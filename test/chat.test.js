@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES } from '../src/index.js';
+import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
 import { modelLabel, parseAction, resolveModel, runTask, SYSTEM } from '../src/loop.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
@@ -719,6 +719,69 @@ describe('the bar on a published page', () => {
       expect(text).not.toContain('flisk-sh/fleet');
       expect(text).toContain(html.includes('last') ? 'last line' : 'no body tag');
     }
+  });
+});
+
+describe('a published page can save to localStorage inside the sandbox', () => {
+  // The sandbox has no allow-same-origin, so the browser throws on localStorage; a throwing save killed every click handler.
+  const run = (html, win) => {
+    const shim = /<script>([\s\S]*?)<\/script>/.exec(withStorageShim(html))[1];
+    new Function('window', shim)(win);
+    return win;
+  };
+  const blocked = () => {
+    const win = { name: '' };
+    Object.defineProperty(win, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+    Object.defineProperty(win, 'sessionStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+    return win;
+  };
+
+  test('the shim comes before the page scripts and keeps the doctype first', () => {
+    const out = withStorageShim('<!DOCTYPE html><html><head><title>x</title></head><body><header>h</header><script>var a=1</script></body></html>');
+    expect(out.startsWith('<!DOCTYPE html><html><head><script>')).toBe(true);
+    expect(out.indexOf('flisk-site-storage')).toBeLessThan(out.indexOf('var a=1'));
+    expect(withStorageShim('<!doctype html><p>no head</p>')).toMatch(/^<!doctype html><script>/);
+    expect(withStorageShim('<p>bare</p>')).toMatch(/^<script>.*<\/script><p>bare<\/p>$/s);
+  });
+
+  test('with blocked storage, set/get/remove/clear/key/length work and survive a reload through window.name', () => {
+    const win = run('<html><head></head></html>', blocked());
+    win.localStorage.setItem('crm', '{"a":1}');
+    win.localStorage.setItem('n', 5);
+    expect(win.localStorage.getItem('crm')).toBe('{"a":1}');
+    expect(win.localStorage.getItem('n')).toBe('5');
+    expect(win.localStorage.getItem('missing')).toBeNull();
+    expect(win.localStorage.length).toBe(2);
+    expect(win.localStorage.key(0)).toBe('crm');
+    expect(win.localStorage.key(9)).toBeNull();
+    win.sessionStorage.setItem('s', '1');
+    expect(win.localStorage.getItem('s')).toBeNull();
+    const reloaded = run('<html><head></head></html>', Object.assign(blocked(), { name: win.name }));
+    expect(reloaded.localStorage.getItem('crm')).toBe('{"a":1}');
+    expect(reloaded.sessionStorage.getItem('s')).toBe('1');
+    reloaded.localStorage.removeItem('crm');
+    expect(reloaded.localStorage.getItem('crm')).toBeNull();
+    reloaded.localStorage.clear();
+    expect(reloaded.localStorage.length).toBe(0);
+  });
+
+  test('where real storage works the shim leaves it alone', () => {
+    const real = { getItem() {} };
+    const win = { name: '', localStorage: real, sessionStorage: real };
+    run('<html></html>', win);
+    expect(win.localStorage).toBe(real);
+    expect(win.name).toBe('');
+  });
+
+  test('the served page carries the shim and a one-line bar that lets taps through', async () => {
+    const e = env();
+    const made = await publishSite(e, 'octo', '<html><head></head><body><script>localStorage.setItem("k","v")</script></body></html>', ORIGIN);
+    const text = await (await handle(new Request(made.url), e, {})).text();
+    expect(text.indexOf('flisk-site-storage')).toBeLessThan(text.indexOf('localStorage.setItem("k"'));
+    const bar = text.slice(text.indexOf('Made with Flisk Chat') - 400);
+    expect(bar).toContain('pointer-events:none');
+    expect(bar).toContain('white-space:nowrap');
+    expect(bar).toMatch(/<a [^>]*pointer-events:auto[^>]*>report<\/a>/);
   });
 });
 
