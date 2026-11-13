@@ -194,8 +194,9 @@ export function podTracker(env, login, fleet) {
   return {
     started: (id) => env.DB.prepare('INSERT OR REPLACE INTO pods (id, login, url, created, until) VALUES (?, ?, NULL, ?, ?)').bind(id, login, new Date().toISOString(), hoursFromNow(2)).run(),
     stopped: (id) => env.DB.prepare('DELETE FROM pods WHERE id = ?').bind(id).run(),
-    kept: async (id, url) => {
-      await env.DB.prepare('UPDATE pods SET url = ?, until = ? WHERE id = ?').bind(url, hoursFromNow(KEEP_DAYS * 24), id).run();
+    // until: when the provider stops the computer by itself (no sleep and wake); else KEEP_DAYS.
+    kept: async (id, url, until = null) => {
+      await env.DB.prepare('UPDATE pods SET url = ?, until = ? WHERE id = ?').bind(url, until || hoursFromNow(KEEP_DAYS * 24), id).run();
       const { results = [] } = await env.DB.prepare('SELECT id FROM pods WHERE login = ? AND url IS NOT NULL ORDER BY created DESC LIMIT -1 OFFSET ?').bind(login, KEPT_PER_LOGIN).all();
       for (const old of results) {
         const s = await fleet.stop(old.id).catch(() => null);

@@ -5,7 +5,9 @@
 //   3. opens the URL itself and only then calls it live.
 // The computer is kept instead of stopped: it pauses itself when idle (no compute is billed while paused), a visit wakes it,
 // and chat deletes it after KEEP_DAYS (see index.js keptPods). Only providers that can give a port a public URL do this
-// (Upstash Box today); for the others fleet answers 501 and the model makes the one-file copy instead.
+// For a provider whose computers cannot sleep and wake, the link lasts only as long as the computer (about an hour), and the
+// answer says so. A provider without public URLs answers 501: the answer says plainly that there is no live link, and
+// never ships a copy of the app instead.
 export const KEEP_DAYS = 7;
 export const KEPT_PER_LOGIN = 3;
 
@@ -24,7 +26,7 @@ export function cleanShare(v) {
 const home = (dir) => dir.replace(/^~/, '$HOME');
 
 // What the computer runs every time it starts again after a pause: the same `flisk up` as the build.
-export const startupCommand = (dir) => `export PATH=$HOME/.local/bin:$PATH; cd "${home(dir)}" && (nohup flisk up > /tmp/up.log 2>&1 &)`;
+export const startupCommand = (dir) => `export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd "${home(dir)}" && (nohup flisk up > /tmp/up.log 2>&1 &)`;
 
 // Every Vite config of the app (not in node_modules) answers on all interfaces and any host name. Then wait until the port
 // answers again, because Vite restarts itself when its config changes.
@@ -49,18 +51,29 @@ async function check(url, fetchImpl, wait) {
   return { ok: false, last };
 }
 
-// computer: fleet.js client. Returns { url } or { error } (an error the model can act on: make the one-file copy instead).
-export async function shareApp({ computer, podId, spec, fetchImpl = fetch, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+// What the model is told when the provider cannot give a public link: say so, never fake it with a copy.
+export const noLinkError = (provider, why) =>
+  `${provider || 'this provider'} cannot give this computer a public link (${why}). Do NOT make a copy of the app. "say" plainly that the app was built and checked on the computer, but ${provider || 'this provider'} cannot share it, so it stops when you answer; connecting a provider that can share (for example Upstash Box) gives a live link next time.`;
+
+// computer: fleet.js client. Returns { url, wakesOnVisit, expiresAt }, or { error } the model can act on ({ refused: true }
+// when the provider cannot share at all).
+export async function shareApp({ computer, podId, spec, provider = '', fetchImpl = fetch, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const opened = await computer.run(podId, openViteCommand(spec.dir, spec.port));
   if (opened.error) return { error: opened.error };
   const out = String(opened.data?.stdout || '');
   if (opened.data?.exitCode === 3) return { error: `there is no folder ${spec.dir} on the computer. Send {"share": {"port": ${spec.port}, "dir": "~/<the app folder>"}}` };
   if (!/port=[1-5]\d\d/.test(out)) return { error: `nothing answers on port ${spec.port}. Is flisk up running? Last lines of /tmp/up.log:\n${out.slice(-600)}` };
   const made = await computer.share(podId, spec.port, startupCommand(spec.dir));
-  if (made.error) return { error: made.status === 501 || made.status === 404 ? `this computer cannot have a public link (${made.error}). Make the one-file copy instead: "write" ONE self-contained index.html, then "publish" it.` : made.error };
+  if (made.error) return made.status === 501 ? { error: noLinkError(provider, made.error), refused: true } : { error: made.error };
   const url = made.data?.url;
   if (!/^https:\/\//.test(String(url || ''))) return { error: 'fleet gave no public link' };
   const seen = await check(url, fetchImpl, wait);
   if (!seen.ok) return { error: `the public link does not open the app yet (${seen.last}). Check that the website answers on port ${spec.port} and that the Vite config has host: true and allowedHosts: true` };
-  return { url };
+  // expiresAt: the provider ends the computer then, whatever happens, so the link lasts until then. With no end, a computer
+  // that sleeps when idle and wakes on a visit (wakesOnVisit) is kept KEEP_DAYS; any other lasts about an hour (fleet's
+  // default pod lifetime).
+  const wakesOnVisit = made.data.wakesOnVisit === true;
+  const end = Date.parse(made.data.expiresAt || '');
+  const expiresAt = end ? new Date(end).toISOString() : wakesOnVisit ? null : new Date(Date.now() + 3600_000).toISOString();
+  return { url, wakesOnVisit, expiresAt };
 }

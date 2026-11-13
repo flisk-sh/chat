@@ -845,26 +845,25 @@ describe('a build ends with a public link', () => {
     return { seen, model: async (m) => (seen.push(m[m.length - 1].content), { text: replies.shift() }) };
   };
 
-  test('the recipe shares the running app, with the one-file copy only as the fallback', () => {
+  test('the recipe shares the running app, and an app is never a published copy', () => {
     expect(SYSTEM).toContain('{"share": <the website\'s port from that log>}');
     expect(SYSTEM).toContain("fetch('/api/...')");
-    expect(SYSTEM).toContain('Only if share answers an error');
+    expect(SYSTEM).toContain('do NOT make a copy of the app');
+    expect(SYSTEM).toContain('is an app, never a published page');
+    expect(SYSTEM).not.toMatch(/data kept in localStorage|one-file clickable copy|Only if share answers/);
     expect(SYSTEM).toContain('Each task starts on a fresh computer');
   });
 
-  test('saying the app works without a link sends the model back to publish once', async () => {
-    const { seen, model } = script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &); sleep 5"}', '{"say":"It works on localhost:3000"}', '{"write":{"path":"/tmp/s/index.html","content":"<html></html>"}}', '{"publish":"/tmp/s/index.html"}', '{"say":"Here: https://chat.flisk.si/s/abc"}']);
-    const r = await runTask2({ task: 'build crm via flisk', model, computer: fakeComputer(), publish: async () => ({ url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
-    expect(seen.some((m) => m.startsWith('No public link yet'))).toBe(true);
-    expect(r.links).toEqual(['https://chat.flisk.si/s/abc']);
-    expect(r.answer).toContain('https://chat.flisk.si/s/abc');
-  });
-
-  test('a system of services that is built and then described gets sent back to publish a clickable page', async () => {
-    const { seen, model } = script(['{"system":{"title":"Team CRM","services":["customers","deals"]}}', '{"say":"7 of 7 answered, no public link"}', '{"write":{"path":"/tmp/s/index.html","content":"<html></html>"}}', '{"publish":"/tmp/s/index.html"}', '{"say":"Here: https://chat.flisk.si/s/abc"}']);
-    const r = await runTask2({ task: 'build crm via flisk', model, computer: fakeComputer(), publish: async () => ({ url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
-    expect(seen.some((m) => m.startsWith('No public link yet'))).toBe(true);
-    expect(r.links).toEqual(['https://chat.flisk.si/s/abc']);
+  test('saying the app works without a link sends the model back to share, and a published copy is refused', async () => {
+    const published = [];
+    const { seen, model } = script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &); sleep 5"}', '{"say":"It works on localhost:3000"}', '{"write":{"path":"/tmp/s/index.html","content":"<html></html>"}}', '{"publish":"/tmp/s/index.html"}', '{"say":"done"}']);
+    const r = await runTask2({ task: 'build crm via flisk', model, computer: fakeComputer(), publish: async (h) => (published.push(h), { url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
+    const nudge = seen.find((m) => m.startsWith('No public link yet'));
+    expect(nudge).toContain('{"share": <the website port>}');
+    expect(nudge).not.toMatch(/localStorage|publish/);
+    expect(seen.some((m) => m.includes('do not publish a copy of it'))).toBe(true);
+    expect(published).toEqual([]);
+    expect(r.links).toEqual([]);
   });
 
   test('it asks only once, and never when a link is already published', async () => {

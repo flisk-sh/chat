@@ -10,7 +10,7 @@ const URL1 = 'https://box_1-3000.preview.box.upstash.com';
 const noWait = async () => {};
 
 // A computer whose website answers, and a fleet that can (or cannot) give it a public URL.
-function computer({ port = 'port=200', share = { status: 200, data: { url: URL1 } } } = {}) {
+function computer({ port = 'port=200', share = { status: 200, data: { url: URL1, wakesOnVisit: true } } } = {}) {
   const calls = [];
   return {
     calls,
@@ -38,14 +38,14 @@ describe('share: the model asks for a live link to the running app', () => {
   test('the computer opens Vite to the public host and restarts the app with flisk up when it wakes', () => {
     expect(openViteCommand('~/app', 3000)).toContain(`sed -i "s/host: 'localhost'/host: true, allowedHosts: true/"`);
     expect(openViteCommand('~/app', 3000)).toContain('http://127.0.0.1:3000/');
-    expect(startupCommand('~/app')).toBe('export PATH=$HOME/.local/bin:$PATH; cd "$HOME/app" && (nohup flisk up > /tmp/up.log 2>&1 &)');
+    expect(startupCommand('~/app')).toBe('export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd "$HOME/app" && (nohup flisk up > /tmp/up.log 2>&1 &)');
   });
 
   test('a working share answers the public URL after opening it', async () => {
     const c = computer();
     const seen = [];
     const r = await shareApp({ computer: c, podId: 'p', spec: { port: 3000, dir: '~/app' }, fetchImpl: async (u) => (seen.push(String(u)), site()()), wait: noWait });
-    expect(r).toEqual({ url: URL1 });
+    expect(r).toEqual({ url: URL1, wakesOnVisit: true, expiresAt: null });
     expect(c.calls.find((x) => x[0] === 'share')).toEqual(['share', 'p', 3000, startupCommand('~/app')]);
     expect(seen).toEqual([URL1]);
   });
@@ -56,8 +56,12 @@ describe('share: the model asks for a live link to the running app', () => {
     noDir.run = async () => ({ status: 200, data: { exitCode: 3, stdout: '' } });
     expect((await shareApp({ computer: noDir, podId: 'p', spec, fetchImpl: site(), wait: noWait })).error).toContain('no folder ~/app');
     expect((await shareApp({ computer: computer({ port: 'port=000\nerror' }), podId: 'p', spec, fetchImpl: site(), wait: noWait })).error).toContain('nothing answers on port 3000');
-    const e2b = await shareApp({ computer: computer({ share: { status: 501, error: 'e2b cannot give a pod a public URL through fleet yet' } }), podId: 'p', spec, fetchImpl: site(), wait: noWait });
-    expect(e2b.error).toContain('one-file copy');
+    const e2b = await shareApp({ computer: computer({ share: { status: 501, error: 'hopx cannot give a pod a public URL through fleet yet' } }), podId: 'p', spec, provider: 'hopx', fetchImpl: site(), wait: noWait });
+    // No live link: the model is told to say so plainly, never to make a copy.
+    expect(e2b.refused).toBe(true);
+    expect(e2b.error).toContain('hopx cannot give this computer a public link');
+    expect(e2b.error).toContain('Do NOT make a copy');
+    expect(e2b.error).not.toMatch(/one-file|"publish"/);
     const blocked = await shareApp({ computer: computer(), podId: 'p', spec, fetchImpl: site(403, 'Blocked request. This host ("x") is not allowed.'), wait: noWait });
     expect(blocked.error).toContain('does not open the app');
   });
@@ -77,14 +81,14 @@ describe('a task that shares its app keeps the computer', () => {
       fetchImpl: site(),
       publish: async () => ({ error: 'not used' }),
       emit: (e) => events.push(e),
-      track: { started: (id) => track.started.push(id), kept: (id, url) => track.kept.push([id, url]), stopped: (id) => track.stopped.push(id) },
+      track: { started: (id) => track.started.push(id), kept: (...a) => track.kept.push(a), stopped: (id) => track.stopped.push(id) },
     });
     expect(r.links).toEqual([URL1]);
     expect(c.calls.some((x) => x[0] === 'stop')).toBe(false);
     expect(events.find((e) => e.type === 'pod_kept')).toMatchObject({ url: URL1, days: 7 });
     expect(events.some((e) => e.type === 'pod_stopped')).toBe(false);
     expect(events.find((e) => e.type === 'output' && e.live)).toBeTruthy();
-    expect(track).toEqual({ started: ['pod_upstash_box_1'], kept: [['pod_upstash_box_1', URL1]], stopped: [] });
+    expect(track).toEqual({ started: ['pod_upstash_box_1'], kept: [['pod_upstash_box_1', URL1, null]], stopped: [] });
   });
 
   test('the model is told the shared link, so it says it instead of making a copy', async () => {
@@ -92,6 +96,39 @@ describe('a task that shares its app keeps the computer', () => {
     await runTask({ task: 'build crm via flisk', model: script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &)"}', '{"share": 3000}', '{"say":"ok"}'], seen), computer: computer(), fetchImpl: site(), publish: async () => ({}), emit: () => {} });
     expect(seen.at(-1)).toStartWith(`Shared. The running app's public link is ${URL1}.`);
     expect(seen.at(-1)).not.toContain('undefined');
+  });
+
+  test('a computer that sleeps and wakes but is deleted at a fixed time: the link lasts until then, not 7 days', async () => {
+    const until = new Date(Date.now() + 50 * 60_000).toISOString();
+    const c = computer({ share: { status: 200, data: { url: 'https://p.bl.run', wakesOnVisit: true, expiresAt: until } } });
+    const seen = [];
+    const events = [];
+    await runTask({ task: 'build crm via flisk', model: script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &)"}', '{"share": 3000}', '{"say":"ok"}'], seen), computer: c, fetchImpl: site(), publish: async () => ({}), emit: (e) => events.push(e) });
+    expect(seen.at(-1)).toMatch(/about (49|50) minutes/);
+    expect(seen.at(-1)).toContain('until then it sleeps when idle');
+    expect(seen.at(-1)).not.toContain('deleted after 7 days');
+    expect(events.find((e) => e.type === 'pod_kept')).toMatchObject({ days: 0, until });
+  });
+
+  test('a computer that cannot sleep and wake: the link lasts until the provider stops it, and the model is told how long', async () => {
+    const until = new Date(Date.now() + 45 * 60_000).toISOString();
+    const c = computer({ share: { status: 200, data: { url: 'https://3000-sbx.e2b.app', wakesOnVisit: false, expiresAt: until } } });
+    const seen = [];
+    const events = [];
+    const kept = [];
+    await runTask({ task: 'build crm via flisk', model: script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &)"}', '{"share": 3000}', '{"say":"ok"}'], seen), computer: c, fetchImpl: site(), publish: async () => ({}), emit: (e) => events.push(e), track: { kept: (...a) => kept.push(a) } });
+    expect(seen.at(-1)).toContain('https://3000-sbx.e2b.app');
+    expect(seen.at(-1)).toMatch(/about 4[45] minutes/);
+    expect(seen.at(-1)).not.toContain('wakes on a visit');
+    expect(kept).toEqual([['pod_upstash_box_1', 'https://3000-sbx.e2b.app', until]]);
+    expect(events.find((e) => e.type === 'pod_kept')).toMatchObject({ days: 0, until });
+    expect(c.calls.some((x) => x[0] === 'stop')).toBe(false);
+  });
+
+  test('fleet that gives no end time: about an hour is assumed', async () => {
+    const r = await shareApp({ computer: computer({ share: { status: 200, data: { url: URL1 } } }), podId: 'p', spec: { port: 3000, dir: '~/app' }, fetchImpl: site(), wait: noWait });
+    expect(r.wakesOnVisit).toBe(false);
+    expect(Math.round((Date.parse(r.expiresAt) - Date.now()) / 60000)).toBe(60);
   });
 
   test('a task that does not share stops the computer and crosses it off', async () => {
@@ -120,6 +157,8 @@ describe('kept computers are deleted on time', () => {
     }
     expect(fleet.stopped).toEqual(['pod_1']);
     expect(env.DB.raw.query('SELECT id FROM pods ORDER BY id').all().map((r) => r.id)).toEqual(['pod_2', 'pod_3', 'pod_4']);
+    await t.kept('pod_4', 'https://u4', '2030-01-01T00:00:00.000Z');
+    expect(env.DB.raw.query("SELECT until FROM pods WHERE id = 'pod_4'").get().until).toBe('2030-01-01T00:00:00.000Z');
     await t.stopped('pod_4');
     expect(env.DB.raw.query('SELECT COUNT(*) AS n FROM pods').get().n).toBe(2);
   });
@@ -146,11 +185,12 @@ describe('kept computers are deleted on time', () => {
   });
 });
 
-test('the result card says a shared app is the real app and a /s/ page is the one-file copy', async () => {
+test('the result card says a shared app is the real app and a /s/ link is a page', async () => {
   const { appPage } = await import('../src/page.js');
   const page = appPage({ login: 'x' });
   expect(page).toContain('Your app is live: the real website and API');
-  expect(page).toContain('Your page is live (one-file copy)');
+  expect(page).toContain("'Your page is live'");
+  expect(page).not.toContain('one-file copy');
 });
 
 test('a reopened chat shows the card for a shared app link too', async () => {
