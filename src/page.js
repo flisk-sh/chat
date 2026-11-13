@@ -169,7 +169,7 @@ const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30
 const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.slice(0,80),msgs:history});saveAll(all);drawHist();};
 function drawHist(){const all=loadAll();hist.textContent='';if(!all.length){const li=document.createElement('li');li.className='none';li.textContent='No chats yet. They stay in this browser.';hist.appendChild(li);return;}
   all.forEach(c=>{const li=document.createElement('li'),b=document.createElement('button'),x=document.createElement('button');b.textContent=c.title;b.title=c.title;b.onclick=()=>openChat(c);x.className='x';x.textContent='×';x.title='Delete this chat';x.setAttribute('aria-label','Delete chat');x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
-function newChat(){history=[];go.disabled=false;chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');document.body.classList.remove('chatting');box.focus();}
+function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder="What should it do?";chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');document.body.classList.remove('chatting');box.focus();}
 function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');history.forEach(m=>el(m.role==='user'?'u':'a',m.content));}
 document.getElementById('newchat').onclick=newChat;
 const say=(cls,text)=>{comp.hidden=false;const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
@@ -223,14 +223,16 @@ async function run(task){
 }
 // Zachman questions as a tree of squares: hover (or tap) one, the next row opens, until all six are answered.
 const ZQ=[['What','What is it?',['A website','A small app','An answer or check']],['Who','Who is it for?',['Customers','My team','Just me']],['Why','Why do you need it?',['Sell more','Look professional','Try an idea']],['Where','Where should it live?',['A live link','Code I can keep','Only this chat']],['When','When do you need it?',['Right now','Polished, no rush','A quick draft']],['How','How should it feel?',['Bold','Calm','Playful']]];
+let treeAnswer=null;
 function ask6(task){
-  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');
+  document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');
   const wrap=document.createElement('div');wrap.className='tree';talk.appendChild(wrap);
   const rows=document.createElement('div');rows.className='tree';const chips=document.createElement('div');chips.className='zchips';wrap.append(rows,chips);
   let pick=[],sent=false;
-  const finish=()=>{if(sent)return;sent=true;wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
+  const finish=()=>{if(sent)return;sent=true;treeAnswer=null;box.placeholder="What should it do?";wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+p).join('; ')+'.':task;
     history.push({role:'user',content:full});run(full);};
+  treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
   const draw=()=>{rows.textContent='';
     for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className="trow"+(i===pick.length?" new":"");row.style.marginLeft=(i*14)+'px';
       const q=document.createElement('div');q.className='q';q.textContent=ZQ[i][1];row.appendChild(q);
@@ -240,11 +242,12 @@ function ask6(task){
       rows.appendChild(row);}
     chips.textContent='';ZQ.forEach((z,i)=>{const c=document.createElement('span');c.className='zchip'+(pick[i]?' ok':'');c.textContent=z[0]+(pick[i]?': '+pick[i]:'');chips.appendChild(c);});
     const sk=document.createElement('button');sk.type='button';sk.className='zskip';sk.textContent=pick.length===ZQ.length?'Build it >>>':'Skip, just run it';sk.onclick=finish;chips.appendChild(sk);
+    if(!sent)box.placeholder=pick.length<ZQ.length?"Or type your own answer: "+ZQ[pick.length][1]:"Add anything else, or press Build it";
     wrap.scrollIntoView({block:"nearest"});};
   draw();
 }
 let lastSend=0;
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
