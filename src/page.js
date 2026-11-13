@@ -68,9 +68,32 @@ form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form
 .card form{display:flex;gap:8px;margin-top:10px}.card input{flex:1;font:13px var(--mono);padding:9px;border:1px solid var(--ink);background:transparent;color:inherit;min-width:0;border-radius:0}
 .note{font:11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--dim);padding:0 40px 16px;margin:0}
 #signin{margin:0 40px 20px}
+.frame.app{max-width:1240px}
+.shell{display:grid;grid-template-columns:260px minmax(0,1fr);flex:1;min-height:0}
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail{border-right:0!important;border-bottom:1px solid var(--ink)}}
+.rail{border-right:1px solid var(--ink);display:flex;flex-direction:column}
+.rail section{border-bottom:1px solid var(--ink);padding:14px 16px}
+.rail h4{margin:0 0 10px;font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:400;display:flex;justify-content:space-between}
+.rail h4 a{color:var(--green);text-decoration:none}
+.newchat{display:block;width:100%;text-align:center}
+#hist{list-style:none;margin:0;padding:0;max-height:34vh;overflow:auto}
+#hist li{display:flex;align-items:center;border-bottom:1px dashed rgba(23,23,21,.2)}
+#hist li button{flex:1;text-align:left;font:13px/1.35 var(--sans);background:none;border:0;padding:7px 0;cursor:pointer;color:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hist li button:hover{color:var(--green)}#hist li .x{flex:0;color:var(--dim);padding:7px 4px}
+#hist .none{font-size:13px;color:var(--dim);border:0;padding:4px 0}
+.comps{list-style:none;margin:0;padding:0;font-size:13px}
+.comps li{padding:4px 0}.comps .on::before{content:'● ';color:var(--glow)}
+.comps .off{color:var(--dim)}
+.soon{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0}
+.tag{font:10px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--ink);padding:3px 6px;color:var(--dim);white-space:nowrap}
+.main{display:flex;flex-direction:column;min-width:0}
+.tools{display:flex;gap:8px;align-items:center;padding:8px 40px 0;background:var(--card);border-top:1px solid var(--ink)}
+@media (max-width:640px){.tools{padding:8px 20px 0}}
+.tools button{font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;border:1px dashed var(--dim);background:none;color:var(--dim);padding:6px 9px;cursor:not-allowed}
+form.ask{border-top:0}
 `;
 
-const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
+const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 export const homePage = () =>
   shell(
@@ -93,8 +116,18 @@ const IDEAS = [
 
 const APP_JS = `
 const talk=document.getElementById('talk'),screen=document.getElementById('screen'),form=document.getElementById('ask'),box=document.getElementById('task'),go=document.getElementById('go'),setup=document.getElementById('setup'),signin=document.getElementById('signin');
-const history=[],comp=document.getElementById('comp');
-const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
+let history=[];const comp=document.getElementById('comp'),hist=document.getElementById('hist');
+const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;if(cls==='a')linkify(d,text);else d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
+// Past chats live in this browser only (localStorage), never on our server.
+const KEY='chat_history_v1';let chatId=null;
+const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
+const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
+const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.slice(0,80),msgs:history});saveAll(all);drawHist();};
+function drawHist(){const all=loadAll();hist.textContent='';if(!all.length){const li=document.createElement('li');li.className='none';li.textContent='No chats yet. They stay in this browser.';hist.appendChild(li);return;}
+  all.forEach(c=>{const li=document.createElement('li'),b=document.createElement('button'),x=document.createElement('button');b.textContent=c.title;b.title=c.title;b.onclick=()=>openChat(c);x.className='x';x.textContent='×';x.title='Delete this chat';x.setAttribute('aria-label','Delete chat');x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
+function newChat(){history=[];chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');box.focus();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();document.getElementById('ideas').classList.add('gone');history.forEach(m=>el(m.role==='user'?'u':'a',m.content));}
+document.getElementById('newchat').onclick=newChat;
 const say=(cls,text)=>{comp.hidden=false;const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
 const linkify=(node,text)=>{node.textContent='';text.split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;node.appendChild(a);}else node.appendChild(document.createTextNode(p));});};
 document.querySelectorAll('.ideas button').forEach(b=>b.onclick=()=>{box.value=b.childNodes[0].textContent;box.focus();});
@@ -141,10 +174,11 @@ async function run(task){
         else if(ev.type==='done'&&ev.ms)say('d','# '+(ev.ms/1000).toFixed(1)+' s');
       }}
   }catch(err){wait.className='err';wait.textContent=String(err.message||err);}
-  if(answer!==null){linkify(wait,answer);history.push({role:'assistant',content:answer});}
+  if(answer!==null){linkify(wait,answer);history.push({role:'assistant',content:answer});saveChat();}
   go.disabled=false;box.focus();
 }
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);history.push({role:'user',content:task});run(task);};
+drawHist();
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
 
@@ -155,6 +189,16 @@ export function appPage({ login, connected = [] }) {
   return shell(
     'Flisk Chat',
     `<header><a class="logo" href="/"><span class="mark">C</span>chat</a>${login ? `<span class="r m">@${esc(login)} · <a href="/auth/signout">sign out</a></span>` : '<span class="r m"><a class="cta m" href="/auth/start">Sign in with GitHub</a></span>'}</header>
+<div class="shell"><aside class="rail">
+<section><button type="button" id="newchat" class="btn newchat">+ New chat</button></section>
+<section><h4>History</h4><ul id="hist"></ul></section>
+<section><h4>Computers &amp; keys <a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${
+      login && connected.length
+        ? connected.map((id) => `<li class="on">${esc(PROVIDER_NAMES[id] || id)}</li>`).join('')
+        : `<li class="off">${login ? 'None connected yet' : 'Sign in to see yours'}</li>`
+    }</ul>${login ? '<p style="margin:8px 0 0;font-size:12px;color:var(--dim)">Add a key here, or remove one in fleet (manage). Keys are stored encrypted in fleet; your own AI key is never saved.</p>' : ''}</section>
+<section><h4>Coming soon</h4><div class="soon">🎙 Voice talk <span class="tag">soon</span></div><div class="soon">🎬 Video generation <span class="tag">soon</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--dim)">Talk to chat and hear it answer in Ava, the warm voice from Flisk videos.</p></section>
+</aside><div class="main">
 <div class="hero"><h1>What should we <em>get done?</em></h1>
 <p class="sub">${!login ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.' : connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
 <div class="pickers">
@@ -168,8 +212,10 @@ export function appPage({ login, connected = [] }) {
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 </div>
 <div id="comp" hidden><h3>Computer</h3><div id="screen" aria-label="What the computer did"></div></div>
+<div class="tools"><button type="button" disabled title="Coming soon">🎙 Voice · soon</button><button type="button" disabled title="Coming soon">🎬 Video · soon</button></div>
 <form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form>
-</div>`,
+</div></div></div>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};` + APP_JS,
+    'app',
   );
 }

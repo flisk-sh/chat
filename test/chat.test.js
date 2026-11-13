@@ -276,3 +276,13 @@ describe('service binding to inference', () => {
     expect(r).toEqual({ fleet: { status: 200 }, inference: { status: 401 } });
   });
 });
+
+import { appPage as appPageUi } from '../src/page.js';
+test('app page shows history, key management and coming-soon voice and video', () => {
+  const page = appPageUi({ login: 'ann', connected: ['upstash'] });
+  expect(page).toContain('id="hist"');
+  expect(page).toContain('fleet.flisk.si/console?section=providers');
+  expect(page).toContain('Voice talk');
+  expect(page).toContain('Video generation');
+  expect(page).toContain('Upstash Box');
+});
