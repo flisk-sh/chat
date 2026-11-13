@@ -128,6 +128,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .sep{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--soft);letter-spacing:.02em}.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--line)}
 .result{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);padding:12px 14px}
 .result .rt{flex:1;min-width:0}.result b{display:block;font-weight:500}.result .url{font-size:13px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.optwrap{display:flex;flex-direction:column;width:100%}
 .optin{display:block;margin:6px 2px 0;color:var(--dim);font-size:12px;line-height:1.35}
 .byor{display:block;margin:6px 0 2px;padding:0;border:0;background:none;color:var(--ink);text-decoration:underline;font-size:13px;cursor:pointer}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--radius);padding:7px 14px;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap}
@@ -941,7 +942,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
 <section class="sidesec"><h4>Voice</h4><div class="soon">Voice talk: tap the wave and just talk, it answers out loud <span class="tag">new</span></div></section>
-<div class="who">${login && anon ? '<a class="btn" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a><small class="optin">Optional. It keeps your computers on every device and unlocks PR reviews and higher limits.</small>' : login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
+<div class="who">${login && anon ? '<div class="optwrap"><a class="btn" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a><small class="optin">Optional. It keeps your computers on every device and unlocks PR reviews and higher limits.</small></div>' : login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
 <div id="scrim" class="scrim" aria-hidden="true"></div>
 <div class="main">
