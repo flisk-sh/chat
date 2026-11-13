@@ -513,3 +513,12 @@ test('API keys are encrypted in the browser, never kept as plain text in localSt
   expect(page).toContain('Encrypted and saved in this browser only');
   expect(page).not.toContain("localStorage.setItem('chat_key");
 });
+
+test('the model box keeps the full OpenRouter list, never sends an empty model, and file notes stay out of the chat', async () => {
+  const { appPage } = await import('../src/page.js');
+  const page = appPage({ login: 'ann', connected: [], models: [] });
+  expect(page).toContain("m.key==='openrouter'&&orIds.length?orIds:");
+  expect(page).toContain('fixModel(byoModel.value.trim()).model||byoModel.value.trim()');
+  expect(page).not.toContain("Did you mean: '+f.near.join(', ')+'?';byWarn");
+  expect(page).not.toContain("errMsg(f.name+' is over 150 KB.')");
+});
