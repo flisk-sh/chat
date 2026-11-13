@@ -180,7 +180,7 @@ export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 export const OPENROUTER_PREFERRED = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-super-vl:free'];
 export const WORKERS_AI_FALLBACK = '@cf/meta/llama-3.1-8b-instruct-fast';
 export const WORKERS_AI_PER_DAY = 300; // about 1,500 neurons at most: chat's share of the account's free 10,000
-export const FREE_BUSY = 'The free AI is busy right now. Try again in a minute, or pick your own AI in the model menu.';
+export const FREE_BUSY = 'The free AI is busy right now. Try again in a minute, or keep going free with your own OpenRouter account.';
 const WOLF_REST_MS = 10 * 60 * 1000;
 let wolfOutUntil = 0; // after a budget or rate-limit answer, skip Wolf for a while instead of asking it every step
 let orModels = { at: 0, ids: null };
@@ -213,7 +213,26 @@ function workersAiModel(env, overLimit) {
   };
 }
 
+// A person's own OpenRouter account on a free model ("Log in with OpenRouter"): when that model is busy, try other free
+// models with the same key. The account's own daily free allowance being used up ends it, since every free model shares it.
+export const ownFreeOpenRouter = (chosen) => !chosen.free && chosen.ai === 'openrouter' && /:free$/.test(chosen.model || '');
+const dailyFreeUsed = (r) => /free-models-per-day|per.?day/i.test(r.error || '');
+function ownFreeModel(env, fetchImpl, chosen) {
+  return async (messages) => {
+    const first = await oneModel(env, fetchImpl, chosen)(messages);
+    if (!first.error || first.kind === 'key' || dailyFreeUsed(first)) return first;
+    const others = (await freeOpenRouterModels(fetchImpl)).filter((id) => id !== chosen.model).slice(0, 2);
+    for (const id of others) {
+      const r = await oneModel(env, fetchImpl, { ...chosen, model: id })(messages);
+      if (!r.error) return { ...r, by: id };
+      if (dailyFreeUsed(r)) return r;
+    }
+    return first;
+  };
+}
+
 export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }, { overLimit = null, now = () => Date.now(), log = () => {} } = {}) {
+  if (ownFreeOpenRouter(chosen)) return ownFreeModel(env, fetchImpl, chosen);
   if (!chosen.free) return oneModel(env, fetchImpl, chosen);
   const wolf = oneModel(env, fetchImpl, chosen);
   const workers = workersAiModel(env, overLimit);
