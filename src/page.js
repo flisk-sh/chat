@@ -166,7 +166,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);padding:4px 11px 4px 5px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;max-width:240px}
 .chip>span{overflow:hidden;text-overflow:ellipsis}.chip svg{border-radius:var(--radius);flex:none}.chip:hover{border-color:var(--ink)}
 .chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:pointer}.chip.plain:hover{border-color:var(--ink)}
-.chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b}
+.chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b;animation:micp 1.2s ease-in-out infinite}#mic.busy{opacity:.6;cursor:progress}@keyframes micp{50%{box-shadow:0 0 0 5px rgba(192,57,43,.25)}}
 .chev{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);flex:none;opacity:.6}
 .send{margin-left:auto;width:38px;height:38px;border:0;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
 .send:hover{background:var(--green-d)}.send[disabled]{background:var(--line2);cursor:wait}
@@ -516,21 +516,51 @@ fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){errMsg
   const ext=(f.name.split('.').pop()||'').toLowerCase(),text=TEXTY.indexOf(ext)>=0||(f.type||'').indexOf('text/')===0,r=new FileReader();
   r.onload=()=>{let c=String(r.result||'');if(!text)c=c.slice(c.indexOf(',')+1);attached.push({name:f.name,content:c,b64:!text});drawFiles();};r.onerror=()=>errMsg('Could not read '+f.name+'.');
   if(text)r.readAsText(f);else r.readAsDataURL(f);});fileIn.value='';};
-// Voice, free and in the browser: the mic types what you say, Voice reads each answer aloud. No key, nothing leaves the browser but the speech service your browser uses.
-const voiceBtn=$('voice'),micBtn=$('mic'),SR=window.SpeechRecognition||window.webkitSpeechRecognition,TTS=window.speechSynthesis;
-let voiceOn=lsGet('chat_voice')==='1',rec=null;
-const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').trim().slice(0,1500);
+// Voice. The mic records in the browser and chat writes it down on the server (Whisper), so it works in every browser.
+// With Voice on, a spoken task is sent by itself and each answer is read aloud, a sentence at a time (Chrome stops
+// reading one long text after about 15 seconds).
+const voiceBtn=$('voice'),micBtn=$('mic'),TTS=window.speechSynthesis;
+let voiceOn=lsGet('chat_voice')==='1',rec=null,recTimer=null;
+const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').replace(/([.!?]) *[.] +/g,'$1 ').trim().slice(0,3000);
 const stopTalk=()=>{try{TTS&&TTS.cancel();}catch(e){}};
-const talkBack=(t)=>{if(!TTS||!t)return;stopTalk();try{const u=new SpeechSynthesisUtterance(spoken(t));u.lang=navigator.language||'en-US';const vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2)===u.lang.slice(0,2));u.voice=vs.find(v=>!v.localService)||vs[0]||null;TTS.speak(u);}catch(e){}};
-const drawVoice=()=>{voiceBtn.textContent='Voice · '+(voiceOn?'on':'off');voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);};
+const GOOD=['Google','Natural','Neural','Premium','Enhanced','Samantha','Ava','Daniel'];
+const pickVoice=(lang)=>{const vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===lang.slice(0,2).toLowerCase());return vs.find(v=>GOOD.some(g=>v.name.indexOf(g)>=0))||vs.find(v=>v.default)||vs[0]||null;};
+const talkBack=(t)=>{if(!TTS||!t)return;stopTalk();const lang=navigator.language||'en-US',v=pickVoice(lang);
+  const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());
+  parts.forEach(x=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:lang;if(v)u.voice=v;u.rate=1;TTS.speak(u);});};
+if(TTS&&TTS.onvoiceschanged!==undefined)TTS.onvoiceschanged=()=>{};
+const drawVoice=()=>{voiceBtn.textContent='Voice · '+(voiceOn?'on':'off');voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);voiceBtn.title=voiceOn?'Answers are read aloud, a spoken task sends itself':'Read answers aloud';};
 if(!TTS){voiceBtn.title='This browser cannot speak';voiceBtn.disabled=true;}
-voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Voice is on.');};
+voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Voice is on. Tap the mic and talk.');};
 drawVoice();
-if(SR){micBtn.hidden=false;micBtn.onclick=()=>{if(rec){rec.stop();return;}stopTalk();rec=new SR();rec.lang=navigator.language||'en-US';rec.interimResults=true;rec.continuous=false;const base=box.value?box.value.trim()+' ':'';
-  rec.onresult=(e)=>{let t='';for(const r of e.results)t+=r[0].transcript;box.value=(base+t).slice(0,2000);};
-  rec.onerror=(e)=>{if(e.error==='not-allowed'||e.error==='service-not-allowed')errMsg('Allow the microphone for this site to talk.');};
-  rec.onend=()=>{rec=null;micBtn.classList.remove('rec');micBtn.setAttribute('aria-label','Speak your task');box.focus();};
-  try{rec.start();micBtn.classList.add('rec');micBtn.setAttribute('aria-label','Stop listening');}catch(e){rec=null;}};}
+const micIdle=(label)=>{micBtn.classList.remove('rec','busy');micBtn.disabled=false;micBtn.setAttribute('aria-label',label||'Speak your task');micBtn.title=label||'Speak your task';};
+const b64=(blob)=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result||'');ok(s.slice(s.indexOf(',')+1));};r.onerror=()=>no(new Error('could not read the recording'));r.readAsDataURL(blob);});
+async function heard(blob){
+  micBtn.classList.remove('rec');micBtn.classList.add('busy');micBtn.disabled=true;micBtn.title='Writing down what you said';const was=box.placeholder;box.placeholder='Writing down what you said…';
+  try{if(blob.size<800)throw new Error('I did not hear anything. Hold the mic a bit longer and talk.');
+    const res=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type})});
+    if(res.status===401){try{sessionStorage.setItem('chat_pending',box.value);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+    const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||('Voice answered '+res.status));
+    const t=String(b.text||'').trim();if(!t)throw new Error('I did not catch any words. Try again a little closer to the mic.');
+    box.value=((box.value.trim()?box.value.trim()+' ':'')+t).slice(0,2000);box.dispatchEvent(new Event('input'));
+    if(voiceOn&&!go.disabled)form.requestSubmit();else box.focus();
+  }catch(e){errMsg(String(e.message||e));}
+  finally{box.placeholder=was;micIdle();}
+}
+async function listen(){
+  if(rec){rec.stop();return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
+  stopTalk();let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){errMsg(e&&e.name==='NotAllowedError'?'Allow the microphone for chat.flisk.si (the icon in the address bar), then tap the mic again.':e&&e.name==='NotFoundError'?'No microphone found on this device.':'Could not open the microphone: '+(e&&e.message||e));return;}
+  const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  const chunks=[];rec=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream);
+  rec.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  rec.onstop=()=>{clearTimeout(recTimer);stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||type||'audio/webm'});rec=null;heard(blob);};
+  rec.start();micBtn.classList.add('rec');micBtn.setAttribute('aria-label','Stop and send what I said');micBtn.title='Listening. Tap again when you are done.';
+  recTimer=setTimeout(()=>{if(rec)rec.stop();},55000);
+}
+if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.onclick=listen;}
 const secs=(ms)=>Math.max(0,Math.round(ms/1000))+'s';
 // Step icons, from Lucide (lucide.dev, ISC license): each kind of step gets its own, the way T3 Code shows tool calls.
 const SI={terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
