@@ -175,7 +175,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #byo .bystat{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}#byo #byrm{font:12px var(--mono);text-transform:uppercase;background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:4px 8px;color:var(--ink);cursor:pointer}#byo #byrm:hover{border-color:var(--red);color:var(--red)}
 #byo label{font-size:12px;color:var(--dim)}
 #byo input{font:14px var(--mono);padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--panel);color:var(--ink);width:100%}
-details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
+details.pick .menu{overscroll-behavior:contain}details.pick .menu::after{content:'';position:sticky;bottom:-6px;display:block;height:22px;margin:-22px -6px -6px;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--panel));pointer-events:none}details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
 details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(330px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);padding:6px;max-height:min(420px,60vh);overflow:auto;font-size:14px}
 .crow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius);cursor:pointer}
 .crow:hover{background:var(--bg)}.crow .nm{flex:1;min-width:0}.crow small{display:block;font-size:12px;color:var(--dim);line-height:1.3}

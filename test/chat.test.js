@@ -172,6 +172,7 @@ describe('safety', () => {
     expect(home).toContain('add(linkCard(r.link))');
     expect(home).toContain('ctl.abort()');
     expect(home).toContain('Try again');
+    expect(home).toContain("details.pick .menu::after");
     expect(home).toContain('.side{visibility:hidden;');
     expect(home).toContain('@media (hover:none){#hist li .x{opacity:1}}');
     expect(home).toContain('Type this exact model name');
@@ -179,6 +180,16 @@ describe('safety', () => {
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
+  });
+});
+
+describe('logos', () => {
+  test('no logo changes colour with the browser theme, the page is always light', async () => {
+    const { LOGOS } = await import('../src/logos.js');
+    for (const [name, uri] of Object.entries(LOGOS)) {
+      if (!uri.includes('svg+xml')) continue;
+      expect([name, atob(uri.split(',')[1]).includes('prefers-color-scheme')]).toEqual([name, false]);
+    }
   });
 });
 
