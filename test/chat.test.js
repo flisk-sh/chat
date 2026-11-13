@@ -468,6 +468,8 @@ describe('attached files', () => {
     expect(writes).toEqual([['data.csv', '1,2']]);
     expect(seen[0].find((m) => m.role === 'user').content).toContain('data.csv');
   });
+});
+
 test('the model button names the chosen model even after a logo replaces the icon', () => {
   const page = appPageUi({ login: 'ann', connected: [] });
   expect(page).toContain('<span class="mpname">Flisk Wolf</span>');
