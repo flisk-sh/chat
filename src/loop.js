@@ -2,6 +2,7 @@ import { widgetPrompt, parseWidget } from './widgets.js';
 import { cleanVideo, makeVideo } from './video.js';
 import { cleanSystem, makeSystem, MAX_SERVICES } from './system.js';
 import { cleanShare, KEEP_DAYS, shareApp } from './share.js';
+import { githubNote, scrub, setupGithub } from './github.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
 export const MAX_STEPS = 8;
@@ -336,7 +337,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, share, stop } (fleet.js). track: optional { started(podId), kept(podId, url), stopped(podId) }. publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function runTask({ task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -349,7 +350,8 @@ export async function runTask({ task, history = [], model, computer, publish, tr
   if (lastPast?.role === 'user' && String(lastPast.content || '').trim() === String(task).trim()) past.pop();
   // Asked "which model are you", the model would say it does not know: tell it what the visitor picked.
   const who = modelName ? `\n\nThe AI model behind you is ${String(modelName).slice(0, 120)}. If the user asks which model you are, say that, in "say".` : '';
-  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who;
+  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who + (github === undefined ? '' : githubNote(github, origin));
+  const token = github?.token || '';
   const messages = [{ role: 'system', content: system }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
@@ -452,6 +454,11 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         provider = made.data.provider;
         await Promise.resolve(track.started?.(podId)).catch(() => {});
         emit({ type: 'pod_started', provider });
+        if (token) {
+          const g = await setupGithub({ computer, podId, github }).catch((e) => ({ error: String(e?.message || e) }));
+          emit({ type: 'github', ok: !!g.ok, error: g.error ? scrub(g.error, token) : null });
+          if (g.error) messages.push({ role: 'user', content: `Note: signing GitHub in on this computer failed (${scrub(g.error, token)}), so push and gh may not work.` });
+        }
         for (const f of files) {
           const r = f.b64 ? await computer.write(podId, `${f.path}.b64`, f.content) : await computer.write(podId, f.path, f.content);
           if (!r.error && f.b64) await computer.run(podId, `base64 -d '${f.path}.b64' > '${f.path}' && rm '${f.path}.b64'`);
@@ -470,7 +477,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         emit({ type: 'run', command: action.command });
         if (/\b(flisk up|nohup)\b/.test(action.command)) startedServer = true;
         const r = await computer.run(podId, action.command);
-        shown = r.error ? { error: r.error } : { exitCode: r.data.exitCode, stdout: clip(r.data.stdout), stderr: clip(r.data.stderr, 600) };
+        shown = r.error ? { error: scrub(r.error, token) } : { exitCode: r.data.exitCode, stdout: clip(scrub(r.data.stdout, token)), stderr: clip(scrub(r.data.stderr, token), 600) };
       } else if (action.type === 'write') {
         emit({ type: 'write', path: action.path, bytes: action.content.length });
         const r = await computer.write(podId, action.path, action.content);
@@ -516,7 +523,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
       } else {
         emit({ type: 'read', path: action.path });
         const r = await computer.read(podId, action.path);
-        shown = r.error ? { error: r.error } : { content: clip(r.data.content) };
+        shown = r.error ? { error: scrub(r.error, token) } : { content: clip(scrub(r.data.content, token)) };
       }
       steps.push({ action, ...shown });
       if (!shown.widget) emit({ type: 'output', ...shown });
