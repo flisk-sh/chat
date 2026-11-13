@@ -110,7 +110,57 @@ test('voice talk with nothing heard answers empty without calling the model', as
 
 test('the page speaks a reply with a voice for its language, not the browser language', () => {
   const page = appPage({ login: 'ann', connected: [] });
-  expect(page).toContain('const lang=langOf(t,hint),v=pickVoice(lang)');
+  expect(page).toContain('const gen=sayGen,lang=langOf(t,hint),words=spoken(t)');
+  expect(page).toContain("AUD.src='/voice?l='");
+  expect(page).toContain('await browserSay(x,lang,gen)');
   expect(page).toContain("uk:'uk-UA'");
   expect(page).not.toContain("const lang=navigator.language||'en-US',v=pickVoice(lang)");
+});
+
+import { ssml, secMsGec, VOICE } from '../src/tts.js';
+
+test('the voice request uses Ava Multilingual, the locale heard, and escapes the text', () => {
+  const x = ssml('Tom & <Jerry>', 'uk');
+  expect(x).toContain(`<voice name='${VOICE}'>`);
+  expect(VOICE).toBe('en-US-AvaMultilingualNeural');
+  expect(x).toContain("xml:lang='uk-UA'");
+  expect(x).toContain('Tom &amp; &lt;Jerry&gt;');
+  expect(x).not.toContain('<lang');
+  expect(ssml('hi', 'zz')).toContain("xml:lang='en-US'");
+});
+
+test('the connection token is the v2 form and changes every 5 minutes', async () => {
+  const a = await secMsGec(Date.UTC(2026, 10, 13, 12, 0, 1));
+  expect(a).toMatch(/^[0-9A-F]+-[0-9A-F]{64}$/);
+  expect(await secMsGec(Date.UTC(2026, 10, 13, 12, 4, 59))).toBe(a);
+  expect(await secMsGec(Date.UTC(2026, 10, 13, 12, 5, 0))).not.toBe(a);
+});
+
+test('/voice streams mp3 for a signed-in visitor on chat itself, and says why when the voice fails', async () => {
+  const calls = [];
+  const e = env({ SPEAK: async (t, l) => { calls.push([t, l]); if (t === 'boom') throw new Error('voice down'); return new Response(new Uint8Array(900).fill(7)).body; } });
+  const get = (q, cookie, site = 'same-origin') => handle(new Request(`${ORIGIN}/voice?${q}`, { headers: { cookie, 'sec-fetch-site': site } }), e, { fetchImpl: async () => Response.json({}) });
+  expect((await get('t=hi', '')).status).toBe(401);
+  const cookie = (await makeSession(e, 'ann')).split(';')[0];
+  expect((await get('t=hi', cookie, 'cross-site')).status).toBe(403);
+  const ok = await get('l=uk&t=' + encodeURIComponent('Привіт'), cookie);
+  expect(ok.status).toBe(200);
+  expect(ok.headers.get('content-type')).toBe('audio/mpeg');
+  expect((await ok.arrayBuffer()).byteLength).toBe(900);
+  expect(calls[0]).toEqual(['Привіт', 'uk']);
+  const bad = await get('t=boom', cookie);
+  expect(bad.status).toBe(502);
+  expect((await bad.json()).error).toContain('voice down');
+  expect((await get('t=', cookie)).status).toBe(400);
+  expect((await get('t=' + 'x'.repeat(1201), cookie)).status).toBe(413);
+});
+
+test('a refused microphone gets steps for the device in hand, iPhone Chrome included', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('Settings › Apps › Chrome and turn on Microphone');
+  expect(page).toContain('Website Settings › Microphone › Allow');
+  expect(page).toContain("errMsg(micHelp(e,'tap the wave again'))");
+  expect(page).not.toContain('the icon in the address bar), then tap');
+  // The level meter's AudioContext is made before the permission prompt, inside the tap.
+  expect(page.indexOf('oCtx=new AC()')).toBeLessThan(page.indexOf("oStream=await navigator.mediaDevices.getUserMedia"));
 });

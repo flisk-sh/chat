@@ -567,7 +567,12 @@ fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){fileNo
 const voiceBtn=$('voice'),micBtn=$('mic'),TTS=window.speechSynthesis;
 let voiceOn=lsGet('chat_voice')==='1',rec=null,recTimer=null,byVoice=false;
 const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').replace(/([.!?]) *[.] +/g,'$1 ').trim().slice(0,3000);
-const stopTalk=()=>{try{TTS&&TTS.cancel();}catch(e){}};
+// The voice is Ava Multilingual, the one the video factory uses (streamed from /voice); the browser's own voice reads
+// the answer when it fails. stopTalk ends whatever is being read.
+const AUD=new Audio();AUD.preload='auto';let sayGen=0;
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+const unlockAudio=()=>{try{AUD.src=SILENT;const p=AUD.play();if(p)p.catch(()=>{});}catch(e){}};
+const stopTalk=()=>{sayGen++;try{AUD.pause();}catch(e){}try{TTS&&TTS.cancel();}catch(e){}};
 const GOOD=['Google','Natural','Neural','Premium','Enhanced','Samantha','Ava','Daniel'];
 // Which language a text is in: Whisper's answer when there is one, else a guess from the letters, else the browser's.
 const LOC={en:'en-US',uk:'uk-UA',ru:'ru-RU',es:'es-ES',de:'de-DE',fr:'fr-FR',it:'it-IT',pt:'pt-BR',pl:'pl-PL',nl:'nl-NL',tr:'tr-TR',cs:'cs-CZ',ja:'ja-JP',ko:'ko-KR',zh:'zh-CN',ar:'ar-SA',he:'he-IL',hi:'hi-IN',el:'el-GR',sv:'sv-SE',fi:'fi-FI',da:'da-DK',no:'nb-NO',ro:'ro-RO',hu:'hu-HU',bg:'bg-BG',vi:'vi-VN',th:'th-TH',id:'id-ID',kk:'kk-KZ',ka:'ka-GE',be:'be-BY'};
@@ -579,14 +584,26 @@ const langOf=(t,hint)=>{if(hint)return String(hint).slice(0,2).toLowerCase();t=S
   if(/ (the|and|is|you|what|how|to) /.test(w))return 'en';return (navigator.language||'en').slice(0,2).toLowerCase();};
 const pickVoice=(lang)=>{if(!TTS)return null;const l=String(lang).slice(0,2).toLowerCase(),vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===l);return vs.find(v=>GOOD.some(g=>v.name.indexOf(g)>=0))||vs.find(v=>v.default)||vs[0]||null;};
 const utter=(x,lang,v)=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:(LOC[lang]||lang);if(v)u.voice=v;return u;};
-const talkBack=(t,hint)=>{if(!TTS||!t)return;stopTalk();const lang=langOf(t,hint),v=pickVoice(lang);
-  const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());
-  parts.forEach(x=>TTS.speak(utter(x,lang,v)));};
+const sentences=(t)=>{const out=[];spoken(t).replace(/([.!?…]) +/g,'$1|').split('|').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(out.length&&(out[out.length-1].length<40||out.length>=8))out[out.length-1]+=' '+x;else out.push(x);});return out;};
+// Ava's voice streams from /voice, so it starts on the first chunk. When it has not started within 6 s, or fails
+// before it starts, the browser's own voice reads the answer instead.
+const playVoice=(text,lang,gen)=>new Promise((ok)=>{if(gen!==sayGen||!window.__SIGNED__){ok(false);return;}let started=false,w=0,t=0;
+  const fin=(r)=>{AUD.onended=AUD.onerror=AUD.onplaying=null;clearInterval(w);clearTimeout(t);ok(r);};
+  AUD.onplaying=()=>{started=true;clearTimeout(t);};AUD.onended=()=>fin(true);AUD.onerror=()=>{try{AUD.pause();}catch(e){}fin(started);};
+  t=setTimeout(()=>{if(!started){try{AUD.pause();AUD.removeAttribute('src');AUD.load();}catch(e){}fin(false);}},6000);
+  w=setInterval(()=>{if(gen!==sayGen){try{AUD.pause();}catch(e){}fin(true);}},150);
+  AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(text.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{if(!started)fin(false);});});
+const browserSay=(x,lang,gen)=>new Promise((ok)=>{if(!TTS||gen!==sayGen){ok();return;}const u=utter(x,lang,pickVoice(lang));let done=false,w=0;
+  const fin=()=>{if(done)return;done=true;clearInterval(w);ok();};u.onend=u.onerror=fin;w=setInterval(()=>{if(gen!==sayGen){try{TTS.cancel();}catch(e){}fin();}},150);TTS.speak(u);setTimeout(fin,4000+x.length*120);});
+async function say(t,hint){stopTalk();const gen=sayGen,lang=langOf(t,hint),words=spoken(t);if(!words)return;
+  if(await playVoice(words,lang,gen))return;
+  for(const x of sentences(t)){if(gen!==sayGen)return;await browserSay(x,lang,gen);}}
+const talkBack=(t,hint)=>{if(t)say(t,hint);};
 if(TTS&&TTS.onvoiceschanged!==undefined)TTS.onvoiceschanged=()=>{};
 const SV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',SPK_ON=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',SPK_OFF=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>';
 const drawVoice=()=>{voiceBtn.innerHTML=voiceOn?SPK_ON:SPK_OFF;voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);const t=voiceOn?'Reading answers aloud. Tap to stop':'Read answers aloud';voiceBtn.title=t;voiceBtn.setAttribute('aria-label',t);};
 if(!TTS){voiceBtn.title='This browser cannot speak';voiceBtn.disabled=true;}
-voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Answers will be read aloud.');};
+voiceBtn.onclick=()=>{unlockAudio();voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Answers will be read aloud.');};
 drawVoice();
 
 const micIdle=(label)=>{micBtn.classList.remove('rec','busy');micBtn.disabled=false;micBtn.setAttribute('aria-label',label||'Speak your task');micBtn.title=label||'Speak your task';};
@@ -603,12 +620,23 @@ async function heard(blob){
   }catch(e){errMsg(String(e.message||e));}
   finally{box.placeholder=was;micIdle();}
 }
+// What to do when the microphone is refused, in the words of the device in hand. On an iPhone, Chrome and Safari both
+// need the phone's own switch (Settings) as well as the site's prompt, and a refused prompt is not asked again.
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function micHelp(e,again){const n=e&&e.name;
+  if(n==='NotFoundError'||n==='OverconstrainedError')return 'No microphone found on this device.';
+  if(n==='NotReadableError'||n==='AbortError')return 'Another app is using the microphone. Close it (a call, a recorder), then '+again+'.';
+  if(n!=='NotAllowedError'&&n!=='SecurityError')return 'Could not open the microphone: '+(e&&e.message||e);
+  if(IOS&&/CriOS/.test(navigator.userAgent))return 'The microphone is off for Chrome. On your iPhone open Settings › Apps › Chrome and turn on Microphone. Then reload chat.flisk.si and '+again+'. If Chrome asked and you tapped Don’t Allow, reload the page and tap Allow.';
+  if(IOS)return 'The microphone is off for this site. Tap aA in the address bar › Website Settings › Microphone › Allow (or Settings › Apps › Safari › Microphone). Then reload and '+again+'.';
+  if(/Android/.test(navigator.userAgent))return 'The microphone is blocked. Tap the icon left of the address › Permissions › Microphone › Allow, then '+again+'.';
+  return 'The microphone is blocked for chat.flisk.si. Click the icon left of the address › Microphone › Allow, then '+again+'.';}
 async function listen(){
   if(rec){rec.stop();return;}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
   stopTalk();let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
-  catch(e){errMsg(e&&e.name==='NotAllowedError'?'Allow the microphone for chat.flisk.si (the icon in the address bar), then tap the mic again.':e&&e.name==='NotFoundError'?'No microphone found on this device.':'Could not open the microphone: '+(e&&e.message||e));return;}
+  catch(e){errMsg(micHelp(e,'tap the mic again'));return;}
   const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
   const chunks=[];rec=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream);
   rec.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
@@ -622,11 +650,7 @@ if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.oncl
 const oracle=$('oracle'),orb=$('orb'),oState=$('ostate'),oYou=$('oyou'),oSay=$('osay');
 let oLang='',oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
 const oSet=(st,msg)=>{oracle.className='oracle '+st;oState.textContent=msg;};
-const speakAll=(t,hint)=>new Promise((done)=>{if(!TTS||!t){done();return;}stopTalk();const lang=langOf(t,hint),v=pickVoice(lang);oracle._noVoice=!v&&TTS.getVoices().length>0?lang:'';
-  const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());if(!parts.length){done();return;}
-  let left=parts.length,fin=false;const end=()=>{if(fin)return;fin=true;oSpeaking=false;done();};const guard=setTimeout(end,4000+t.length*90);
-  oSpeaking=true;parts.forEach(x=>{const u=utter(x,lang,v);u.onend=u.onerror=()=>{if(--left<=0){clearTimeout(guard);end();}};TTS.speak(u);});
-  oracle._endSpeak=()=>{clearTimeout(guard);stopTalk();end();};});
+const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;try{await say(t,hint);}finally{oSpeaking=false;}};
 // Record one utterance: starts on speech, stops after 1 s of quiet (1.5 s after a short opening like "Hi!", so a greeting
 // and its question stay one turn), or 30 s; gives up after 9 s of silence.
 const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
@@ -656,16 +680,18 @@ async function oLoop(){
     if(b.lang)oLang=b.lang;oYou.textContent=said;oSay.textContent=reply;oTurns.push({role:'user',content:said},{role:'assistant',content:reply});
     oSet('speaking','Speaking… tap the circle to interrupt');
     await speakAll(reply,oLang);
-    if(oracle._noVoice){const n=LNAME[oracle._noVoice]||oracle._noVoice;oSet('speaking','This browser has no '+n+' voice, so read the answer. Tap the circle to talk.');return;}
   }
 }
 async function oOpen(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
   if(!window.__SIGNED__){signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+  // The level meter's AudioContext is made inside the tap: an iPhone leaves one made later silent, and talk never hears you.
+  const AC=window.AudioContext||window.webkitAudioContext;try{oCtx=new AC();oCtx.resume().catch(()=>{});}catch(e){oCtx=null;}
   stopTalk();oracle.hidden=false;oYou.textContent='';oSay.textContent='';oTurns=[];oLang='';oSet('thinking','Opening the microphone…');
   try{oStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
-  catch(e){oClose();errMsg(e&&e.name==='NotAllowedError'?'Allow the microphone for chat.flisk.si (the icon in the address bar), then tap the wave again.':e&&e.name==='NotFoundError'?'No microphone found on this device.':'Could not open the microphone: '+(e&&e.message||e));return;}
-  const AC=window.AudioContext||window.webkitAudioContext;oCtx=new AC();try{await oCtx.resume();}catch(e){}
+  catch(e){oClose();errMsg(micHelp(e,'tap the wave again'));return;}
+  if(!oCtx){oClose();errMsg('This browser cannot listen for pauses. Use the mic button instead.');return;}
+  try{await oCtx.resume();}catch(e){}
   oOn=true;oLoop();
 }
 function oClose(){oOn=false;if(oStop)oStop();if(oracle._endSpeak)oracle._endSpeak();stopTalk();
@@ -676,7 +702,7 @@ function oClose(){oOn=false;if(oStop)oStop();if(oracle._endSpeak)oracle._endSpea
 orb.onclick=()=>{if(!oOn)return;if(oSpeaking&&oracle._endSpeak){oracle._endSpeak();return;}if(oStop){oStop();return;}if(!oRec)oLoop();};
 $('oend').onclick=oClose;
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&!oracle.hidden)oClose();});
-$('orbbtn').onclick=oOpen;
+$('orbbtn').onclick=()=>{unlockAudio();oOpen();};
 const secs=(ms)=>Math.max(0,Math.round(ms/1000))+'s';
 // Step icons, from Lucide (lucide.dev, ISC license): each kind of step gets its own, the way T3 Code shows tool calls.
 const SI={terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
@@ -826,7 +852,7 @@ function ask6(task){
 }
 const BUILD=/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|video|clip|promo|reel|build|make|create|design)\\b/i,ASK=/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell|list|turn)\\b/i;
 let lastSend=0;
-form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
+form.onsubmit=(e)=>{e.preventDefault();stopTalk();if(voiceOn)unlockAudio();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}dropLimit();userMsg(task);
