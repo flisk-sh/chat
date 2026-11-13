@@ -7,6 +7,7 @@ import { clearSession, makeSession, readSession, sameOrigin } from './session.js
 export const TASKS_PER_DAY = 20;
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
+export const VIDEOS_PER_LOGIN = 5;
 const SITE_DAYS = 7;
 
 // The model picker's list comes from inference (/v1/catalog), so a model added there shows up here with no chat change.
@@ -31,7 +32,7 @@ const SECURITY = {
   'x-frame-options': 'DENY',
   'referrer-policy': 'same-origin',
   'strict-transport-security': 'max-age=31536000',
-  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
 };
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -71,6 +72,42 @@ export async function publishSite(env, login, content, origin) {
   return { url: `${origin}/s/${id}` };
 }
 
+// A video a task made: kept as base64 parts in D1 (a row holds at most 2 MB), linked by an unguessable id, 7 days,
+// the oldest dropped over VIDEOS_PER_LOGIN.
+export async function saveVideo(env, login, parts, title, origin) {
+  if (!Array.isArray(parts) || !parts.length) return { error: 'the video is empty' };
+  const id = hex(8);
+  const created = new Date().toISOString();
+  await env.DB.batch(parts.map((data, i) => env.DB.prepare('INSERT INTO videos (id, part, login, title, data, created) VALUES (?, ?, ?, ?, ?, ?)').bind(id, i, login, String(title || '').slice(0, 60), data, created)));
+  await env.DB.prepare('DELETE FROM videos WHERE login = ? AND id NOT IN (SELECT id FROM videos WHERE login = ? GROUP BY id ORDER BY MAX(created) DESC LIMIT ?)').bind(login, login, VIDEOS_PER_LOGIN).run();
+  return { url: `${origin}/v/${id}.mp4` };
+}
+
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+// Serves the mp4 with byte ranges, which Safari needs to play a <video>.
+async function videoResponse(env, id, request) {
+  const { results = [] } = await env.DB.prepare('SELECT part, data, created FROM videos WHERE id = ? ORDER BY part').bind(id).all();
+  if (!results.length || Date.now() - Date.parse(results[0].created) > SITE_DAYS * 86400_000) return null;
+  const chunks = results.map((r) => unb64(r.data));
+  const size = chunks.reduce((n, c) => n + c.length, 0);
+  const all = new Uint8Array(size);
+  let o = 0;
+  for (const c of chunks) {
+    all.set(c, o);
+    o += c.length;
+  }
+  const headers = { 'content-type': 'video/mp4', 'accept-ranges': 'bytes', 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff', 'x-robots-tag': 'noindex, nofollow' };
+  const m = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get('range') || '');
+  if (m && (m[1] || m[2])) {
+    let start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+    let end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    if (start >= size || start > end) return new Response(null, { status: 416, headers: { ...headers, 'content-range': `bytes */${size}` } });
+    return new Response(all.slice(start, end + 1), { status: 206, headers: { ...headers, 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': String(end - start + 1) } });
+  }
+  return new Response(all, { headers: { ...headers, 'content-length': String(size) } });
+}
+
 // The page opens in its own sandbox (no cookies, no access to chat), with a bar saying who made it.
 function siteResponse(row) {
   const bar = `<div style="position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;font:12px ui-monospace,Menlo,monospace;padding:6px 10px;z-index:2147483647">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site · <a style="color:#7ee787" href="https://github.com/flisk-sh/fleet/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
@@ -93,7 +130,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
   const origin = env.PUBLIC_ORIGIN || url.origin;
 
   if (request.method === 'GET' && path === '/favicon.ico') return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nDisallow: /s/\nDisallow: /api/\n', { headers: { 'content-type': 'text/plain' } });
+  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nDisallow: /s/\nDisallow: /v/\nDisallow: /api/\n', { headers: { 'content-type': 'text/plain' } });
 
   // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.
   if (request.method === 'GET' && path === '/health') {
@@ -116,6 +153,12 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(sm[1]).first();
     if (!row || Date.now() - Date.parse(row.created) > SITE_DAYS * 86400_000) return html(messagePage('Page not found', 'This page expired or never existed.'), 404);
     return siteResponse(row);
+  }
+
+  const vm = /^\/v\/([a-f0-9]{16})\.mp4$/.exec(path);
+  if (vm && (request.method === 'GET' || request.method === 'HEAD')) {
+    const res = await videoResponse(env, vm[1], request);
+    return res || html(messagePage('Video not found', 'This video expired or never existed.'), 404);
   }
 
   if (request.method === 'GET' && path === '/auth/start') {
@@ -179,12 +222,16 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       const missing = order.find((p) => !connections[p]);
       if (missing) return json(400, { error: `${missing} is not connected yet. Connect it, or tick another computer` });
       // Only the shared free model counts against the daily cap; the visitor's own key costs us nothing.
-      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE }))) return json(429, { error: `at most ${TASKS_PER_DAY} free tasks a day each. Come back tomorrow, or pick "my API key"` });
+      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE }))) {
+        const now = new Date();
+        const resetsIn = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
+        return json(429, { error: `You've used today's ${TASKS_PER_DAY} free tasks`, limit: TASKS_PER_DAY, resetsIn });
+      }
       const { readable, writable } = new TransformStream();
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, order, publish: (content) => publishSite(env, login, content, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, order, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

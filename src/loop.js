@@ -1,3 +1,4 @@
+import { cleanVideo, makeVideo } from './video.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
 export const MAX_STEPS = 8;
@@ -15,6 +16,7 @@ Pick exactly one of these shapes:
 {"write": {"path": "<file>", "content": "<text>"}}
 {"read": "<file>"}
 {"publish": "<path to an index.html>"}
+{"video": {"title": "<short title>", "scenes": [{"text": "<words on screen, at most 10>", "say": "<one spoken sentence>"}]}}
 {"say": "<answer for the user>"}
 
 Rules:
@@ -23,6 +25,7 @@ Rules:
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
 - Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
 - To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- To make a video (the user asks for a video, a clip or a promo, or the answers say "What: A video"): send ONE "video" action with 4 to 6 scenes. Chat draws the scenes, records a voice-over and makes an mp4 on the computer (it takes a few minutes), then tells you the link. Then "say" the link in one sentence. Never invent a phone number, email address or street address.
 - For multi-service apps: Fleet pods have no Docker or Tilt. Use Flisk in local-process mode only (services that declare a \"command\" field). First install the CLI with:
   curl -fsSL https://flisk.sh/install.sh | sh
   Then:
@@ -56,9 +59,13 @@ export function parseAction(text) {
       if (a?.write && typeof a.write.path === 'string' && typeof a.write.content === 'string') return { type: 'write', path: a.write.path, content: a.write.content };
       if (typeof a?.read === 'string' && a.read.trim()) return { type: 'read', path: a.read.trim() };
       if (typeof a?.publish === 'string' && a.publish.trim()) return { type: 'publish', path: a.publish.trim() };
+      if (a?.video) {
+        const spec = cleanVideo(a.video);
+        if (spec) return { type: 'video', spec };
+      }
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
-    if (/^\s*\{\s*"(run|write|read|publish)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
+    if (/^\s*\{\s*"(run|write|read|publish|video)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
 
   // If it still looks like a tool call or XML, force a retry.
@@ -134,7 +141,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, order = [], emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), order = [], emit = () => {}, maxSteps = MAX_STEPS }) {
   const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task }];
   let podId = null;
   let provider = null;
@@ -190,6 +197,14 @@ export async function runTask({ task, history = [], model, computer, publish, or
         emit({ type: 'write', path: action.path, bytes: action.content.length });
         const r = await computer.write(podId, action.path, action.content);
         shown = r.error ? { error: r.error } : { written: action.path };
+      } else if (action.type === 'video') {
+        emit({ type: 'video_start', title: action.spec.title, scenes: action.spec.scenes.length });
+        const made = await makeVideo({ computer, podId, spec: action.spec, save: saveVideo, emit });
+        if (made.error) shown = { error: made.error };
+        else {
+          links.push(made.url);
+          shown = { video: made.url };
+        }
       } else if (action.type === 'publish') {
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);
@@ -214,6 +229,8 @@ export async function runTask({ task, history = [], model, computer, publish, or
         ? `Error: ${shown.error}`
         : shown.published
           ? `Published. The live link is ${shown.published}`
+          : shown.video
+            ? `The video is ready. Its link is ${shown.video}`
           : shown.exitCode !== undefined
             ? `Exit code ${shown.exitCode}\nstdout:\n${shown.stdout || '(empty)'}${shown.stderr ? `\nstderr:\n${shown.stderr}` : ''}`
             : shown.written
