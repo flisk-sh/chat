@@ -50,7 +50,7 @@ details.pick>summary::after{content:' ▾'}
 details.pick .menu{position:absolute;z-index:5;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--line);padding:6px 8px;max-height:300px;overflow:auto}
 details.pick .menu label{display:flex;gap:8px;align-items:center;padding:3px 0;font:inherit;text-transform:none;letter-spacing:0}
 details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-top:1px solid var(--dim);opacity:.4;margin:6px 0}
-#byo{display:flex;flex-direction:column;gap:6px}
+#byo{display:flex;flex-direction:column;gap:6px}#byo[hidden]{display:none}
 `;
 
 const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><style>${CSS}</style></head><body><div class="wrap">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;

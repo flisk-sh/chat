@@ -246,3 +246,21 @@ describe('the two pickers', () => {
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
   });
 });
+
+describe('service binding to inference', () => {
+  test('the free model is called through env.INFERENCE, not the public address', async () => {
+    const seen = [];
+    const e = env({ INFERENCE: { fetch: async (u, init) => (seen.push(u), Response.json({ choices: [{ message: { content: '{"say":"via binding"}' } }] })) } });
+    const w = world();
+    const res = await post(e, w, '/api/run', { task: 'hi' }, await authed(e));
+    expect((await res.text())).toContain('via binding');
+    expect(seen).toEqual(['https://inf.test/v1/chat/completions']);
+    expect(w.log.some((l) => l.modelCall)).toBe(false);
+  });
+  test('/health reports fleet and inference without sign-in', async () => {
+    const e = env({ INFERENCE: { fetch: async () => new Response('{}', { status: 401 }) } });
+    const w = world();
+    const r = await (await handle(new Request(`${ORIGIN}/health`), e, { fetchImpl: async () => new Response('{}', { status: 200 }) })).json();
+    expect(r).toEqual({ fleet: { status: 200 }, inference: { status: 401 } });
+  });
+});

@@ -10,6 +10,12 @@ FLEET_URL = "https://fleet.flisk.si"
 INFERENCE_URL = "https://inference.flisk.si/v1/chat/completions"
 INFERENCE_MODEL = "flisk-wolf-chat"
 
+# The free model is the flisk-inference Worker on our own domain: a direct link, because a Worker cannot call another
+# Worker by its public address on the same domain (Cloudflare error 1033).
+[[services]]
+binding = "INFERENCE"
+service = "flisk-inference"
+
 # Made sites. Create once: bunx wrangler@4 d1 create flisk-chat, put its id below, then
 #   bunx wrangler@4 d1 execute flisk-chat --remote --file schema.sql
 [[d1_databases]]

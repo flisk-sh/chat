@@ -70,11 +70,14 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
   const model = chosen.free ? env.INFERENCE_MODEL || 'flisk-wolf-chat' : chosen.model;
   const key = chosen.free ? env.INFERENCE_KEY : chosen.key;
   const maxTokens = chosen.free ? 1024 : 4096;
+  // The free model is another Worker on our own domain: Cloudflare refuses a Worker calling it by its public address
+  // (error 1033), so the call goes through a service binding when there is one.
+  const call = chosen.free && env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl;
   return async (messages) => {
     if (!key) return { error: 'chat has no model key yet (INFERENCE_KEY)' };
     let res;
     try {
-      res = await fetchImpl(url, {
+      res = await call(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat' },
         body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0 }),
