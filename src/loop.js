@@ -36,6 +36,7 @@ Rules:
   If the curl install fails, fall back to installing Node first then npm install -g @flisk-sh/flisk.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - In "say", give the result itself (numbers, the content, the link), not a description of the steps.
+- "say" is shown as Markdown: **bold**, "- " lists, and "| a | b |" tables. For weather, prices, schedules or any comparison over days or items, give one line with the current state, then a table (for weather: Day | Sky | High / Low | Rain chance, for the next 7 days), then 2 or 3 bullets with what it means for the user. Keep plain questions short with no table.
 
 Remember: reply is only the JSON object. Nothing else.`;
 

@@ -100,7 +100,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #talk{display:flex;flex-direction:column;gap:18px;padding:28px 0 24px}#talk:empty{display:none}
 .u{align-self:flex-end;max-width:80%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
 .turn{display:flex;flex-direction:column;gap:10px}
-.a{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}.a a{font-weight:500;word-break:break-all}
+.a{overflow-wrap:anywhere;line-height:1.65}.a a{font-weight:500;word-break:break-all}.a p{margin:0 0 .8em}.a p.h{font-weight:600;font-size:1.05em}.a ul,.a ol{margin:0 0 .8em;padding-left:1.3em}.a li{margin:.3em 0}.a code{font-family:var(--mono);font-size:.9em;background:var(--panel);padding:.1em .35em}.a .tw{overflow-x:auto;margin:.4em 0 1em}.a table{border-collapse:collapse;width:100%;min-width:420px}.a th{text-align:left;font-weight:600;padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}.a td{padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}
 .work{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--dim);border-bottom:1px solid var(--line);padding-bottom:8px}
 .work .l{display:inline-flex;align-items:center;gap:8px}
 .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--green);animation:spin .8s linear infinite}
@@ -304,10 +304,33 @@ const MODELS=window.__MODELS__||[],IC=window.__ICONS__||{},LG=window.__LOGOS__||
 let history=[];
 const down=()=>{scroller.scrollTop=scroller.scrollHeight;};
 const node=(tag,cls,text)=>{const d=document.createElement(tag);if(cls)d.className=cls;if(text!=null)d.textContent=text;return d;};
+const inl=(p,s)=>{String(s).split(/(\\*\\*[^*]+\\*\\*|\\x60[^\\x60]+\\x60|https?:\\/\\/[^\\s)|]+)/).forEach(t=>{if(!t)return;
+  if(t.slice(0,2)==='**'&&t.length>4)p.appendChild(node('b','',t.slice(2,-2)));
+  else if(t.charCodeAt(0)===96&&t.length>2)p.appendChild(node('code','',t.slice(1,-1)));
+  else if(/^https?:\\/\\//.test(t)){const a=document.createElement('a');a.href=t;a.target='_blank';a.rel='noopener';a.textContent=t;p.appendChild(a);}
+  else p.appendChild(document.createTextNode(t));});};
+const LI=/^\\s*([-*]|\\d+[.)])\\s+(.*)/;
+const md=(n,text)=>{n.textContent='';const L=String(text).split('\\n');let i=0;
+  const cells=(l)=>l.trim().replace(/^\\|/,'').replace(/\\|$/,'').split('|').map(c=>c.trim());
+  while(i<L.length){const l=L[i];
+    if(!l.trim()){i++;continue;}
+    if(l.trim().charAt(0)==='|'&&i+1<L.length&&L[i+1].indexOf('-')>=0&&/^[\\s:|-]+$/.test(L[i+1])){
+      const t=node('table'),th=node('thead'),tb=node('tbody'),hr=node('tr');
+      cells(l).forEach(c=>{const h=node('th');inl(h,c);hr.appendChild(h);});th.appendChild(hr);i+=2;
+      while(i<L.length&&L[i].trim().charAt(0)==='|'){const r=node('tr');cells(L[i]).forEach(c=>{const d=node('td');inl(d,c);r.appendChild(d);});tb.appendChild(r);i++;}
+      t.append(th,tb);const w=node('div','tw');w.appendChild(t);n.appendChild(w);continue;}
+    const m=LI.exec(l);
+    if(m){const ul=node(/\\d/.test(m[1])?'ol':'ul');for(let x=LI.exec(L[i]);i<L.length&&x;x=i<L.length?LI.exec(L[i]):null){const li=node('li');inl(li,x[2]);ul.appendChild(li);i++;}n.appendChild(ul);continue;}
+    const h=/^#{1,4}\\s+(.*)/.exec(l);
+    if(h){const e=node('p','h');inl(e,h[1]);n.appendChild(e);i++;continue;}
+    const buf=[l];i++;
+    while(i<L.length&&L[i].trim()&&!LI.test(L[i])&&L[i].trim().charAt(0)!=='|'&&!/^#{1,4}\\s/.test(L[i])){buf.push(L[i]);i++;}
+    const p=node('p');inl(p,buf.join(' '));n.appendChild(p);}
+};
 const linkify=(n,text)=>{n.textContent='';String(text).split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;n.appendChild(a);}else n.appendChild(document.createTextNode(p));});};
 const add=(n)=>{talk.appendChild(n);down();return n;};
 const userMsg=(t)=>add(node('div','u',t));
-const asstMsg=(t)=>{const d=node('div','a');linkify(d,t);return add(d);};
+const asstMsg=(t)=>{const d=node('div','a');md(d,t);return add(d);};
 const errMsg=(t)=>add(node('div','err',t));
 const chatting=(on)=>{welcome.classList.toggle('gone',on);};
 // Past chats live in this browser only (localStorage), never on our server.
@@ -485,7 +508,7 @@ async function run(task){
       }}
   }catch(err){failed=true;errCard(turn,String(err.message||err),'other',task);}
   end(!failed||answer!==null);
-  if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();
+  if(answer!==null){const a=node('div','a');md(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();
     const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
     dl2.onclick=()=>{const u=URL.createObjectURL(new Blob([answer],{type:'text/markdown'})),x=document.createElement('a');x.href=u;x.download='flisk-chat-answer.md';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);dl2.textContent='Saved ✓';setTimeout(()=>dl2.textContent='Save as file',1500);};
     cp2.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(answer).then(()=>{cp2.textContent='Copied';setTimeout(()=>cp2.textContent='Copy',1500);});};sv.append(dl2,cp2);turn.appendChild(sv);}
