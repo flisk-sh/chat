@@ -13,62 +13,76 @@ export const PROVIDER_NAMES = { daytona: 'Daytona', blaxel: 'Blaxel', upstash: '
 export const AI_CHOICES = [['wolf', 'Flisk Wolf (free)'], ['anthropic', 'Claude (my API key)'], ['openai', 'OpenAI (my API key)'], ['openrouter', 'OpenRouter (my API key)']];
 
 const CSS = `
-:root{--bg:#faf9f4;--fg:#1a1a14;--dim:#76746a;--line:#dedbcd;--card:#fff;--accent:#1f7a3d;--term:#12130f;--termfg:#e8e8e8}
-@media (prefers-color-scheme:dark){:root{--bg:#12130f;--fg:#f1efdc;--dim:#a19f8d;--line:#2e2f26;--card:#1a1b15;--accent:#58c27d}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-a{color:var(--accent)}.m{font:14px ui-monospace,Menlo,monospace}
-.wrap{max-width:820px;margin:0 auto;padding:20px 16px 40px;min-height:100vh;display:flex;flex-direction:column}
-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;margin-bottom:28px;border-bottom:1px solid var(--line)}
-header b{font:700 18px ui-monospace,Menlo,monospace}header b i{color:var(--accent);font-style:normal}
-h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 10px;letter-spacing:-.025em;text-align:center}
-.sub{max-width:600px;color:var(--dim);margin:0 auto 22px;text-align:center}
-.btn{display:inline-block;font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 18px;cursor:pointer;text-decoration:none}
-.btn[disabled]{opacity:.5;cursor:default}
-.cols{display:flex;flex-direction:column;gap:16px;flex:1}
-.panel{border:0;padding:0}.panel h2{display:none}
-#talk{display:flex;flex-direction:column;gap:14px;max-height:none}
-#talk:empty{display:none}
-.u{align-self:flex-end;max-width:85%;background:var(--accent);color:#fff;border-radius:16px 16px 4px 16px;padding:9px 14px;white-space:pre-wrap}
-.a{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:10px 14px;max-width:92%}.a a{word-break:break-all;font-weight:600}.err{color:#b42318;white-space:pre-wrap;background:var(--card);border:1px solid #b42318;border-radius:12px;padding:10px 14px}
-#comp{border:1px solid var(--line);border-radius:12px;overflow:hidden}#comp[hidden]{display:none}
-#comp h3{margin:0;padding:8px 12px;font:600 12px ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);border-bottom:1px solid var(--line);background:var(--card)}
-#screen{font:13px ui-monospace,Menlo,monospace;background:var(--term);color:var(--termfg);padding:12px;min-height:120px;max-height:36vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
-#screen .c{color:#7ee787}#screen .d{color:#9aa0a6}#screen .x{color:#ff7b72}
-form.ask{display:flex;gap:8px;align-items:flex-end;margin-top:auto;position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-form.ask textarea{flex:1;min-height:48px;max-height:160px;font:inherit;padding:8px 10px;border:0;outline:0;background:transparent;color:inherit;resize:none}
-.ideas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}.ideas.gone{display:none}
-@media (max-width:600px){.ideas{grid-template-columns:1fr}}
-.ideas button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:inherit;padding:12px 14px;cursor:pointer;text-align:left;border-radius:12px;line-height:1.35}
-.ideas button:hover{border-color:var(--accent)}
-.cards{display:grid;gap:10px;margin:10px 0}
-.card{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px}.card b{display:block}.card small{color:var(--dim)}
-.card form{display:flex;gap:8px;margin-top:8px}.card input{flex:1;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;min-width:0}
-.note{font-size:13px;color:var(--dim);margin-top:10px;text-align:center}
-.pickers{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;align-items:flex-start;justify-content:center}
-.pick{display:flex;flex-direction:column;gap:4px;min-width:210px}
-.pick>label{display:none}
-.pick select,.pick input[type=text],.pick input[type=password]{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit}
-details.pick{position:relative}details.pick>summary{cursor:pointer;list-style:none;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;font-size:14px;min-width:240px}
-details.pick>summary::after{content:' ▾';color:var(--dim)}
-details.pick .menu{position:absolute;z-index:5;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;max-height:300px;overflow:auto;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+:root{--paper:#f7f5e4;--card:#fffef6;--ink:#171715;--dim:#6b6a5f;--green:#16a34a;--glow:#22c55e;--night:#0a0a0e;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--serif:Fraunces,'Times New Roman',serif;--sans:'Inter Tight',system-ui,-apple-system,'Segoe UI',sans-serif}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%;overflow-x:clip}
+body{margin:0;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");color:var(--ink);font:15px/1.55 var(--sans)}
+a{color:inherit}.m{font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.mark{display:inline-grid;place-items:center;width:22px;height:22px;background:var(--glow);color:var(--night);font:500 10px/1 var(--mono)}
+.frame{max-width:980px;margin:0 auto;min-height:100vh;border-left:1px solid var(--ink);border-right:1px solid var(--ink);display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:stretch;border-bottom:1px solid var(--ink);height:46px}
+.logo{display:inline-flex;align-items:center;gap:9px;padding:0 20px;font:800 22px/1 var(--serif);letter-spacing:-.03em;text-decoration:none}
+header .r{display:flex;align-items:center;gap:14px;padding:0 20px}
+header a.cta{align-self:stretch;display:flex;align-items:center;padding:0 22px;margin-right:-20px;background:var(--ink);color:var(--paper);text-decoration:none}
+header a.cta:hover{background:var(--green)}
+.hero{padding:44px 40px 22px;border-bottom:1px solid var(--ink)}
+h1{font:800 clamp(40px,7vw,76px)/.95 var(--serif);letter-spacing:-.045em;margin:0 0 16px}h1 em{font-style:normal;color:var(--green)}
+.sub{font-size:17px;max-width:52ch;margin:0 0 22px}
+.b,.btn{display:inline-block;border:1px solid var(--ink);padding:11px 18px;text-decoration:none;background:transparent;color:var(--ink);font:12px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+.b:hover,.btn:hover{background:var(--ink);color:var(--paper)}
+.btn{background:var(--green);border-color:var(--green);color:#fff}.btn:hover{background:var(--ink);border-color:var(--ink)}
+.btn[disabled]{opacity:.5;cursor:wait}
+.pickers{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.pick{display:flex;flex-direction:column;gap:6px;min-width:230px}
+.pick>label{font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.pick select,.pick input[type=text],.pick input[type=password]{font:13px var(--mono);padding:10px;border:1px solid var(--ink);background:var(--card);color:inherit;border-radius:0}
+details.pick{position:relative;align-self:flex-start}details.pick>summary{cursor:pointer;list-style:none;border:1px solid var(--ink);background:var(--card);padding:10px;font:13px var(--mono);min-width:260px}
+details.pick>summary::before{content:'COMPUTERS  ';color:var(--dim);font-size:11px}details.pick>summary::after{content:' ▾'}
+details.pick .menu{position:absolute;z-index:5;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--ink);border-top:0;padding:8px 12px;max-height:300px;overflow:auto;font-size:14px}
 details.pick .menu label{display:flex;gap:8px;align-items:center;padding:3px 0}
-details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-top:1px solid var(--ink);margin:6px 0;opacity:.3}
 #byo{display:flex;flex-direction:column;gap:6px}#byo[hidden]{display:none}
+.cols{display:flex;flex-direction:column;flex:1}
+.panel{padding:0}.panel h2{display:none}
+.ideas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--ink)}.ideas.gone{display:none}
+@media (max-width:640px){.ideas{grid-template-columns:1fr}.hero{padding:28px 20px 18px}}
+.ideas button{font:inherit;font-size:15px;border:0;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);background:transparent;color:inherit;padding:20px 24px 22px;cursor:pointer;text-align:left;line-height:1.4;position:relative}
+.ideas button:nth-child(2n){border-right:0}.ideas button:nth-last-child(-n+2){border-bottom:0}
+.ideas button::before{content:attr(data-n);display:block;font:11px/1 var(--mono);color:var(--dim);margin-bottom:10px;letter-spacing:.06em}
+.ideas button:hover{background:var(--card)}.ideas button:hover::before{color:var(--green)}
+#talk{display:flex;flex-direction:column;gap:14px;padding:24px 40px}#talk:empty{display:none}
+@media (max-width:640px){#talk{padding:20px}}
+.u{align-self:flex-end;max-width:85%;background:var(--ink);color:var(--paper);padding:10px 14px;white-space:pre-wrap}
+.a{white-space:pre-wrap;background:var(--card);border:1px solid var(--ink);padding:12px 16px;max-width:92%}.a a{word-break:break-all;font-weight:600;color:var(--green)}
+.err{color:#b42318;white-space:pre-wrap;border:1px dashed #b42318;padding:12px 16px}
+#comp{margin:0 40px 20px;border:1px solid var(--ink)}#comp[hidden]{display:none}
+@media (max-width:640px){#comp{margin:0 20px 16px}}
+#comp h3{margin:0;padding:8px 12px;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);border-bottom:1px solid var(--ink);background:var(--card);font-weight:400}
+#screen{font:13px/1.55 var(--mono);background:var(--night);color:#e8e8e8;padding:12px;min-height:120px;max-height:36vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
+#screen .c{color:var(--glow)}#screen .d{color:#8b8f98}#screen .x{color:#ff7b72}
+form.ask{display:flex;gap:0;margin-top:auto;position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--ink)}
+form.ask textarea{flex:1;min-height:64px;max-height:160px;font:15px var(--sans);padding:18px 40px;border:0;outline:0;background:transparent;color:inherit;resize:none}
+@media (max-width:640px){form.ask textarea{padding:16px 20px}}
+form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form.ask .btn::after{content:' >>>'}
+.cards{display:grid;gap:10px;margin:0;padding:20px 40px}
+.card{border:1px solid var(--ink);background:var(--card);padding:14px 16px}.card b{display:block}.card small{color:var(--dim)}.card small a{color:var(--green)}
+.card form{display:flex;gap:8px;margin-top:10px}.card input{flex:1;font:13px var(--mono);padding:9px;border:1px solid var(--ink);background:transparent;color:inherit;min-width:0;border-radius:0}
+.note{font:11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--dim);padding:0 40px 16px;margin:0}
+#signin{margin:0 40px 20px}
 `;
 
-const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><style>${CSS}</style></head><body><div class="wrap">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
+const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 export const homePage = () =>
   shell(
     'Flisk Chat',
-    `<header><b>chat<i>.</i>flisk</b><a href="https://flisk.si">Flisk</a></header>
-<h1>Ask for a website.<br>It gets a computer.</h1>
+    `<header><a class="logo" href="/"><span class="mark">C</span>chat</a><span class="r m"><a href="https://flisk.si">Flisk</a></span></header>
+<h1>Ask for a website.<br>It gets a <em>computer.</em></h1>
 <p class="sub">Type what you want. Flisk's free model plans it, runs it on a real computer from your own sandbox account, and gives you the result and a live link. Sign in with GitHub, nothing else.</p>
 <a class="btn" href="/auth/start">Sign in with GitHub</a>
 <p class="note">Beta. Computers come from your own provider account (several have free credit), so chat costs you nothing and us nothing.</p>`,
   );
 
-export const messagePage = (title, text) => shell(`${title} · chat`, `<header><b>chat<i>.</i>flisk</b></header><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back</a>`);
+export const messagePage = (title, text) => shell(`${title} · chat`, `<header><a class="logo" href="/"><span class="mark">C</span>chat</a></header><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back</a>`);
 
 const IDEAS = [
   'Make me a one-page website for a coffee shop called Moon Roast.',
@@ -83,7 +97,7 @@ const history=[],comp=document.getElementById('comp');
 const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
 const say=(cls,text)=>{comp.hidden=false;const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
 const linkify=(node,text)=>{node.textContent='';text.split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;node.appendChild(a);}else node.appendChild(document.createTextNode(p));});};
-document.querySelectorAll('.ideas button').forEach(b=>b.onclick=()=>{box.value=b.textContent;box.focus();});
+document.querySelectorAll('.ideas button').forEach(b=>b.onclick=()=>{box.value=b.childNodes[0].textContent;box.focus();});
 box.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
 const aiSel=document.getElementById('ai'),byo=document.getElementById('byo'),byoKey=document.getElementById('byokey'),byoModel=document.getElementById('byomodel');
 const auto=document.getElementById('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=document.getElementById('sbsum');
@@ -140,16 +154,16 @@ export function appPage({ login, connected = [] }) {
   ).join('');
   return shell(
     'Flisk Chat',
-    `<header><b>chat<i>.</i>flisk</b>${login ? `<span class="m">@${esc(login)} · <a href="/auth/signout">sign out</a></span>` : '<a class="m" href="/auth/start">Sign in with GitHub</a>'}</header>
-<h1>What should we get done?</h1>
+    `<header><a class="logo" href="/"><span class="mark">C</span>chat</a>${login ? `<span class="r m">@${esc(login)} · <a href="/auth/signout">sign out</a></span>` : '<span class="r m"><a class="cta m" href="/auth/start">Sign in with GitHub</a></span>'}</header>
+<div class="hero"><h1>What should we <em>get done?</em></h1>
 <p class="sub">${!login ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.' : connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
 <div class="pickers">
 <div class="pick"><label for="ai">AI</label><select id="ai">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>
 <div id="byo" hidden><input id="byomodel" type="text" placeholder="Model name (blank: Claude default)" aria-label="Model name" autocomplete="off"><input id="byokey" type="password" placeholder="Your API key (used for this task only, never saved)" aria-label="API key" autocomplete="off"></div></div>
 <details class="pick"><summary id="sbsum">Fleet (auto: cheapest first)</summary><div class="menu"><label><input type="checkbox" id="auto" checked> <b>Fleet</b> (auto: cheapest first, falls back)</label><hr>${Object.entries(PROVIDER_NAMES).map(([id, name]) => (connected.includes(id) ? `<label><input type="checkbox" name="sb" value="${esc(id)}" data-label="${esc(name)}"> ${esc(name)}</label>` : `<label class="off">${esc(name)} · ${PROVIDER_CARDS.some((c) => c.id === id) ? '<a href="#setup">connect</a>' : '<a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">connect</a>'}</label>`)).join('')}</div></details>
-</div>
+</div></div>
 <div class="cols">
-<div class="panel"><h2>Chat</h2><div class="ideas" id="ideas">${IDEAS.map((i) => `<button type="button">${esc(i)}</button>`).join('')}</div><div id="talk" aria-live="polite"></div>
+<div class="panel"><h2>Chat</h2><div class="ideas" id="ideas">${IDEAS.map((i, n) => `<button type="button" data-n="0${n + 1} / TRY">${esc(i)}</button>`).join('')}</div><div id="talk" aria-live="polite"></div>
 <div id="setup" ${connected.length ? 'hidden' : 'hidden'}><div class="cards">${cards}</div><p class="note">Your key is stored encrypted and is only used to start your computers. Free credit comes from the provider, not from us.</p></div>
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 </div>
