@@ -240,7 +240,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (!Object.keys(connections).length) return json(409, { error: 'connect a computer first', needProvider: true });
       // Which AI answers, and which of the user's computers may be used (empty = fleet picks the cheapest).
       const chosen = resolveModel(body.ai);
-      if (chosen.error) return json(400, { error: chosen.error });
+      if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
       const order = Array.isArray(body.providers) ? [...new Set(body.providers.map(String))].slice(0, 20) : [];
       const missing = order.find((p) => !connections[p]);
       if (missing) return json(400, { error: `${missing} is not connected yet. Connect it, or tick another computer` });

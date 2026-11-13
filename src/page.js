@@ -377,16 +377,18 @@ const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.
 async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(!ids.length){orLoaded=false;return;}
   OR=d.map(x=>orModel(x.id,x.name,(Number(x.pricing&&x.pricing.prompt)||0)*1e6,x.context_length));if(cur.key==='openrouter')fillSugg(ids);else sugList=ids;const same=OR.find(m=>m.id===cur.id);if(same&&same.name!==cur.name)pick(same);else if(!pop.hidden)drawList();}catch(e){orLoaded=false;}}
 byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
-byoModel.addEventListener('input',()=>{if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());byWarn.hidden=true;drawSug();});
+byoModel.addEventListener('input',()=>{shownName();if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());byWarn.hidden=true;drawSug();});
 byoModel.addEventListener('focus',drawSug);byoModel.addEventListener('blur',()=>{bySug.hidden=true;byoModel.setAttribute('aria-expanded','false');const f=fixModel(byoModel.value.trim());
   if(f.ok&&f.fixed){byoModel.value=f.model;lsSet('chat_model_'+cur.key,f.model);}else if(!f.ok&&byoModel.value.trim()){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;}});
 bySave.onclick=()=>{const m=byoModel.value.trim(),k=byoKey.value.trim();if(!k){byoKey.focus();byStat.textContent='Paste your API key first.';return;}const f=fixModel(m);if(!f.ok){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;byoModel.focus();return;}
   if(f.fixed)byoModel.value=f.model;lsSet('chat_key_'+cur.key,k);if(!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());stat();byStat.textContent='Saved ✓ in this browser only, never on our servers.';bySave.textContent='Saved ✓';setTimeout(()=>{bySave.textContent='Save';},1500);closePop();box.focus();};
 byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');byoKey.value='';if(!cur.model)byoModel.value='';stat();byoKey.focus();};
+// The button names what will run: a typed model name replaces the generic provider name.
+function shownName(){const t=byoModel.value.trim();mpBtn.querySelector('.mpname').textContent=!cur.free&&!cur.model&&t?cur.providerName+' · '+t.split('/').pop():cur.name;}
 function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model||(m.free?'':lsGet('chat_model_'+m.key));byoModel.parentElement.hidden=!!m.model;
   byoKey.value=m.free?'':lsGet('chat_key_'+m.key);byWarn.hidden=true;fillSugg(SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
   $('byokeylabel').textContent='Your '+m.providerName+' API key';
-  mpBtn.querySelector('.mpname').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
+  mpBtn.querySelector('.mpname').textContent=m.name;shownName();mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
 mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',()=>{if(mq.value.trim())loadOr();drawList();});
@@ -464,7 +466,7 @@ async function run(task){
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
-    if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));throw new Error(b.error||('Chat answered '+res.status+'. Try again in a minute.'));}
+    if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));const er=new Error(b.error||('Chat answered '+res.status+'. Try again in a minute.'));er.kind=b.kind;throw er;}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
     for(;;){const {value,done}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
       while((i=buf.indexOf('\\n'))>=0){const line=buf.slice(0,i);buf=buf.slice(i+1);if(!line.trim())continue;let ev;try{ev=JSON.parse(line);}catch(e){continue;}
@@ -483,7 +485,7 @@ async function run(task){
         else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
         else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
       }}
-  }catch(err){failed=true;errCard(turn,String(err.message||err),'other',task);}
+  }catch(err){failed=true;errCard(turn,String(err.message||err),err.kind||'other',task);}
   end(!failed||answer!==null);
   if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();
     const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
@@ -565,7 +567,8 @@ function ask6(task){
 const BUILD=/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|video|clip|promo|reel|build|make|create|design)\\b/i,ASK=/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell|list|turn)\\b/i;
 let lastSend=0;
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
-  if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byoKey.focus();return;}
+  if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
+  if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}userMsg(task);
   if(!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
