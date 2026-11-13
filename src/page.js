@@ -268,8 +268,9 @@ details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),
 const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
-const shell = (title, body, script = '') =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title><meta name="robots" content="noindex"><link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it.">${FONTS}<style>${CSS}</style></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
+const DESC = 'Flisk Chat: describe a website, a small app or a task. It runs on a real computer and gives you the result and a live link. Free model, sign in with GitHub.';
+const shell = (title, body, script = '', index = false) =>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:inherit">chat<span>.</span>flisk</b></a>`;
 
@@ -963,7 +964,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <button type="button" id="orbbtn" class="chip ico talkb" title="Voice talk: just talk, it answers out loud" aria-label="Start voice talk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
-<p class="fine">Runs on a real computer from your own sandbox account. Enter sends, Shift+Enter adds a line.</p>
+<p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line.</p>
 </div></div></div></div>
 <div id="oracle" class="oracle" hidden role="dialog" aria-modal="true" aria-label="Voice talk">
 <div class="otop"><span class="otitle">Flisk Oracle</span><span class="ohint">Talk. Pause when you are done. Tap the circle to interrupt.</span></div>
@@ -975,5 +976,6 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS,
+    true,
   );
 }

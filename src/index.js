@@ -202,7 +202,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   const origin = env.PUBLIC_ORIGIN || url.origin;
 
   if (request.method === 'GET' && path === '/favicon.ico') return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nDisallow: /s/\nDisallow: /v/\nDisallow: /api/\n', { headers: { 'content-type': 'text/plain' } });
+  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nDisallow: /s/\nDisallow: /v/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain' } });
+  if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://chat.flisk.si/</loc></url></urlset>', { headers: { 'content-type': 'application/xml' } });
 
   // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.
   if (request.method === 'GET' && path === '/health') {

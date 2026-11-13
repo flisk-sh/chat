@@ -678,3 +678,19 @@ test('localhost links in an answer get a note that the computer has stopped', as
   const r = await runTask2({ task: 'x', model: async () => ({ text: replies.shift() }), computer });
   expect(r.answer).toContain('will not open for you');
 });
+
+describe('search visibility', () => {
+  test('the home page can be indexed, published sites and the API cannot', async () => {
+    const e = env();
+    const home = await (await handle(new Request(`${ORIGIN}/`), e, {})).text();
+    expect(home).toContain('content="index,follow"');
+    expect(home).not.toContain('content="noindex"');
+    const robots = await (await handle(new Request(`${ORIGIN}/robots.txt`), e, {})).text();
+    expect(robots).toContain('Allow: /$');
+    expect(robots).toContain('Disallow: /s/');
+    expect(robots).toContain('Sitemap:');
+    const map = await handle(new Request(`${ORIGIN}/sitemap.xml`), e, {});
+    expect(map.status).toBe(200);
+    expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
+  });
+});
