@@ -189,7 +189,12 @@ export function cleanHistory(history) {
   return history
     .filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string')
     .slice(-6)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 1500) }));
+    .map((m) => {
+      // A file attached on an earlier turn was on that turn's computer only; say so, so the model asks for it again.
+      const names = Array.isArray(m.files) ? m.files.filter((n) => typeof n === 'string').slice(0, 3).map((n) => n.slice(0, 80)) : [];
+      const note = m.role === 'user' && names.length ? `\n[Attached then: ${names.join(', ')}. Not on this computer any more: ask the user to attach it again if you need it.]` : '';
+      return { role: m.role, content: m.content.slice(0, 1500) + note };
+    });
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
@@ -200,7 +205,11 @@ export async function runTask({ task, history = [], model, computer, publish, sa
   const first = pics.length
     ? [{ type: 'text', text: `${task}${where} The picture${pics.length > 1 ? 's are' : ' is'} also shown to you here: look at ${pics.length > 1 ? 'them' : 'it'} to answer.` }, ...pics.map((f) => ({ type: 'image_url', image_url: { url: `data:${f.image};base64,${f.content}` } }))]
     : task + where;
-  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: first }];
+  // The page sends the new task as the last history entry too: drop it so the model gets the task once.
+  const past = Array.isArray(history) ? history.slice() : [];
+  const lastPast = past[past.length - 1];
+  if (lastPast?.role === 'user' && String(lastPast.content || '').trim() === String(task).trim()) past.pop();
+  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
   const steps = [];

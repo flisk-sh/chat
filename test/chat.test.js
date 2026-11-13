@@ -548,3 +548,22 @@ test('a first message with a file attached runs at once instead of asking the bu
   const page = appPageUi({ login: 'ann', connected: [] });
   expect(page).toContain('if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)');
 });
+
+test('history remembers an earlier attachment so the model asks for it again', () => {
+  const { cleanHistory } = require('../src/loop.js');
+  const h = cleanHistory([{ role: 'user', content: 'what word?', files: ['word.jpg'] }, { role: 'assistant', content: 'HAMMER' }]);
+  expect(h[0].content).toContain('Attached then: word.jpg');
+  expect(h[1].content).toBe('HAMMER');
+});
+
+test('chat search looks inside messages and file names, and reopened chats show their files', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain("(c.msgs||[]).some(m=>String(m.content||'').toLowerCase().includes(q)");
+  expect(page).toContain("lu.files=sendFiles.map(f=>f.name)");
+});
+
+test('the new task is sent to the model once, not again from history', async () => {
+  let seen;
+  await runTask2({ task: 'hi', history: [{ role: 'user', content: 'old' }, { role: 'assistant', content: 'ok' }, { role: 'user', content: 'hi', files: ['a.jpg'] }], model: async (m) => ((seen ??= m), { text: '{"say":"yo"}' }), computer: {} });
+  expect(seen.filter((m) => m.role === 'user').map((m) => m.content)).toEqual(['old', 'hi']);
+});
