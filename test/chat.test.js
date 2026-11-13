@@ -579,3 +579,23 @@ test('files attached before sign-in are kept and sent with the task after it', (
   expect(page).toContain("sessionStorage.setItem('chat_pending_files',JSON.stringify(sendFiles))");
   expect(page).toContain("attached=pf.slice(0,3)");
 });
+
+describe('empty model replies', () => {
+  test('one empty reply is retried instead of ending the task', async () => {
+    const replies = [{ error: 'the model sent an empty answer', kind: 'empty' }, { text: '{"say":"done"}' }];
+    const events = [];
+    const r = await runTask2({ task: 'x', model: async () => replies.shift(), computer: {}, emit: (e) => events.push(e) });
+    expect(r.answer).toBe('done');
+    expect(events.some((e) => e.type === 'retry')).toBe(true);
+  });
+  test('three empty replies in a row stop with the reason', async () => {
+    const r = await runTask2({ task: 'x', model: async () => ({ error: 'the model sent an empty answer (it ran out of answer length while thinking)', kind: 'empty' }), computer: {} });
+    expect(r.error).toContain('ran out of answer length');
+  });
+  test('modelFrom explains why the answer was empty', async () => {
+    const f = async () => Response.json({ choices: [{ message: { content: '', reasoning: 'hmm' }, finish_reason: 'length' }] });
+    const r = await modelFrom2({}, f, { ai: 'openrouter', free: false, url: 'https://x.test', key: 'k'.repeat(10), model: 'a/b' })([{ role: 'user', content: 'hi' }]);
+    expect(r.kind).toBe('empty');
+    expect(r.error).toContain('while thinking');
+  });
+});
