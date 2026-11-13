@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES } from '../src/index.js';
-import { parseAction, runTask } from '../src/loop.js';
+import { parseAction, resolveModel, runTask } from '../src/loop.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -16,7 +16,10 @@ function world({ connected = true, replies = [] } = {}) {
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url);
     const body = init.body ? JSON.parse(init.body) : undefined;
-    if (u.host === 'inf.test') {
+    if (u.host !== 'fleet.test') {
+      log.push({ modelCall: { host: u.host, auth: init.headers.authorization, model: body.model, max: body.max_tokens } });
+    }
+    if (u.host === 'inf.test' || u.host === 'api.anthropic.com' || u.host === 'openrouter.ai') {
       log.push({ model: body.messages });
       return Response.json({ choices: [{ message: { content: replies.shift() ?? '{"say":"out of script"}' } }] });
     }
@@ -28,6 +31,7 @@ function world({ connected = true, replies = [] } = {}) {
       state.connected = true;
       return Response.json({ ok: true });
     }
+    if (u.pathname === '/v1/pods' && init.method === 'POST') state.podBody = body;
     if (u.pathname === '/v1/pods' && init.method === 'POST') return Response.json({ id: 'pod_x', provider: 'daytona' }, { status: 201 });
     if (u.pathname.endsWith('/run')) return Response.json({ stdout: `ran:${body.command}\n`, stderr: '', exitCode: 0 });
     if (u.pathname.endsWith('/files') && init.method === 'PUT') return Response.json({ path: body.path, bytes: body.content.length });
@@ -167,5 +171,78 @@ describe('runTask', () => {
     const r = await runTask({ task: 't', model, computer: fleetClient(env(), 'octo', w.fetchImpl), publish: async () => ({}) });
     expect(r.error).toBe('daily limit used up');
     expect(w.state.stopped).toEqual(['/v1/pods/pod_x']);
+  });
+});
+
+describe('the two pickers', () => {
+  const body = (extra) => ({ task: 'make a site', ...extra });
+  const script = ['{"run":"true"}', '{"say":"ok"}'];
+
+  test('default: free Wolf, and fleet picks (no order sent)', async () => {
+    const e = env();
+    const w = world({ replies: [...script] });
+    await (await post(e, w, '/api/run', body({}), await authed(e))).text();
+    expect(w.state.podBody.order).toBeUndefined();
+    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'inf.test', auth: 'Bearer ik', model: 'flisk-wolf-chat', max: 1024 });
+  });
+
+  test('ticked computers become the order fleet may use', async () => {
+    const e = env();
+    const w = world({ replies: [...script] });
+    await (await post(e, w, '/api/run', body({ providers: ['daytona'] }), await authed(e))).text();
+    expect(w.state.podBody.order).toEqual(['daytona']);
+  });
+
+  test('a computer that is not connected is refused before any model call', async () => {
+    const e = env();
+    const w = world();
+    const res = await post(e, w, '/api/run', body({ providers: ['e2b'] }), await authed(e));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('e2b is not connected');
+    expect(w.log.some((l) => l.modelCall)).toBe(false);
+  });
+
+  test("the visitor's own Claude key goes only to Anthropic, with a bigger answer limit, and is never echoed", async () => {
+    const e = env();
+    const w = world({ replies: [...script] });
+    const res = await post(e, w, '/api/run', body({ ai: { ai: 'anthropic', key: 'sk-ant-secret-key-1' } }), await authed(e));
+    const text = await res.text();
+    expect(text).not.toContain('sk-ant-secret');
+    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'api.anthropic.com', auth: 'Bearer sk-ant-secret-key-1', model: 'claude-sonnet-5-5', max: 4096 });
+    expect(JSON.stringify(e.DB.raw.query('SELECT * FROM sites').all())).not.toContain('sk-ant');
+  });
+
+  test('bad choices are refused: unknown AI, missing key, odd model name', () => {
+    expect(resolveModel({ ai: 'evil' }).error).toContain('listed');
+    expect(resolveModel({ ai: 'anthropic', key: '' }).error).toContain('API key');
+    expect(resolveModel({ ai: 'openai', key: 'sk-long-enough-key' }).error).toContain('model name');
+    expect(resolveModel({ ai: 'openai', key: 'sk-long-enough-key', model: 'a b;rm' }).error).toContain('model name');
+    expect(resolveModel({ ai: 'openrouter', key: 'sk-long-enough-key', model: 'anthropic/claude-sonnet-5-5' })).toMatchObject({ free: false, url: 'https://openrouter.ai/api/v1/chat/completions' });
+    expect(resolveModel(undefined)).toEqual({ ai: 'wolf', free: true });
+  });
+
+  test('the 20-a-day cap counts only the free model', async () => {
+    const e = env();
+    const store = new Map();
+    e.LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+    const cookie = await authed(e);
+    for (let i = 0; i < 20; i++) await (await post(e, world({ replies: [...script] }), '/api/run', body({}), cookie)).text();
+    expect((await post(e, world({ replies: [...script] }), '/api/run', body({}), cookie)).status).toBe(429);
+    const own = await post(e, world({ replies: [...script] }), '/api/run', body({ ai: { ai: 'anthropic', key: 'sk-ant-secret-key-1' } }), cookie);
+    expect(own.status).toBe(200);
+    await own.text();
+  });
+
+  test('the page offers both pickers, lists connected computers as tickable and the rest as connect links', async () => {
+    const e = env();
+    const w = world();
+    const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e) } }), e, { fetchImpl: w.fetchImpl })).text();
+    expect(app).toContain('id="ai"');
+    expect(app).toContain('Fleet</b> (auto');
+    expect(app).toContain('name="sb" value="daytona"');
+    expect(app).not.toContain('name="sb" value="e2b"');
+    expect(app).toContain('E2B · <a href="#setup">connect</a>');
+    expect(app).toContain('Blaxel · <a href="https://fleet.flisk.si/console?section=providers"');
+    for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
   });
 });

@@ -43,24 +43,47 @@ const clip = (s, n = OUT_CHARS) => {
   return t.length > n ? `${t.slice(0, n)}\n…(${t.length - n} more characters cut)` : t;
 };
 
-// Calls the model (Flisk Inference, OpenAI-compatible). Errors come back as { error }.
-export function modelFrom(env = {}, fetchImpl = fetch) {
-  const url = env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions';
-  const model = env.INFERENCE_MODEL || 'flisk-wolf-chat';
+// Who answers. "wolf" is Flisk Inference (free, shared, answers capped at 1024 tokens). The others use the visitor's own API key,
+// sent with the request and never stored; only these three addresses are allowed, so a key can't be sent anywhere else.
+export const BYO = {
+  anthropic: { label: 'Claude (my API key)', url: 'https://api.anthropic.com/v1/chat/completions', model: 'claude-sonnet-5-5' },
+  openai: { label: 'OpenAI (my API key)', url: 'https://api.openai.com/v1/chat/completions', model: '' },
+  openrouter: { label: 'OpenRouter (my API key)', url: 'https://openrouter.ai/api/v1/chat/completions', model: '' },
+};
+
+// choice: undefined or { ai: 'wolf' } or { ai: 'anthropic'|'openai'|'openrouter', key, model }. Returns { error } for a bad choice.
+export function resolveModel(choice) {
+  const ai = choice?.ai || 'wolf';
+  if (ai === 'wolf') return { ai, free: true };
+  const p = BYO[ai];
+  if (!p) return { error: 'pick one of the listed AI models' };
+  const key = String(choice.key || '').trim();
+  const model = String(choice.model || '').trim() || p.model;
+  if (key.length < 8 || key.length > 300 || /\s/.test(key)) return { error: `paste your ${p.label.split(' (')[0]} API key` };
+  if (!model || !/^[A-Za-z0-9._:\/-]{1,80}$/.test(model)) return { error: 'type the model name, for example the one shown on your provider\'s model list' };
+  return { ai, free: false, url: p.url, key, model };
+}
+
+// Calls the model (OpenAI-compatible). Errors come back as { error }.
+export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }) {
+  const url = chosen.free ? env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions' : chosen.url;
+  const model = chosen.free ? env.INFERENCE_MODEL || 'flisk-wolf-chat' : chosen.model;
+  const key = chosen.free ? env.INFERENCE_KEY : chosen.key;
+  const maxTokens = chosen.free ? 1024 : 4096;
   return async (messages) => {
-    if (!env.INFERENCE_KEY) return { error: 'chat has no model key yet (INFERENCE_KEY)' };
+    if (!key) return { error: 'chat has no model key yet (INFERENCE_KEY)' };
     let res;
     try {
       res = await fetchImpl(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.INFERENCE_KEY}`, 'user-agent': 'flisk-chat' },
-        body: JSON.stringify({ model, messages, max_tokens: 1024, temperature: 0 }),
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat' },
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0 }),
       });
     } catch (e) {
       return { error: `the model did not answer: ${String(e?.message || e).slice(0, 150)}` };
     }
     const body = await res.json().catch(() => null);
-    if (!res.ok) return { error: body?.error?.message || body?.error || `the model answered ${res.status}` };
+    if (!res.ok) return { error: String(body?.error?.message || body?.error || `the model answered ${res.status}`).slice(0, 300) };
     const text = body?.choices?.[0]?.message?.content;
     if (typeof text === 'string' && text.trim()) return { text };
     if (text && typeof text === 'object') return { text: JSON.stringify(text) };
@@ -77,7 +100,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, order = [], emit = () => {}, maxSteps = MAX_STEPS }) {
   const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task }];
   let podId = null;
   let provider = null;
@@ -115,7 +138,7 @@ export async function runTask({ task, history = [], model, computer, publish, em
       }
       if (!podId) {
         emit({ type: 'pod_starting' });
-        const made = await computer.start();
+        const made = await computer.start(order);
         if (made.error) {
           emit({ type: 'error', error: made.error });
           return await finish(null, made.error);

@@ -8,6 +8,10 @@ export const PROVIDER_CARDS = [
   { id: 'isorun', label: 'Isorun', url: 'https://app.isorun.ai', note: 'Free credit.' },
 ];
 
+// Every provider fleet can use. Only some can be connected here with one key; the rest are connected in fleet's own cabinet.
+export const PROVIDER_NAMES = { daytona: 'Daytona', blaxel: 'Blaxel', upstash: 'Upstash Box', e2b: 'E2B', isorun: 'Isorun', vercel: 'Vercel Sandbox', boat: 'boat', hopx: 'Hopx', runloop: 'Runloop', sprites: 'Fly Sprites', morph: 'Morph', tensorlake: 'Tensorlake', freestyle: 'Freestyle', langsmith: 'LangSmith' };
+export const AI_CHOICES = [['wolf', 'Flisk Wolf (free)'], ['anthropic', 'Claude (my API key)'], ['openai', 'OpenAI (my API key)'], ['openrouter', 'OpenRouter (my API key)']];
+
 const CSS = `
 :root{--bg:#f7f5e4;--fg:#15150f;--dim:#6d6b5c;--line:#15150f;--accent:#1f7a3d;--term:#111;--termfg:#e8e8e8}
 @media (prefers-color-scheme:dark){:root{--bg:#14140f;--fg:#f1efdc;--dim:#a19f8d;--line:#f1efdc;--accent:#58c27d}}
@@ -37,6 +41,16 @@ form.ask textarea{flex:1;min-height:52px;font:inherit;padding:10px;border:1.5px 
 .card{border:1.5px solid var(--line);padding:10px 12px}.card b{display:block}.card small{color:var(--dim)}
 .card form{display:flex;gap:8px;margin-top:8px}.card input{flex:1;font:inherit;padding:8px;border:1.5px solid var(--line);background:transparent;color:inherit;min-width:0}
 .note{font-size:13px;color:var(--dim);margin-top:10px}
+.pickers{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 16px;align-items:flex-start}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:210px}
+.pick>label,.pick>summary{font:600 12px ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em}
+.pick select,.pick input[type=text],.pick input[type=password]{font:inherit;padding:8px;border:1.5px solid var(--line);background:var(--bg);color:inherit}
+details.pick{position:relative}details.pick>summary{cursor:pointer;list-style:none;border:1.5px solid var(--line);padding:8px;font:inherit;text-transform:none;letter-spacing:0;min-width:240px}
+details.pick>summary::after{content:' ▾'}
+details.pick .menu{position:absolute;z-index:5;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--line);padding:6px 8px;max-height:300px;overflow:auto}
+details.pick .menu label{display:flex;gap:8px;align-items:center;padding:3px 0;font:inherit;text-transform:none;letter-spacing:0}
+details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-top:1px solid var(--dim);opacity:.4;margin:6px 0}
+#byo{display:flex;flex-direction:column;gap:6px}
 `;
 
 const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><style>${CSS}</style></head><body><div class="wrap">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
@@ -68,6 +82,15 @@ const say=(cls,text)=>{const s=document.createElement('span');if(cls)s.className
 const linkify=(node,text)=>{node.textContent='';text.split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;node.appendChild(a);}else node.appendChild(document.createTextNode(p));});};
 document.querySelectorAll('.ideas button').forEach(b=>b.onclick=()=>{box.value=b.textContent;box.focus();});
 box.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+const aiSel=document.getElementById('ai'),byo=document.getElementById('byo'),byoKey=document.getElementById('byokey'),byoModel=document.getElementById('byomodel');
+const auto=document.getElementById('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=document.getElementById('sbsum');
+const syncAi=()=>{byo.hidden=aiSel.value==='wolf';try{sessionStorage.setItem('chat_ai',aiSel.value);}catch(e){}};
+aiSel.onchange=syncAi;try{const v=sessionStorage.getItem('chat_ai');if(v&&[...aiSel.options].some(o=>o.value===v))aiSel.value=v;}catch(e){}syncAi();
+const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);
+const syncSb=()=>{const p=picked();auto.checked=!p.length;sum.textContent=p.length?p.map(x=>document.querySelector('input[value='+x+']').dataset.label).join(', '):'Fleet (auto: cheapest first)';};
+auto.onchange=()=>{if(auto.checked)opts.forEach(o=>o.checked=false);syncSb();};
+opts.forEach(o=>o.onchange=syncSb);syncSb();
+document.querySelectorAll('a[href="#setup"]').forEach(a=>a.onclick=()=>{setup.hidden=false;});
 let pending=null;
 document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
   e.preventDefault();const input=f.querySelector('input'),btn=f.querySelector('button'),id=f.dataset.p;
@@ -80,7 +103,7 @@ document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
 async function run(task){
   go.disabled=true;const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
   try{
-    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history})});
+    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
     if(res.status===409){wait.remove();pending=task;setup.hidden=false;el('a','I need a computer for that. Connect one of your sandbox accounts below (once).');go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));throw new Error(b.error||('error '+res.status));}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
@@ -114,7 +137,12 @@ export function appPage({ login, connected = [] }) {
     'Flisk Chat',
     `<header><b>chat<i>.</i>flisk</b><span class="m">@${esc(login)} · <a href="/auth/signout">sign out</a></span></header>
 <h1>Ask. It gets a computer.</h1>
-<p class="sub">${connected.length ? `Computers come from your ${connected.map(esc).join(', ')} account.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
+<p class="sub">${connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
+<div class="pickers">
+<div class="pick"><label for="ai">AI</label><select id="ai">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>
+<div id="byo" hidden><input id="byomodel" type="text" placeholder="Model name (blank: Claude default)" aria-label="Model name" autocomplete="off"><input id="byokey" type="password" placeholder="Your API key (used for this task only, never saved)" aria-label="API key" autocomplete="off"></div></div>
+<details class="pick"><summary id="sbsum">Fleet (auto: cheapest first)</summary><div class="menu"><label><input type="checkbox" id="auto" checked> <b>Fleet</b> (auto: cheapest first, falls back)</label><hr>${Object.entries(PROVIDER_NAMES).map(([id, name]) => (connected.includes(id) ? `<label><input type="checkbox" name="sb" value="${esc(id)}" data-label="${esc(name)}"> ${esc(name)}</label>` : `<label class="off">${esc(name)} · ${PROVIDER_CARDS.some((c) => c.id === id) ? '<a href="#setup">connect</a>' : '<a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">connect</a>'}</label>`)).join('')}</div></details>
+</div>
 <div class="cols">
 <div class="panel"><h2>Chat</h2><div class="ideas">${IDEAS.map((i) => `<button type="button">${esc(i)}</button>`).join('')}</div><div id="talk" aria-live="polite"></div>
 <div id="setup" ${connected.length ? 'hidden' : 'hidden'}><div class="cards">${cards}</div><p class="note">Your key is stored encrypted and is only used to start your computers. Free credit comes from the provider, not from us.</p></div>
