@@ -102,6 +102,35 @@ export function resolveModel(choice) {
   return { ai, free: false, url: p.url, key, model };
 }
 
+
+// "Provider returned error" tells a person nothing. OpenRouter puts the real reason in error.metadata (raw text and the
+// upstream provider's name), so show it, say what kind of problem it is, and let the page offer the matching next step.
+export function explainModelError(body, status, chosen = {}) {
+  const e = body?.error;
+  const msg = typeof e === 'string' ? e : String(e?.message || '');
+  const code = Number(e?.code) || status || 0;
+  const meta = e?.metadata || {};
+  let raw = meta.raw;
+  if (raw && typeof raw !== 'string') raw = JSON.stringify(raw);
+  const detail = String(raw || meta.reasons || '').replace(/\s+/g, ' ').slice(0, 220);
+  const who = meta.provider_name ? ` from ${meta.provider_name}` : '';
+  const hay = `${msg} ${detail}`.toLowerCase();
+  let kind = 'other';
+  if (code === 401 || code === 403 || /api key|unauthori|invalid.*key|no auth/.test(hay)) kind = 'key';
+  else if (code === 402 || code === 429 || /credit|quota|rate.?limit|insufficient|too many/.test(hay)) kind = 'limit';
+  else if (code === 404 || code === 400 && /model/.test(hay) || /no endpoints|not a valid model|model.*not (found|exist)|does not exist|unknown model/.test(hay)) kind = 'model';
+  else if (code >= 500 || /provider returned error|overloaded|timeout/.test(hay)) kind = 'provider';
+  const head = {
+    key: `Your ${chosen.ai || 'provider'} API key was refused`,
+    limit: 'Out of credit or rate limited',
+    model: `The model "${chosen.model || ''}" is not available`,
+    provider: `The model provider${who} had a problem (HTTP ${code || 'unknown'})`,
+    other: `The model answered with an error (HTTP ${code || 'unknown'})`,
+  }[kind];
+  const why = [msg && !/^provider returned error$/i.test(msg) ? msg : '', detail].filter(Boolean).join(': ') || msg;
+  return { error: `${head}${why ? `: ${why}` : ''}`.slice(0, 500), kind };
+}
+
 // Calls the model (OpenAI-compatible). Errors come back as { error }.
 export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }) {
   const url = chosen.free ? env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions' : chosen.url;
@@ -121,15 +150,31 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
         body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0 }),
       });
     } catch (e) {
-      return { error: `the model did not answer: ${String(e?.message || e).slice(0, 150)}` };
+      return { error: `the model did not answer: ${String(e?.message || e).slice(0, 150)}`, kind: 'provider' };
     }
     const body = await res.json().catch(() => null);
-    if (!res.ok) return { error: String(body?.error?.message || body?.error || `the model answered ${res.status}`).slice(0, 300) };
+    if (!res.ok || (body?.error && !body?.choices)) return explainModelError(body, res.status, chosen);
     const text = body?.choices?.[0]?.message?.content;
     if (typeof text === 'string' && text.trim()) return { text };
     if (text && typeof text === 'object') return { text: JSON.stringify(text) };
     return { error: 'the model sent an empty answer' };
   };
+}
+
+
+export const MAX_FILES = 3;
+export const MAX_FILE_BYTES = 150 * 1024;
+// Files the visitor attached: text, or base64 for anything else. Names are flattened so nothing escapes the folder.
+export function cleanFiles(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, MAX_FILES).flatMap((f) => {
+    const path = String(f?.name || '').split(/[\\/]/).pop().replace(/[^A-Za-z0-9._ -]/g, '_').replace(/^\.+/, '').slice(0, 80);
+    const content = typeof f?.content === 'string' ? f.content : '';
+    if (!path || !content || content.length > MAX_FILE_BYTES * 1.4) return [];
+    const b64 = !!f.b64;
+    if (b64 && !/^[A-Za-z0-9+/=\s]+$/.test(content)) return [];
+    return [{ path: path.replace(/ /g, '_'), content: b64 ? content.replace(/\s/g, '') : content, b64 }];
+  });
 }
 
 export function cleanHistory(history) {
@@ -141,8 +186,9 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), order = [], emit = () => {}, maxSteps = MAX_STEPS }) {
-  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task }];
+export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), order = [], files = [], emit = () => {}, maxSteps = MAX_STEPS }) {
+  const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
+  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task + where }];
   let podId = null;
   let provider = null;
   const steps = [];
@@ -162,7 +208,7 @@ export async function runTask({ task, history = [], model, computer, publish, sa
       if (last) messages.push({ role: 'user', content: 'That was the last action. Reply with {"say": ...} now.' });
       const reply = await model(messages);
       if (reply.error) {
-        emit({ type: 'error', error: reply.error });
+        emit({ type: 'error', error: reply.error, kind: reply.kind });
         return await finish(null, reply.error);
       }
       messages.push({ role: 'assistant', content: reply.text });
@@ -181,12 +227,17 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         emit({ type: 'pod_starting' });
         const made = await computer.start(order);
         if (made.error) {
-          emit({ type: 'error', error: made.error });
+          emit({ type: 'error', error: made.error, kind: 'computer' });
           return await finish(null, made.error);
         }
         podId = made.data.id;
         provider = made.data.provider;
         emit({ type: 'pod_started', provider });
+        for (const f of files) {
+          const r = f.b64 ? await computer.write(podId, `${f.path}.b64`, f.content) : await computer.write(podId, f.path, f.content);
+          if (!r.error && f.b64) await computer.run(podId, `base64 -d '${f.path}.b64' > '${f.path}' && rm '${f.path}.b64'`);
+          emit({ type: 'file', path: f.path, error: r.error || null });
+        }
       }
       let shown;
       if (action.type === 'run') {
