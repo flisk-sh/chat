@@ -4,6 +4,7 @@ import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, resolveModel, ru
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
+import { runResult } from './run.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 
 export const TASKS_PER_DAY = 20;
@@ -211,6 +212,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   // GitHub App: "@flisk-chat review" on a pull request (signed webhook, no session).
   if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+
+  if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl });
 
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
   if (sm && request.method === 'GET') {

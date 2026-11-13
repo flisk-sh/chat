@@ -20,12 +20,19 @@ const sign = async (secret, body) => {
 const event = (over = {}) => ({ action: 'created', installation: { id: 7 }, repository: { full_name: 'o/r' }, issue: { number: 5, state: 'open', pull_request: {} }, comment: { id: 99, body: '@flisk-chat review pr', user: { login: 'odykyi', type: 'User' } }, ...over });
 
 async function setup({ permission = 'write', model = { summary: 'Adds eval.', verdict: 'request_changes', comments: [{ path: 'src/a.js', line: 3, body: 'eval is unsafe', suggestion: 'const c = parse(x);' }, { path: 'src/a.js', line: 99, body: 'not in the diff' }] }, reject = [], diff = DIFF, ...extra } = {}) {
-  const env = { DB: fakeD1(SCHEMA), PUBLIC_ORIGIN: 'https://chat.test', SESSION_SECRET: 's', KEY_SECRET: 'k'.repeat(32), INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', GITHUB_WEBHOOK_SECRET: 'whs', GITHUB_APP_ID: '123', GITHUB_APP_KEY: await pem(), ...extra };
+  const env = { DB: fakeD1(SCHEMA), PUBLIC_ORIGIN: 'https://chat.test', SESSION_SECRET: 's', KEY_SECRET: 'k'.repeat(32), INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', GITHUB_WEBHOOK_SECRET: 'whs', GITHUB_APP_ID: '123', GITHUB_APP_KEY: await pem(), FLEET_URL: 'https://fleet.test', FLEET_SERVICE_SECRET: 'x'.repeat(40), ...extra };
   const calls = [];
+  const stopped = [];
+  const fleetDown = extra.fleetDown;
   const fetchImpl = async (url, init = {}) => {
     const u = new URL(url);
     const body = init.body ? JSON.parse(init.body) : undefined;
     calls.push({ host: u.host, path: u.pathname, method: init.method || 'GET', body, auth: init.headers?.authorization });
+    if (u.host === 'fleet.test') {
+      if (u.pathname === '/v1/pods' && init.method === 'POST') return fleetDown ? Response.json({ error: 'connect a computer first' }, { status: 409 }) : Response.json({ id: 'pod_x', provider: 'daytona' }, { status: 201 });
+      if (init.method === 'DELETE') return stopped.length ? Response.json({ error: 'gone' }, { status: 410 }) : (stopped.push(u.pathname), Response.json({ ok: true }));
+      return Response.json({ ok: true, stdout: '', exitCode: 0 });
+    }
     if (u.host !== 'api.github.com') return Response.json({ choices: [{ message: { content: JSON.stringify(model) } }] });
     if (u.pathname === '/app/installations/7/access_tokens') return Response.json({ token: 'inst-token' }, { status: 201 });
     if (u.pathname.endsWith('/permission')) return Response.json({ permission });
@@ -37,7 +44,7 @@ async function setup({ permission = 'write', model = { summary: 'Adds eval.', ve
     const body = JSON.stringify(ev);
     return sign(secret, body).then((sig) => handle(new Request('https://chat.test/github/webhook', { method: 'POST', body, headers: { 'x-hub-signature-256': sig, 'x-github-event': kind } }), env, { fetchImpl }));
   };
-  return { env, calls, send };
+  return { env, calls, send, stopped, fetchImpl };
 }
 const reviewOf = (calls) => calls.find((c) => c.path.endsWith('/reviews'))?.body;
 
@@ -117,6 +124,52 @@ describe('@flisk-chat review webhook', () => {
     await w.send(event());
     expect(w.calls.some((c) => c.host === 'inf.test')).toBe(false);
     expect(w.calls.find((c) => c.path.endsWith('/comments')).body.body).toContain('free reviews');
+  });
+});
+
+describe('review run (sandbox)', () => {
+  test('starts a computer for the commenter, writes the script with a signed callback, and does not wait for the tests', async () => {
+    const w = await setup();
+    await w.send(event({ comment: { id: 99, body: '@flisk-chat review run', user: { login: 'odykyi', type: 'User' } } }));
+    const fleet = w.calls.filter((c) => c.host === 'fleet.test');
+    expect(fleet.map((c) => `${c.method} ${c.path}`)).toEqual(['POST /v1/pods', 'PUT /v1/pods/pod_x/files', 'POST /v1/pods/pod_x/run']);
+    const script = fleet[1].body.content;
+    expect(script).toContain("git clone -q --depth 1 'https://github.com/o/r.git'");
+    expect(script).toContain("'pull/5/head'");
+    expect(script).toMatch(/run-result\?inst=7&repo=o%2Fr&pr=5&pod=pod_x&login=odykyi&sig=[0-9a-f]{64}/);
+    expect(reviewOf(w.calls).body).toContain('Adds eval.');
+  });
+  test('a private repo gets a clone token scoped to that repo, read-only', async () => {
+    const w = await setup();
+    await w.send(event({ repository: { full_name: 'o/r', private: true }, comment: { id: 99, body: '@flisk-chat review run', user: { login: 'odykyi', type: 'User' } } }));
+    const scoped = w.calls.filter((c) => c.path === '/app/installations/7/access_tokens' && c.body);
+    expect(scoped[0].body).toEqual({ repositories: ['r'], permissions: { contents: 'read' } });
+  });
+  test('no computer connected: one clear comment, the diff review is still posted', async () => {
+    const w = await setup({ fleetDown: true });
+    await w.send(event({ comment: { id: 99, body: '@flisk-chat review run', user: { login: 'odykyi', type: 'User' } } }));
+    expect(w.calls.find((c) => c.path.endsWith('/comments')).body.body).toContain('could not start a computer');
+    expect(reviewOf(w.calls)).toBeDefined();
+  });
+  test('plain review does not start a computer', async () => {
+    const w = await setup();
+    await w.send(event());
+    expect(w.calls.some((c) => c.host === 'fleet.test')).toBe(false);
+  });
+  test('the callback posts the output once, stops the computer, and rejects a bad signature', async () => {
+    const w = await setup();
+    const { runSig } = await import('../src/run.js');
+    const sig = await runSig(w.env.GITHUB_WEBHOOK_SECRET, ['7', 'o/r', '5', 'pod_x', 'odykyi']);
+    const url = (sg) => `https://chat.test/github/run-result?inst=7&repo=o%2Fr&pr=5&pod=pod_x&login=odykyi&sig=${sg}`;
+    const call = (sg, text) => handle(new Request(url(sg), { method: 'POST', body: text }), w.env, { fetchImpl: w.fetchImpl });
+    expect((await call('0'.repeat(64), 'x')).status).toBe(401);
+    expect((await call(sig, '$ npm test\n3 pass\n[exit 0]')).status).toBe(200);
+    const posted = w.calls.find((c) => c.path === '/repos/o/r/issues/5/comments');
+    expect(posted.body.body).toContain('3 pass');
+    expect(w.stopped).toHaveLength(1);
+    const again = await call(sig, 'replay');
+    expect(await again.text()).toBe('already done');
+    expect(w.calls.filter((c) => c.path === '/repos/o/r/issues/5/comments')).toHaveLength(1);
   });
 });
 
