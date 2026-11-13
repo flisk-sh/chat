@@ -83,6 +83,8 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .tag{font-size:11px;border:1px solid var(--line2);border-radius:var(--radius);padding:1px 7px;color:var(--soft)}
 .who{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--dim);border-top:1px solid var(--line);padding:10px 4px 0}
 .who a{color:var(--dim)}
+/* Click targets: the small text links get a padded hit area (about 32px tall) without changing the layout. */
+.who a,.sidesec h4 a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px;margin:0 -6px}
 .main{display:flex;flex-direction:column;min-width:0;min-height:0}
 .top{display:none;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--bg)}
 .iconbtn{border:1px solid var(--line2);background:var(--panel);border-radius:var(--radius);width:34px;height:34px;display:inline-grid;place-items:center;cursor:pointer}
