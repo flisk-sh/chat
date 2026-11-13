@@ -5,11 +5,17 @@ import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, revi
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
-import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
+import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { weatherNote } from './weather.js';
 
 export const TASKS_PER_DAY = 20;
+// Visitors without GitHub are counted by network address, not by cookie (a cookie can be thrown away), so their share is smaller.
+export const ANON_TASKS_PER_DAY = 10;
+export const ANON_VOICE_PER_DAY = 20;
+export const ANON_TALK_PER_DAY = 30;
+export const ANON_SPEAK_PER_DAY = 150;
+export const ANON_PER_PERSON_BACKUP = 10;
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
 export const VIDEOS_PER_LOGIN = 5;
@@ -118,8 +124,8 @@ export async function overDailyLimit(login, { cache = globalThis.caches?.default
 // The free model's last fallback (Workers AI on our account) has one daily cap for everyone, so chat keeps to its share.
 // Each person may use only a share of it, so one busy visitor cannot use up the day for everybody.
 export const WORKERS_AI_PER_PERSON = 40;
-export const freeModelOpts = (env, login = '') => ({
-  overLimit: async () => (login && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_PERSON, scope: 'workers-ai-person' }))) || overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
+export const freeModelOpts = (env, login = '', anon = false) => ({
+  overLimit: async () => (login && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: anon ? ANON_PER_PERSON_BACKUP : WORKERS_AI_PER_PERSON, scope: anon ? 'workers-ai-anon' : 'workers-ai-person' }))) || overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
   log: (tried) => console.log('free model fallbacks all failed', JSON.stringify(tried).slice(0, 600)),
 });
 
@@ -242,7 +248,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   if (request.method === 'GET' && path === '/auth/start') {
     if (!env.SESSION_SECRET) return html(messagePage('Sign-in is not set up', 'This copy of chat has no session secret yet.'), 503);
-    if (await readSession(env, request)) return redirect('/');
+    const have = await readSession(env, request);
+    if (have && !isAnon(have.login)) return redirect('/');
     if (env.DEV_LOGIN) return redirect('/', { 'set-cookie': await makeSession(env, env.DEV_LOGIN) });
     if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) return html(messagePage('Sign-in is not set up', 'GitHub sign-in has not been connected yet.'), 503);
     const state = crypto.randomUUID();
@@ -256,7 +263,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const code = url.searchParams.get('code') || '';
     if (!env.SESSION_SECRET || !code || !state || state !== cookie) return html(messagePage('Sign-in failed', 'The sign-in link expired. Start again.'), 400);
     const login = await githubLogin(env, code, fetchImpl);
-    if (!login) return html(messagePage('Sign-in failed', "GitHub didn't confirm the sign-in. Start again."), 400);
+    if (!login || /^anon-/i.test(login)) return html(messagePage('Sign-in failed', "GitHub didn't confirm the sign-in. Start again."), 400);
     const headers = new Headers({ location: '/' });
     headers.append('set-cookie', await makeSession(env, login));
     headers.append('set-cookie', 'chat_state=; Path=/auth; Max-Age=0');
@@ -265,19 +272,28 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   if (request.method === 'GET' && path === '/auth/signout') return redirect('/', { 'set-cookie': clearSession() });
 
   const session = await readSession(env, request);
+  // Signing in with GitHub is optional: a visitor with no session gets a private anonymous one on the home page.
+  const anon = !!session && isAnon(session.login);
+  const who = async (login) => (isAnon(login) ? `ip-${[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(request.headers.get('cf-connecting-ip') || 'unknown')))].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('')}` : login);
   if (request.method === 'GET' && path === '/') {
     const models = await loadCatalog(env);
-    if (!session) return html(appPage({ login: null, connected: [], models }));
+    if (!session) {
+      if (!env.SESSION_SECRET) return html(appPage({ login: null, connected: [], models }));
+      const login = newAnonLogin();
+      const res = html(appPage({ login, anon: true, connected: [], models }));
+      res.headers.append('set-cookie', await makeSession(env, login, Date.now(), ANON_DAYS));
+      return res;
+    }
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
-    return html(appPage({ login: session.login, connected: Object.keys(connections), models }));
+    return html(appPage({ login: session.login, anon, connected: Object.keys(connections), models }));
   }
 
   if (request.method === 'GET' && path === '/reviews') {
-    if (!session) return redirect('/auth/start');
+    if (!session || anon) return redirect('/auth/start');
     return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY, flash: url.searchParams.get('ok') || '' }));
   }
   if (request.method === 'POST' && (path === '/reviews/save' || path === '/reviews/delete')) {
-    if (!session) return redirect('/auth/start');
+    if (!session || anon) return redirect('/auth/start');
     if (!sameOrigin(request, origin)) return html(messagePage('Not allowed', 'This only works from the chat page.'), 403);
     if (path === '/reviews/delete') {
       await deleteSettings(env, session.login);
@@ -300,7 +316,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const text = String(url.searchParams.get('t') || '').trim();
     if (!text) return json(400, { error: 'nothing to say' });
     if (text.length > MAX_SPEAK) return json(413, { error: `keep it under ${MAX_SPEAK} characters` });
-    if (await overDailyLimit(session.login, { cache: env.LIMIT_CACHE, limit: SPEAK_PER_DAY, scope: 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
+    if (await overDailyLimit(await who(session.login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_SPEAK_PER_DAY : SPEAK_PER_DAY, scope: anon ? 'speak-anon' : 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
     try {
       const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8));
       return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -316,6 +332,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const fleet = fleetClient(env, login, fetchImpl);
 
     if (path === '/api/review-ai') {
+      if (anon) return json(403, { error: 'PR reviews need GitHub sign-in' });
       const body = await readJson(request);
       const chosen = resolveModel({ ai: String(body?.ai || ''), key: String(body?.key || ''), model: String(body?.model || '') });
       if (chosen.error || chosen.free) return json(400, { error: chosen.error || 'pick an AI with your own key' });
@@ -333,7 +350,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
     if (path === '/api/transcribe') {
       const body = await readJson(request);
-      if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Type instead, or come back tomorrow.` });
+      if (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY, scope: anon ? 'voice-anon' : 'voice-limit' })) return json(429, { error: `You've used today's ${anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY} voice messages.${anon ? ' Sign in with GitHub for more, or come back tomorrow.' : ' Type instead, or come back tomorrow.'}` });
       const r = await transcribe(env, body);
       return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text, lang: r.lang });
     }
@@ -343,7 +360,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       // One round trip per spoken turn: the audio comes with the request, is written down here, then answered.
       let heard = '', lang = String(body?.lang || '').slice(0, 8);
       if (body?.audio) {
-        if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Come back tomorrow.` });
+        if (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY, scope: anon ? 'voice-anon' : 'voice-limit' })) return json(429, { error: `You've used today's ${anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY} voice messages.${anon ? ' Sign in with GitHub for more, or come back tomorrow.' : ' Come back tomorrow.'}` });
         const t = await transcribe(env, body);
         if (t.error) return json(t.status, { error: t.error });
         heard = t.text;
@@ -358,8 +375,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
-      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: TALK_PER_DAY, scope: 'talk-limit' }))) return json(429, { error: `That's your ${TALK_PER_DAY} free voice replies for today. Keep going free with your own OpenRouter account in the model menu, or come back tomorrow.` });
-      const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env, login))(messages);
+      if (chosen.free && (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_TALK_PER_DAY : TALK_PER_DAY, scope: anon ? 'talk-anon' : 'talk-limit' }))) return json(429, { error: `That's your ${anon ? ANON_TALK_PER_DAY : TALK_PER_DAY} free voice replies for today.${anon ? ' Sign in with GitHub for more.' : ''} Keep going free with your own OpenRouter account in the model menu, or come back tomorrow.` });
+      const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon))(messages);
       if (r.error) return json(502, { error: r.error, kind: r.kind });
       const text = spokenReply(r.text);
       return text ? json(200, { heard, lang, text }) : json(502, { error: 'the model sent an empty answer' });
@@ -380,16 +397,16 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const missing = order.find((p) => !connections[p]);
       if (missing) return json(400, { error: `${missing} is not connected yet. Connect it, or tick another computer` });
       // Only the shared free model counts against the daily cap; the visitor's own key costs us nothing.
-      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE }))) {
+      if (chosen.free && (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY, scope: anon ? 'chat-anon' : 'chat-limit' }))) {
         const now = new Date();
         const resetsIn = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
-        return json(429, { error: `That's your ${TASKS_PER_DAY} free tasks for today`, limit: TASKS_PER_DAY, resetsIn });
+        return json(429, { error: `That's your ${anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY} free tasks for today`, limit: anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY, resetsIn, anon });
       }
       const { readable, writable } = new TransformStream();
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, login)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

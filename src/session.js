@@ -11,11 +11,18 @@ async function hmac(secret, text) {
 
 const secretOf = (env) => env.SESSION_SECRET || '';
 
-export async function makeSession(env, login, now = Date.now()) {
-  const body = `${login}.${now + DAYS * 86400_000}`;
+export async function makeSession(env, login, now = Date.now(), days = DAYS) {
+  const body = `${login}.${now + days * 86400_000}`;
   const value = `${body}.${await hmac(secretOf(env), body)}`;
-  return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${DAYS * 86400}`;
+  return `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${days * 86400}`;
 }
+
+// A visitor who has not signed in with GitHub still gets a private id, so chat works with no account. The id lives in
+// this browser's cookie only ("anon-" plus 16 hex digits, which fleet accepts like a GitHub name); GitHub sign-in refuses
+// any name that starts with "anon-", so nobody can take one over.
+export const ANON_DAYS = 90;
+export const isAnon = (login) => /^anon-[a-f0-9]{16}$/.test(String(login || ''));
+export const newAnonLogin = () => `anon-${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 
 export const clearSession = () => `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
