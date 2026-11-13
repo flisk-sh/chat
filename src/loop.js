@@ -69,7 +69,7 @@ export function parseAction(text) {
   }
 
   // If it still looks like a tool call or XML, force a retry.
-  if (/<\|DSML\||<invoke|<parameter|tool_call|function_call/i.test(String(text))) {
+  if (/DSML|<invoke|<parameter|tool_call|function_call/i.test(String(text))) {
     return { type: 'bad', text: String(text) };
   }
 
