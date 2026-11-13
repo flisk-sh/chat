@@ -546,10 +546,19 @@ let voiceOn=lsGet('chat_voice')==='1',rec=null,recTimer=null,byVoice=false;
 const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').replace(/([.!?]) *[.] +/g,'$1 ').trim().slice(0,3000);
 const stopTalk=()=>{try{TTS&&TTS.cancel();}catch(e){}};
 const GOOD=['Google','Natural','Neural','Premium','Enhanced','Samantha','Ava','Daniel'];
-const pickVoice=(lang)=>{const vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===lang.slice(0,2).toLowerCase());return vs.find(v=>GOOD.some(g=>v.name.indexOf(g)>=0))||vs.find(v=>v.default)||vs[0]||null;};
-const talkBack=(t)=>{if(!TTS||!t)return;stopTalk();const lang=navigator.language||'en-US',v=pickVoice(lang);
+// Which language a text is in: Whisper's answer when there is one, else a guess from the letters, else the browser's.
+const LOC={en:'en-US',uk:'uk-UA',ru:'ru-RU',es:'es-ES',de:'de-DE',fr:'fr-FR',it:'it-IT',pt:'pt-BR',pl:'pl-PL',nl:'nl-NL',tr:'tr-TR',cs:'cs-CZ',ja:'ja-JP',ko:'ko-KR',zh:'zh-CN',ar:'ar-SA',he:'he-IL',hi:'hi-IN',el:'el-GR',sv:'sv-SE',fi:'fi-FI',da:'da-DK',no:'nb-NO',ro:'ro-RO',hu:'hu-HU',bg:'bg-BG',vi:'vi-VN',th:'th-TH',id:'id-ID',kk:'kk-KZ',ka:'ka-GE',be:'be-BY'};
+const langOf=(t,hint)=>{if(hint)return String(hint).slice(0,2).toLowerCase();t=String(t||'');
+  if(/[іїєґ]/i.test(t))return 'uk';if(/[а-яё]/i.test(t))return 'ru';if(/[가-힣]/.test(t))return 'ko';if(/[ぁ-ヿ]/.test(t))return 'ja';if(/[一-鿿]/.test(t))return 'zh';
+  if(/[α-ω]/i.test(t))return 'el';if(/[א-ת]/.test(t))return 'he';if(/[ء-ي]/.test(t))return 'ar';if(/[ऀ-ॿ]/.test(t))return 'hi';if(/[ก-๛]/.test(t))return 'th';
+  const w=' '+t.toLowerCase()+' ';if(/[¿¡ñ]/.test(w)||/ (el|los|las|que|es|por|para|una|cuál|qué) /.test(w))return 'es';if(/[ßäöü]/.test(w)||/ (der|die|und|ist|nicht|ich) /.test(w))return 'de';
+  if(/[çœ]/.test(w)||/ (le|les|est|une|vous|je|pas|des) /.test(w))return 'fr';if(/[ãõ]/.test(w)||/ (não|você|uma|para|com) /.test(w))return 'pt';if(/[łąęśźż]/.test(w))return 'pl';
+  if(/ (the|and|is|you|what|how|to) /.test(w))return 'en';return (navigator.language||'en').slice(0,2).toLowerCase();};
+const pickVoice=(lang)=>{if(!TTS)return null;const l=String(lang).slice(0,2).toLowerCase(),vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===l);return vs.find(v=>GOOD.some(g=>v.name.indexOf(g)>=0))||vs.find(v=>v.default)||vs[0]||null;};
+const utter=(x,lang,v)=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:(LOC[lang]||lang);if(v)u.voice=v;return u;};
+const talkBack=(t,hint)=>{if(!TTS||!t)return;stopTalk();const lang=langOf(t,hint),v=pickVoice(lang);
   const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());
-  parts.forEach(x=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:lang;if(v)u.voice=v;u.rate=1;TTS.speak(u);});};
+  parts.forEach(x=>TTS.speak(utter(x,lang,v)));};
 if(TTS&&TTS.onvoiceschanged!==undefined)TTS.onvoiceschanged=()=>{};
 const SV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',SPK_ON=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',SPK_OFF=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>';
 const drawVoice=()=>{voiceBtn.innerHTML=voiceOn?SPK_ON:SPK_OFF;voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);const t=voiceOn?'Reading answers aloud. Tap to stop':'Read answers aloud';voiceBtn.title=t;voiceBtn.setAttribute('aria-label',t);};
@@ -588,46 +597,49 @@ if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.oncl
 // Voice talk (Flisk Oracle): listen until you pause, write it down, the model answers in a few spoken sentences, read it
 // aloud, listen again. No computer, no typing. Tap the circle to interrupt, the red button to end; the talk is kept in the chat.
 const oracle=$('oracle'),orb=$('orb'),oState=$('ostate'),oYou=$('oyou'),oSay=$('osay');
-let oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
+let oLang='',oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
 const oSet=(st,msg)=>{oracle.className='oracle '+st;oState.textContent=msg;};
-const speakAll=(t)=>new Promise((done)=>{if(!TTS||!t){done();return;}stopTalk();const lang=navigator.language||'en-US',v=pickVoice(lang);
+const speakAll=(t,hint)=>new Promise((done)=>{if(!TTS||!t){done();return;}stopTalk();const lang=langOf(t,hint),v=pickVoice(lang);oracle._noVoice=!v&&TTS.getVoices().length>0?lang:'';
   const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());if(!parts.length){done();return;}
   let left=parts.length,fin=false;const end=()=>{if(fin)return;fin=true;oSpeaking=false;done();};const guard=setTimeout(end,4000+t.length*90);
-  oSpeaking=true;parts.forEach(x=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:lang;if(v)u.voice=v;u.onend=u.onerror=()=>{if(--left<=0){clearTimeout(guard);end();}};TTS.speak(u);});
+  oSpeaking=true;parts.forEach(x=>{const u=utter(x,lang,v);u.onend=u.onerror=()=>{if(--left<=0){clearTimeout(guard);end();}};TTS.speak(u);});
   oracle._endSpeak=()=>{clearTimeout(guard);stopTalk();end();};});
-// Record one utterance: starts on speech, stops after about 1.3 s of quiet (or 30 s), gives up after 9 s of silence.
+// Record one utterance: starts on speech, stops after 1 s of quiet (1.5 s after a short opening like "Hi!", so a greeting
+// and its question stay one turn), or 30 s; gives up after 9 s of silence.
 const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
   const chunks=[];const r=type?new MediaRecorder(oStream,{mimeType:type}):new MediaRecorder(oStream);oRec=r;
   const an=oCtx.createAnalyser();an.fftSize=1024;const src=oCtx.createMediaStreamSource(oStream);src.connect(an);const buf=new Float32Array(an.fftSize);
-  let spoke=false,quiet=0,t0=Date.now(),last=Date.now(),raf=0;
+  let spoke=false,quiet=0,talked=0,t0=Date.now(),last=Date.now(),raf=0;
   const tick=()=>{an.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++)sum+=buf[i]*buf[i];const rms=Math.sqrt(sum/buf.length),now=Date.now(),dt=now-last;last=now;
     orb.style.setProperty('--lv',Math.min(1,rms*12).toFixed(3));
-    if(rms>0.02){spoke=true;quiet=0;}else if(spoke)quiet+=dt;
-    if((spoke&&quiet>1300)||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
+    if(rms>0.02){spoke=true;quiet=0;talked+=dt;}else if(spoke)quiet+=dt;
+    if((spoke&&quiet>(talked<2000?1500:1000))||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
   oStop=()=>{if(r.state!=='inactive')r.stop();};
   r.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
   r.onstop=()=>{clearInterval(raf);try{src.disconnect();}catch(e){}orb.style.setProperty('--lv',0);oRec=null;oStop=null;done(spoke?new Blob(chunks,{type:r.mimeType||type||'audio/webm'}):null);};
   r.start();raf=setInterval(tick,60);});
+const LNAME={en:'English',uk:'Ukrainian',ru:'Russian',es:'Spanish',de:'German',fr:'French',it:'Italian',pt:'Portuguese',pl:'Polish',ja:'Japanese',ko:'Korean',zh:'Chinese',ar:'Arabic',he:'Hebrew',hi:'Hindi',tr:'Turkish',nl:'Dutch',el:'Greek'};
 async function oLoop(){
   while(oOn){
     oSet('listening','Listening…');const blob=await hearOne();if(!oOn)return;
     if(!blob){oSet('idle','Tap the circle when you want to talk.');return;}
-    oSet('thinking','Writing down what you said…');let said;
-    try{said=await toText(blob);}catch(e){oSet('idle',String(e.message||e));return;}
-    if(!oOn)return;if(said===null){oClose();signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+    // One request: the recording goes up, the words you said and the spoken answer come back, with the language heard.
+    oSet('thinking','Thinking…');let b;
+    try{const res=await fetch('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type,lang:oLang,history:oTurns,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})});
+      b=await res.json().catch(()=>({}));if(res.status===401){oClose();signin.hidden=false;signin.scrollIntoView({block:'center'});return;}if(!res.ok)throw new Error(b.error||('Voice talk answered '+res.status));}
+    catch(e){oSet('idle',String(e.message||e));return;}
+    if(!oOn)return;const said=String(b.heard||'').trim(),reply=String(b.text||'').trim();
     if(!said){oSet('idle','I did not catch that. Tap the circle and try again.');return;}
-    oYou.textContent=said;oSay.textContent='';oTurns.push({role:'user',content:said});oSet('thinking','Thinking…');
-    let reply;try{const res=await fetch('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({history:oTurns,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})});
-      const b=await res.json().catch(()=>({}));if(res.status===401){oClose();signin.hidden=false;return;}if(!res.ok)throw new Error(b.error||('Voice talk answered '+res.status));reply=String(b.text||'');}
-    catch(e){oTurns.pop();oSet('idle',String(e.message||e));return;}
-    if(!oOn)return;oTurns.push({role:'assistant',content:reply});oSay.textContent=reply;oSet('speaking','Speaking… tap the circle to interrupt');
-    await speakAll(reply);
+    if(b.lang)oLang=b.lang;oYou.textContent=said;oSay.textContent=reply;oTurns.push({role:'user',content:said},{role:'assistant',content:reply});
+    oSet('speaking','Speaking… tap the circle to interrupt');
+    await speakAll(reply,oLang);
+    if(oracle._noVoice){const n=LNAME[oracle._noVoice]||oracle._noVoice;oSet('speaking','This browser has no '+n+' voice, so read the answer. Tap the circle to talk.');return;}
   }
 }
 async function oOpen(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
   if(!window.__SIGNED__){signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
-  stopTalk();oracle.hidden=false;oYou.textContent='';oSay.textContent='';oTurns=[];oSet('thinking','Opening the microphone…');
+  stopTalk();oracle.hidden=false;oYou.textContent='';oSay.textContent='';oTurns=[];oLang='';oSet('thinking','Opening the microphone…');
   try{oStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
   catch(e){oClose();errMsg(e&&e.name==='NotAllowedError'?'Allow the microphone for chat.flisk.si (the icon in the address bar), then tap the wave again.':e&&e.name==='NotFoundError'?'No microphone found on this device.':'Could not open the microphone: '+(e&&e.message||e));return;}
   const AC=window.AudioContext||window.webkitAudioContext;oCtx=new AC();try{await oCtx.resume();}catch(e){}
@@ -638,7 +650,7 @@ function oClose(){oOn=false;if(oStop)oStop();if(oracle._endSpeak)oracle._endSpea
   // Keep the talk in the chat, so it is saved with the rest and can be read later.
   if(oTurns.length){chatting(true);oTurns.forEach(m=>{if(m.role==='user')userMsg(m.content);else asstMsg(m.content);history.push(m);});saveChat();down();oTurns=[];}
 }
-orb.onclick=()=>{if(!oOn)return;if(oSpeaking&&oracle._endSpeak){oracle._endSpeak();return;}if(oStop){oStop();return;}if(/idle/.test(oracle.className))oLoop();};
+orb.onclick=()=>{if(!oOn)return;if(oSpeaking&&oracle._endSpeak){oracle._endSpeak();return;}if(oStop){oStop();return;}if(!oRec)oLoop();};
 $('oend').onclick=oClose;
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&!oracle.hidden)oClose();});
 $('orbbtn').onclick=oOpen;

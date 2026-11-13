@@ -32,12 +32,16 @@ export function spokenReply(text) {
   }
   return t.replace(/```[\s\S]*?```/g, ' ').replace(/[*_#>|`~]/g, '').replace(/\s+/g, ' ').trim().slice(0, 1200);
 }
-export function talkMessages(history) {
+// Whisper's language code -> the name the model understands, so the reply comes back in the language spoken.
+export const LANG_NAMES = { en: 'English', uk: 'Ukrainian', ru: 'Russian', es: 'Spanish', de: 'German', fr: 'French', it: 'Italian', pt: 'Portuguese', pl: 'Polish', nl: 'Dutch', tr: 'Turkish', cs: 'Czech', sk: 'Slovak', ro: 'Romanian', hu: 'Hungarian', sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', el: 'Greek', bg: 'Bulgarian', sr: 'Serbian', hr: 'Croatian', be: 'Belarusian', ka: 'Georgian', he: 'Hebrew', ar: 'Arabic', fa: 'Persian', hi: 'Hindi', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai', id: 'Indonesian', ms: 'Malay', kk: 'Kazakh', lt: 'Lithuanian', lv: 'Latvian', et: 'Estonian', sl: 'Slovenian' };
+export function talkMessages(history, lang = '') {
   const turns = (Array.isArray(history) ? history : [])
     .filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
     .slice(-12)
     .map((m) => ({ role: m.role, content: m.content.slice(0, 1000) }));
-  return [{ role: 'system', content: TALK_SYSTEM }, ...turns];
+  const name = LANG_NAMES[String(lang).slice(0, 2)];
+  const sys = name ? `${TALK_SYSTEM}\nThe person is speaking ${name}. Reply only in ${name}.` : TALK_SYSTEM;
+  return [{ role: 'system', content: sys }, ...turns];
 }
 
 // Speech to text for the mic button: the browser records, Workers AI Whisper writes it down. Works in every browser,
@@ -50,7 +54,8 @@ export async function transcribe(env, body) {
   if (!env.AI) return { status: 503, error: 'voice is not set up on this server' };
   try {
     const r = await env.AI.run(WHISPER_MODEL, { audio });
-    return { status: 200, text: String(r?.text || '').trim() };
+    const lang = String(r?.transcription_info?.language || '').toLowerCase().replace(/[^a-z-]/g, '').slice(0, 8);
+    return { status: 200, text: String(r?.text || '').trim(), lang };
   } catch (e) {
     return { status: 502, error: 'could not hear that, try again: ' + String(e?.message || e).slice(0, 120) };
   }
@@ -288,12 +293,24 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const body = await readJson(request);
       if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Type instead, or come back tomorrow.` });
       const r = await transcribe(env, body);
-      return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text });
+      return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text, lang: r.lang });
     }
 
     if (path === '/api/talk') {
       const body = await readJson(request);
-      const messages = talkMessages(body?.history);
+      // One round trip per spoken turn: the audio comes with the request, is written down here, then answered.
+      let heard = '', lang = String(body?.lang || '').slice(0, 8);
+      if (body?.audio) {
+        if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Come back tomorrow.` });
+        const t = await transcribe(env, body);
+        if (t.error) return json(t.status, { error: t.error });
+        heard = t.text;
+        lang = t.lang || lang;
+        if (!heard) return json(200, { heard: '', lang, text: '' });
+      }
+      const history = Array.isArray(body?.history) ? body.history.slice(-12) : [];
+      if (heard) history.push({ role: 'user', content: heard });
+      const messages = talkMessages(history, lang);
       if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
@@ -301,7 +318,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const r = await modelFrom(env, fetchImpl, chosen)(messages);
       if (r.error) return json(502, { error: r.error, kind: r.kind });
       const text = spokenReply(r.text);
-      return text ? json(200, { text }) : json(502, { error: 'the model sent an empty answer' });
+      return text ? json(200, { heard, lang, text }) : json(502, { error: 'the model sent an empty answer' });
     }
 
     if (path === '/api/run') {

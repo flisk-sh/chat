@@ -11,7 +11,7 @@ const post = async (e, body, cookie) => handle(new Request(`${ORIGIN}/api/transc
 
 test('transcribe sends the audio to Whisper and returns the words', async () => {
   const a = ai({ text: ' make me a website ' });
-  expect(await transcribe({ AI: a }, { audio: 'QUJD' })).toEqual({ status: 200, text: 'make me a website' });
+  expect(await transcribe({ AI: a }, { audio: 'QUJD' })).toEqual({ status: 200, text: 'make me a website', lang: '' });
   expect(a.calls[0]).toEqual({ model: WHISPER_MODEL, input: { audio: 'QUJD' } });
 });
 
@@ -31,7 +31,7 @@ test('/api/transcribe needs a sign-in, then answers with the text', async () => 
   const cookie = (await makeSession(e, 'ann')).split(';')[0];
   const res = await post(e, { audio: 'QUJD' }, cookie);
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ text: 'hello there' });
+  expect(await res.json()).toEqual({ text: 'hello there', lang: '' });
 });
 
 test('the page has the mic and the Voice toggle, and its script parses', () => {
@@ -75,7 +75,7 @@ test('/api/talk answers with the free model, short and plain, and needs a sign-i
   expect((await call({ history: [] }, cookie)).status).toBe(400);
   const res = await call({ history: [{ role: 'user', content: 'Will I ship?' }], ai: { ai: 'wolf' } }, cookie);
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ text: 'You will ship it today.' });
+  expect(await res.json()).toEqual({ heard: '', lang: '', text: 'You will ship it today.' });
   expect(sent[0].messages[0].role).toBe('system');
   expect(sent[0].messages.at(-1)).toEqual({ role: 'user', content: 'Will I ship?' });
 });
@@ -84,4 +84,33 @@ test('the page has the speaker icon, the voice talk button and the talk screen',
   const page = appPage({ login: 'ann', connected: [] });
   for (const id of ['id="voice"', 'id="orbbtn"', 'id="oracle"', 'id="orb"', 'id="oend"', '/api/talk']) expect(page).toContain(id);
   expect(page).not.toContain('Voice · off');
+});
+
+test('voice talk in one request: hears Ukrainian, tells the model the language, returns words, language and answer', async () => {
+  const sent = [];
+  const INFERENCE = { fetch: async (u, init) => { sent.push(JSON.parse(init.body)); return Response.json({ choices: [{ message: { content: 'Столиця Франції — Париж.' } }] }); } };
+  const AI = { run: async () => ({ text: ' Яка столиця Франції? ', transcription_info: { language: 'uk' } }) };
+  const e = env({ AI, INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions' });
+  const cookie = (await makeSession(e, 'ann')).split(';')[0];
+  const res = await handle(new Request(`${ORIGIN}/api/talk`, { method: 'POST', headers: { cookie, origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ audio: 'QUJD', history: [], ai: { ai: 'wolf' } }) }), e, { fetchImpl: async () => Response.json({}) });
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ heard: 'Яка столиця Франції?', lang: 'uk', text: 'Столиця Франції — Париж.' });
+  expect(sent[0].messages[0].content).toContain('Reply only in Ukrainian');
+  expect(sent[0].messages.at(-1)).toEqual({ role: 'user', content: 'Яка столиця Франції?' });
+});
+
+test('voice talk with nothing heard answers empty without calling the model', async () => {
+  let called = 0;
+  const e = env({ AI: { run: async () => ({ text: '' }) }, INFERENCE: { fetch: async () => { called++; return Response.json({}); } }, INFERENCE_KEY: 'ik' });
+  const cookie = (await makeSession(e, 'ann')).split(';')[0];
+  const res = await handle(new Request(`${ORIGIN}/api/talk`, { method: 'POST', headers: { cookie, origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ audio: 'QUJD', history: [] }) }), e, { fetchImpl: async () => Response.json({}) });
+  expect(await res.json()).toEqual({ heard: '', lang: '', text: '' });
+  expect(called).toBe(0);
+});
+
+test('the page speaks a reply with a voice for its language, not the browser language', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('const lang=langOf(t,hint),v=pickVoice(lang)');
+  expect(page).toContain("uk:'uk-UA'");
+  expect(page).not.toContain("const lang=navigator.language||'en-US',v=pickVoice(lang)");
 });
