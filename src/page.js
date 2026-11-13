@@ -199,7 +199,7 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 @media (max-width:860px){
 .trow{grid-template-columns:1fr}.trow .q{padding:0}.sq{flex:1 1 calc(33% - 8px);width:auto;height:76px}
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
-.side.open{transform:none}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
+.side{visibility:hidden;transition:transform .2s,visibility 0s linear .2s}.side.open{transform:none;visibility:visible;transition:transform .2s}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
 .u{max-width:90%}.composer .chip.plain{display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
 @media (min-width:861px){.only-m{display:none}}
 `;
