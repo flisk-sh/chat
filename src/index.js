@@ -180,8 +180,10 @@ async function videoResponse(env, id, request) {
 
 // The page opens in its own sandbox (no cookies, no access to chat), with a bar saying who made it.
 function siteResponse(row) {
-  const bar = `<div style="position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;font:12px ui-monospace,Menlo,monospace;padding:6px 10px;z-index:2147483647">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site · <a style="color:#7ee787" href="https://github.com/flisk-sh/fleet/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
-  const body = /<\/body>/i.test(row.html) ? row.html.replace(/<\/body>/i, `${bar}</body>`) : row.html + bar;
+  const bar = `<div style="position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;font:12px ui-monospace,Menlo,monospace;padding:6px 10px;z-index:2147483647">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site · <a style="color:#7ee787" href="https://github.com/flisk-sh/chat/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
+  // The bar is fixed to the bottom edge: leave room under the page so its last line is not hidden behind it.
+  const room = '<style>body{padding-bottom:40px!important}</style>';
+  const body = /<\/body>/i.test(row.html) ? row.html.replace(/<\/body>/i, `${room}${bar}</body>`) : row.html + room + bar;
   return new Response(body, {
     headers: {
       'content-type': 'text/html; charset=utf-8',

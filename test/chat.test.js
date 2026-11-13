@@ -706,3 +706,18 @@ test('pages load the shared Flisk bar and the CSP allows it', async () => {
   expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.si/);
   expect(csp).toMatch(/img-src [^;]*https:\/\/flisk\.si/);
 });
+
+describe('the bar on a published page', () => {
+  test('leaves room under the page and reports to this repo', async () => {
+    const e = env();
+    for (const html of ['<html><body><footer>last line</footer></body></html>', '<html><footer>no body tag</footer></html>']) {
+      const made = await publishSite(e, 'octo', html, ORIGIN);
+      const text = await (await handle(new Request(made.url), e, {})).text();
+      expect(text).toContain('body{padding-bottom:40px!important}');
+      expect(text.indexOf('padding-bottom:40px')).toBeLessThan(text.indexOf('Made with Flisk Chat'));
+      expect(text).toContain('https://github.com/flisk-sh/chat/issues/new');
+      expect(text).not.toContain('flisk-sh/fleet');
+      expect(text).toContain(html.includes('last') ? 'last line' : 'no body tag');
+    }
+  });
+});
