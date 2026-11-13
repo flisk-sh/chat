@@ -74,7 +74,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #hist li .x{flex:none;opacity:0;padding:6px 8px;color:var(--soft)}#hist li:hover .x,#hist li .x:focus-visible{opacity:1}
 #hist .none{font-size:13px;color:var(--soft);padding:6px 8px}
 .sidesec{border-top:1px solid var(--line);padding:10px 4px 0}
-.sidesec h4{margin:0 0 6px;font:500 12px/1 var(--sans);color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+.sidesec h4{margin:0 0 6px;font:500 12px/1.4 var(--sans);color:var(--dim);display:flex;justify-content:space-between;align-items:center}
 .sidesec h4 a{font-weight:400;text-decoration:none}
 .comps{list-style:none;margin:0;padding:0;font-size:13px;display:flex;flex-wrap:wrap;gap:4px}
 .comps li{display:inline-flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:2px 8px}
@@ -684,7 +684,7 @@ async function run(task){
   try{
     const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
-    if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
+    if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');saveChat();setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));const er=new Error(b.error||('Chat answered '+res.status+'. Try again in a minute.'));er.kind=b.kind;throw er;}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';

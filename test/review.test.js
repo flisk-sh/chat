@@ -138,6 +138,12 @@ describe('saved key', () => {
     expect(del.status).toBe(303);
     expect(await loadSettings(env, 'odykyi')).toBeNull();
   });
+  test('a task that stops at the connect-a-computer step is still saved in the chat history', async () => {
+    const { env } = await setup();
+    const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
+    const html = await (await handle(new Request('https://chat.test/', { headers: { cookie } }), env)).text();
+    expect(html).toContain('Connect one of your sandbox accounts below, once.\');saveChat();');
+  });
   test('saving from another site is refused, and signing in is required', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
