@@ -57,7 +57,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #hist{list-style:none;margin:0;padding:0}
 #hist li{display:flex;align-items:center;border-radius:var(--radius)}#hist li:hover,#hist li.cur{background:rgba(27,27,24,.06)}
 #hist li button{flex:1;min-width:0;text-align:left;background:none;border:0;padding:7px 8px;cursor:pointer;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#hist li .x{flex:none;opacity:0;padding:6px 8px;color:var(--soft)}#hist li:hover .x,#hist li .x:focus-visible{opacity:1}
+#hist li .x{flex:none;opacity:0;padding:6px 8px;color:var(--soft)}#hist li:hover .x,#hist li .x:focus-visible{opacity:1}@media (hover:none){#hist li .x{opacity:1}}#hist li .when{flex:none;font-size:11px;color:var(--soft);padding:0 4px}.stop{font:12px var(--mono);text-transform:uppercase;background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:4px 10px;color:var(--ink);cursor:pointer}.stop:hover{border-color:var(--red);color:var(--red)}
 #hist .none{font-size:13px;color:var(--soft);padding:6px 8px}
 .sidesec{border-top:1px solid var(--line);padding:10px 4px 0}
 .sidesec h4{margin:0 0 6px;font:500 12px/1 var(--sans);color:var(--dim);display:flex;justify-content:space-between;align-items:center}
@@ -275,10 +275,10 @@ const chatting=(on)=>{welcome.classList.toggle('gone',on);};
 const KEY='chat_history_v1';let chatId=null,results={};
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
 const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
-const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.split('\\n')[0].slice(0,80),msgs:history,res:results});saveAll(all);drawHist();};
+const saveChat=()=>{if(!history.length)return;const prev=loadAll().find(c=>c.id===chatId);const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,at:(prev&&prev.at)||Date.now(),title:history[0].content.split('\\n')[0].slice(0,80),msgs:history,res:results});saveAll(all);drawHist();};
 function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
-  all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
+  all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b);if(c.at){const w=node('span','when',new Date(c.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}));w.title=new Date(c.at).toLocaleString();li.append(w);}li.append(x);hist.appendChild(li);});}
 $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;results={};talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
 function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);results=Object.assign({},c.res||{});history.forEach((m,i)=>{if(m.role==='user'){userMsg(m.content);return;}asstMsg(m.content);const r=results[i];if(r&&r.link)add(linkCard(r.link));if(r&&r.video)add(videoCard(r.video));});drawHist();}
@@ -306,7 +306,7 @@ function drawList(){const q=mq.value.trim().toLowerCase();mlist.textContent='';l
     b.innerHTML=tile(m,28)+'<span><span class="n"></span><span class="d"></span></span><svg class="ck" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const n=b.querySelector('.n');n.textContent=m.name;const pr=node('span','price'+(m.free?' free':''),m.free?'free':m.price);n.appendChild(pr);b.querySelector('.d').textContent=m.description;
     b.onclick=()=>{pick(m);if(m.free)closePop();else{(m.model?byoKey:byoModel).focus();}};mlist.appendChild(b);});
-  if(!mlist.children.length)mlist.appendChild(node('div','mgroup','No model matches.'));}
+  if(!mlist.children.length){mlist.appendChild(node('div','mgroup','No model matches.'));const raw=mq.value.trim();if(raw&&MODELS.some(x=>x.provider==='openai'||x.provider==='openrouter')){const key=/^(gpt|o\\d|chatgpt)/i.test(raw)?'openai':'openrouter',m=MODELS.find(x=>x.provider===key)||MODELS.find(x=>x.provider==='openrouter'),b=node('button','mi');b.type='button';b.innerHTML='<span></span><span><span class="n"></span><span class="d">Type this exact model name with your '+m.providerName+' key</span></span><span></span>';b.querySelector('.n').textContent='Use "'+raw+'" on '+m.providerName;b.onclick=()=>{pick(m);byoModel.value=raw;lsSet('chat_model_'+m.key,raw);mq.value='';drawList();byoKey.focus();};mlist.appendChild(b);}}}
 const SUGG={anthropic:['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5','claude-fable-5-2'],openai:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o4-mini'],openrouter:['google/gemini-2.5-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','qwen/qwen3-coder','meta-llama/llama-3.3-70b-instruct']};
 const lsGet=(k)=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
 const lsSet=(k,v)=>{try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
@@ -374,17 +374,17 @@ const noteIcon=(t)=>/scene|draw/i.test(t)?'image':/voice|record/i.test(t)?'mic':
 async function run(task){
   go.disabled=true;chatting(true);closePop();
   const turn=add(node('div','turn')),work=node('div','work'),l=node('span','l'),wt=node('span','',''),ws=node('span','','Thinking');
-  l.append(node('span','spin'),wt);work.append(l,ws);turn.appendChild(work);
+  const ctl=new AbortController(),stopB=node('button','stop','Stop');stopB.type='button';stopB.onclick=()=>{stopped=true;ctl.abort();};l.append(node('span','spin'),wt);work.append(l,ws,stopB);turn.appendChild(work);
   const box2=node('details','stepsbox'),sum2=node('summary','','Steps'),list=node('ol','steps');box2.open=true;box2.append(sum2,list);box2.hidden=true;turn.appendChild(box2);
   const t0=Date.now(),tick=()=>{wt.textContent='Working for '+secs(Date.now()-t0);};tick();const timer=setInterval(tick,1000);
-  let live=null,count=0,answer=null,failed=false,link=null,video=null,lastNote='';
+  let stopped=false,live=null,count=0,answer=null,failed=false,link=null,video=null,lastNote='';
   const step=(html,cls,ic)=>{if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add('ok');}const li=node('li','st '+(cls||'live')),si=node('span','si'),t=node('div','t');si.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+(SI[ic]||SI.sparkles)+'</svg>';t.innerHTML=html;li.append(si,t);list.appendChild(li);box2.hidden=false;count++;sum2.textContent='Steps ('+count+')';live=li;down();return li;};
   const code=(s)=>{const c=document.createElement('code');c.textContent=s;return c.outerHTML;};
   const txt=(s)=>{const c=document.createElement('span');c.textContent=s;return c.innerHTML;};
   const out=(s,bad)=>{if(!live||!s)return;const p=node('pre','',s.length>1500?s.slice(0,1500)+'\\n…':s);live.querySelector('.t').appendChild(p);if(bad){live.classList.remove('live','ok');live.classList.add('bad');live.querySelector('.si').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SI.alert+'</svg>';}down();};
   const end=(ok)=>{clearInterval(timer);if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
   try{
-    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
+    const res=await fetch('/api/run',{method:'POST',signal:ctl.signal,headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
@@ -406,8 +406,8 @@ async function run(task){
         else if(ev.type==='answer')answer=ev.text;
         else if(ev.type==='error'){failed=true;turn.appendChild(node('div','err',ev.error));}
       }}
-  }catch(err){failed=true;turn.appendChild(node('div','err',String(err.message||err)));}
-  end(!failed||answer!==null);
+  }catch(err){failed=true;turn.appendChild(node('div',stopped?'a':'err',stopped?'Stopped. Nothing more will run.':String(err.message||err)));}
+  stopB.remove();end(!failed||answer!==null);
   if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();}
   if(link){turn.appendChild(linkCard(link));noteRes({link});}
   if(video){turn.appendChild(videoCard(video));noteRes({video});}
