@@ -134,6 +134,8 @@ form.ask .btn{border-width:0 0 0 1px;font-size:13px}
 .pick select{appearance:none;-webkit-appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23171715'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:32px}
 .mark{background:var(--orange);color:var(--ink)}
 .comps .on::before{color:var(--orange)}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+form.ask textarea:focus-visible{outline:0}.dock:focus-within{box-shadow:0 0 0 3px var(--orange)}
 @media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
 `;
 
@@ -249,6 +251,7 @@ function ask6(task){
 let lastSend=0;
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
+try{if(matchMedia("(pointer:fine)").matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
 
