@@ -656,6 +656,31 @@ describe('empty model replies', () => {
   });
 });
 
+describe('provider hiccups', () => {
+  const computer = { start: async () => ({ data: { id: 'p', provider: 'upstash' } }), run: async () => ({ data: { exitCode: 0, stdout: 'ok', stderr: '' } }), stop: async () => ({ status: 200 }) };
+  const down = { error: 'The model provider had a problem (HTTP 500): Internal server error', kind: 'provider' };
+  test('an HTTP 500 halfway through a build is retried and the build goes on', async () => {
+    const replies = [{ text: '{"run":"echo hi"}' }, down, { text: '{"say":"done"}' }];
+    const waits = [];
+    const r = await runTask2({ task: 'x', model: async () => replies.shift(), computer, wait: async (ms) => waits.push(ms) });
+    expect(r.error).toBeNull();
+    expect(r.answer).toBe('done');
+    expect(waits).toEqual([3000]);
+  });
+  test('a provider that keeps failing stops after two retries with its reason', async () => {
+    let calls = 0;
+    const r = await runTask2({ task: 'x', model: async () => (calls++, down), computer, wait: async () => {} });
+    expect(calls).toBe(3);
+    expect(r.error).toContain('HTTP 500');
+  });
+  test('a refused key is not retried', async () => {
+    let calls = 0;
+    const r = await runTask2({ task: 'x', model: async () => (calls++, { error: 'Your anthropic API key was refused', kind: 'key' }), computer, wait: async () => {} });
+    expect(calls).toBe(1);
+    expect(r.error).toContain('refused');
+  });
+});
+
 describe('step budget', () => {
   const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), run: async () => ({ data: { exitCode: 0, stdout: 'ok', stderr: '' } }), stop: async () => ({ status: 200 }) };
   test('running out of steps never shows the raw action JSON as the answer', async () => {

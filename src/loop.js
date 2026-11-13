@@ -336,7 +336,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, share, stop } (fleet.js). track: optional { started(podId), kept(podId, url), stopped(podId) }. publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -367,6 +367,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
     return { answer, error, steps, links, provider, ms: Date.now() - t0 };
   };
   let emptyRetries = 0;
+  let providerRetries = 0;
   let kept = null; // the public URL of the running app: the computer is kept, not stopped
   let startedServer = false;
   let askedForLink = false;
@@ -382,6 +383,15 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         emptyRetries++;
         emit({ type: 'retry' });
         messages.push({ role: 'user', content: 'Your last reply was empty. Reply now with the next action as one short JSON object.' });
+        step--;
+        continue;
+      }
+      // A provider hiccup (HTTP 5xx, overloaded, a dropped connection) is nearly always gone a few seconds later. Without a
+      // retry one bad answer ended a build halfway and stopped its computer, so wait and ask again, twice per task at most.
+      if (reply.kind === 'provider' && providerRetries < 2) {
+        providerRetries++;
+        emit({ type: 'retry' });
+        await wait(providerRetries * 3000);
         step--;
         continue;
       }

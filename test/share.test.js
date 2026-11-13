@@ -145,3 +145,10 @@ describe('kept computers are deleted on time', () => {
     expect(env.DB.raw.query('SELECT COUNT(*) AS n FROM pods').get().n).toBe(1);
   });
 });
+
+test('the result card says a shared app is the real app and a /s/ page is the one-file copy', async () => {
+  const { appPage } = await import('../src/page.js');
+  const page = appPage({ login: 'x' });
+  expect(page).toContain('Your app is live: the real website and API');
+  expect(page).toContain('Your page is live (one-file copy)');
+});
