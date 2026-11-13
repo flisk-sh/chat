@@ -41,6 +41,20 @@ const CSS = `
 :root{--bg:#F7F6F2;--panel:#fff;--side:#F0EEE7;--line:#E3E0D6;--line2:#D3D0C5;--ink:#1B1B18;--dim:#6B6960;--soft:#9A988E;--green:#2F7D4A;--green-d:#246139;--tint:#EAF3DE;--warn:#B54708;--red:#B42318;
 --t0:#F6D2C2;--t0i:#712B13;--t1:#F7E3B0;--t1i:#633806;--t2:#C9EDE4;--t2i:#085041;--t3:#F4D3E1;--t3i:#72243E;
 --sans:Geist,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--radius:4px}
+.set{display:grid;grid-template-columns:240px minmax(0,1fr);height:100vh;height:100dvh}
+.setnav{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:14px 12px;overflow:auto}
+.setnav>a{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius);color:var(--ink);text-decoration:none;font-size:14px}.setnav>a:hover,.setnav>a.cur{background:rgba(27,27,24,.06)}
+.setnav .brand{margin-bottom:10px}.setnav .who{margin-top:auto}
+.setmain{overflow:auto;padding:6vh 28px 60px;max-width:760px;width:100%}
+.setmain h1{font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:0 0 18px}
+.setcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
+.setcard h2{font:600 18px/1.3 var(--sans);margin:0 0 8px}.setcard p{margin:8px 0}
+.steps{list-style:decimal;padding-left:20px;margin:8px 0;color:var(--dim)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.setform{display:grid;gap:12px;max-width:440px}.setform label{display:grid;gap:4px;font-size:14px}
+.setform select,.setform input{width:100%;padding:8px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);font:inherit}
+.keylinks,.hint{color:var(--dim);font-size:13px;margin:0}.flash{background:var(--tint);color:var(--green-d);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px}
+@media(max-width:760px){.set{grid-template-columns:1fr;height:auto}.setnav{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}.setnav .who,.setnav .brand{width:100%;margin:0}body{overflow:auto}}
 *{box-sizing:border-box}html,body{height:100%}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);overflow:hidden}
 a{color:var(--green)}button{font:inherit;color:inherit}
@@ -223,22 +237,34 @@ export const homePage = () =>
 export const messagePage = (title, text) =>
   shell(`${title} · chat`, `<main class="col" style="padding-top:14vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">${esc(title)}</h1><p style="color:var(--dim)">${esc(text)}</p><a class="btn" href="/">Back to chat</a></main>`);
 
-// Where a person saves the AI that reviews their pull requests (@flisk-chat review). The key is never shown again.
+// Where a person manages the AI behind their pull request reviews (@flisk-chat review). The key is never shown again.
+export const GITHUB_APP_URL = 'https://github.com/apps/flisk-chat';
+export const KEY_PAGES = { openrouter: ['OpenRouter', 'https://openrouter.ai/keys'], anthropic: ['Claude', 'https://console.anthropic.com/settings/keys'], openai: ['OpenAI', 'https://platform.openai.com/api-keys'] };
+
 export const reviewsPage = ({ login, saved, stored, limit, flash }) =>
   shell(
-    'PR reviews · chat',
-    `<main class="col" style="padding-top:10vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">Pull request reviews</h1>
-<p style="color:var(--dim)">Install the <b>flisk-chat</b> GitHub App on a repo, then comment <code>@flisk-chat review</code> on a pull request. You get one review with a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
-${flash ? `<p style="color:var(--green)">${flash === 'saved' ? 'Saved.' : 'Deleted.'}</p>` : ''}
-<p>${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
-${stored ? `<form method="post" action="/reviews/save" style="display:grid;gap:10px;max-width:420px">
-<label>AI<br><select name="ai" style="width:100%;padding:8px"><option value="openrouter">OpenRouter</option><option value="anthropic">Claude</option><option value="openai">OpenAI</option></select></label>
-<label>Model name<br><input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" style="width:100%;padding:8px" value="${esc(saved?.model || '')}"></label>
-<label>API key<br><input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off" style="width:100%;padding:8px"></label>
-<p style="color:var(--dim);font-size:13px;margin:0">The key is encrypted before it is stored and never shown again.</p>
-<button class="btn" type="submit">Save for reviews</button></form>` : '<p style="color:var(--dim)">Saving a key is not switched on yet.</p>'}
-${saved ? '<form method="post" action="/reviews/delete" style="margin-top:14px"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
-</main>`,
+    'Settings · chat',
+    `<div class="set">
+<nav class="setnav" aria-label="Settings"><div class="brand">${LOGO}</div><a href="/">${icon('chat', 16)}Back to chat</a><a href="#github" class="cur">GitHub reviews</a><a href="#ai">AI for reviews</a><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Computers</a><a href="https://flisk.si" target="_blank" rel="noopener">Flisk</a><div class="who"><span>@${esc(login)}</span><a href="/auth/signout">Sign out</a></div></nav>
+<main class="setmain">
+<h1>Settings</h1>
+${flash ? `<p class="flash" role="status">${flash === 'saved' ? 'Saved. Your next review uses this AI.' : 'Deleted. Reviews use the free Flisk Wolf model again.'}</p>` : ''}
+<section id="github" class="setcard"><h2>Pull request reviews</h2>
+<p>Comment <code>@flisk-chat review</code> on a pull request and get one review: a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
+<ol class="steps"><li>Install the app on the repos you want reviewed.</li><li>Open a pull request and comment <code>@flisk-chat review</code>.</li><li>Optional: save your own AI below for no daily limit.</li></ol>
+<p class="row"><a class="btn go" href="${GITHUB_APP_URL}/installations/new" target="_blank" rel="noopener">Install the GitHub App</a><a class="btn" href="${GITHUB_APP_URL}" target="_blank" rel="noopener">View on GitHub</a><a class="btn" href="https://github.com/settings/installations" target="_blank" rel="noopener">Manage installed repos</a></p></section>
+<section id="ai" class="setcard"><h2>AI for reviews</h2>
+<p class="cur-ai">${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
+${stored ? `<form method="post" action="/reviews/save" class="setform">
+<label>AI<select name="ai" id="aisel">${Object.entries(KEY_PAGES).map(([v, [n]]) => `<option value="${v}"${saved?.ai === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+<p class="keylinks">Get a key: ${Object.entries(KEY_PAGES).map(([v, [n, u]]) => `<a href="${u}" target="_blank" rel="noopener" data-for="${v}">${n} keys</a>`).join(' · ')}</p>
+<label>Model name<input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" value="${esc(saved?.model || '')}"></label>
+<label>API key<input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off"></label>
+<p class="hint">The key is encrypted before it is stored and never shown again.</p>
+<p class="row"><button class="btn go" type="submit">Save for reviews</button></p></form>` : '<p class="hint">Saving a key is not switched on yet.</p>'}
+${saved ? '<form method="post" action="/reviews/delete"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
+</section>
+</main></div>`,
   );
 
 // Starter ideas per kind, for people who never write code.
@@ -517,7 +543,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
 <section class="sidesec"><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div></section>
-<div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">PR reviews</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
+<div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
 <div class="main">
 <div class="top"><button type="button" id="sideopen" class="iconbtn" aria-label="Open the menu"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>${LOGO}</div>
