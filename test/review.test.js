@@ -214,7 +214,7 @@ describe('saved key', () => {
     const page = await handle(new Request('https://chat.test/reviews', { headers: { cookie } }), env);
     const text = await page.text();
     expect(text).toContain('gpt-x');
-    for (const href of ['https://github.com/apps/flisk-chat/installations/new', 'https://openrouter.ai/keys', 'https://console.anthropic.com/settings/keys', 'https://platform.openai.com/api-keys', 'href="/"', 'class="howto"']) expect(text).toContain(href);
+    for (const href of ['https://github.com/apps/flisk-chat/installations/new', 'https://openrouter.ai/keys', 'https://console.anthropic.com/settings/keys', 'https://platform.openai.com/api-keys', 'href="/"', 'class="steps"', 'data-copy="@flisk-chat review run"', '@flisk-chat auto on']) expect(text).toContain(href);
     expect(text).not.toContain('sk-plain-secret-9');
     const del = await handle(new Request('https://chat.test/reviews/delete', { method: 'POST', headers: { cookie, origin: 'https://chat.test' } }), env);
     expect(del.status).toBe(303);
