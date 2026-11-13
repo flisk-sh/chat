@@ -7,6 +7,7 @@ import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
+import { weatherNote } from './weather.js';
 
 export const TASKS_PER_DAY = 20;
 export const MAX_SITE_BYTES = 200 * 1024;
@@ -116,7 +117,7 @@ export async function overDailyLimit(login, { cache = globalThis.caches?.default
 
 // The free model's last fallback (Workers AI on our account) has one daily cap for everyone, so chat keeps to its share.
 // Each person may use only a share of it, so one busy visitor cannot use up the day for everybody.
-export const WORKERS_AI_PER_PERSON = 15;
+export const WORKERS_AI_PER_PERSON = 40;
 export const freeModelOpts = (env, login = '') => ({
   overLimit: async () => (login && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_PERSON, scope: 'workers-ai-person' }))) || overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
   log: (tried) => console.log('free model fallbacks all failed', JSON.stringify(tried).slice(0, 600)),
@@ -352,6 +353,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const history = Array.isArray(body?.history) ? body.history.slice(-12) : [];
       if (heard) history.push({ role: 'user', content: heard });
       const messages = talkMessages(history, lang);
+      const note = await weatherNote(messages[messages.length - 1]?.content, fetchImpl);
+      if (note) messages[0] = { role: 'system', content: `${messages[0].content}\n${note}` };
       if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
