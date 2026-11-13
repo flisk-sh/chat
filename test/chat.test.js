@@ -362,7 +362,7 @@ test('the page reads its models from inference /v1/catalog through the binding',
   expect(models.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'new-one']);
   const page = appPageUi({ login: 'ann', connected: [], models });
   expect(page).toContain('"id":"new-one"');
-  expect(page.split('</script>').length).toBe(2);
+  expect(page.replace('<script src="https://flisk.si/assets/bar.js" defer></script>', '').split('</script>').length).toBe(2);
   expect(await loadCatalog({}, 2e13)).toBe(DEFAULT_MODELS);
 });
 
@@ -693,4 +693,14 @@ describe('search visibility', () => {
     expect(map.status).toBe(200);
     expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
   });
+});
+
+// Every Flisk site shows the shared Flisk bar at the top; the page loads it and the CSP lets its script and icons through.
+test('pages load the shared Flisk bar and the CSP allows it', async () => {
+  const res = await handle(new Request(`${ORIGIN}/`), env());
+  const html = await res.text();
+  expect(html).toContain('<script src="https://flisk.si/assets/bar.js" defer></script>');
+  const csp = res.headers.get('content-security-policy');
+  expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.si/);
+  expect(csp).toMatch(/img-src [^;]*https:\/\/flisk\.si/);
 });
