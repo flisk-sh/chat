@@ -5,7 +5,8 @@
 //   3. opens the URL itself and only then calls it live.
 // The computer is kept instead of stopped: it pauses itself when idle (no compute is billed while paused), a visit wakes it,
 // and chat deletes it after KEEP_DAYS (see index.js keptPods). Only providers that can give a port a public URL do this
-// (Upstash Box today); for the others fleet answers 501 and the model makes the one-file copy instead.
+// For a provider whose computers cannot sleep and wake, the link lasts only as long as the computer (about an hour), and the
+// answer says so. A provider without public URLs answers 501 and the model makes the one-file copy instead.
 export const KEEP_DAYS = 7;
 export const KEPT_PER_LOGIN = 3;
 
@@ -62,5 +63,9 @@ export async function shareApp({ computer, podId, spec, fetchImpl = fetch, wait 
   if (!/^https:\/\//.test(String(url || ''))) return { error: 'fleet gave no public link' };
   const seen = await check(url, fetchImpl, wait);
   if (!seen.ok) return { error: `the public link does not open the app yet (${seen.last}). Check that the website answers on port ${spec.port} and that the Vite config has host: true and allowedHosts: true` };
-  return { url };
+  // wakesOnVisit: the computer sleeps when idle and a visit wakes it, so the link lasts KEEP_DAYS. Otherwise it lasts until the
+  // provider stops the computer (expiresAt, or about an hour: fleet's default pod lifetime).
+  const wakesOnVisit = made.data.wakesOnVisit === true;
+  const expiresAt = wakesOnVisit ? null : made.data.expiresAt || new Date(Date.now() + 3600_000).toISOString();
+  return { url, wakesOnVisit, expiresAt };
 }

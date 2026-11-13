@@ -358,7 +358,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
   const t0 = Date.now();
   const finish = async (answer, error = null) => {
     if (podId && kept) {
-      emit({ type: 'pod_kept', url: kept, days: KEEP_DAYS });
+      emit({ type: 'pod_kept', url: kept.url, days: kept.wakesOnVisit ? KEEP_DAYS : 0, until: kept.expiresAt || null });
     } else if (podId) {
       const s = await computer.stop(podId).catch(() => null);
       emit({ type: 'pod_stopped', ok: s?.status === 200 });
@@ -494,11 +494,14 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         const r = await shareApp({ computer, podId, spec: action.spec, fetchImpl });
         if (r.error) shown = { error: r.error };
         else {
-          kept = r.url;
+          kept = r;
           links.push(r.url);
-          await Promise.resolve(track.kept?.(podId, r.url)).catch(() => {});
+          await Promise.resolve(track.kept?.(podId, r.url, r.expiresAt)).catch(() => {});
           emit({ type: 'live', url: r.url });
-          shown = { live: r.url, note: `This is the running app (website and API), kept running after you answer; it sleeps when idle and wakes on a visit, deleted after ${KEEP_DAYS} days. Say this link first.` };
+          const lasts = r.wakesOnVisit
+            ? `it sleeps when idle and wakes on a visit, deleted after ${KEEP_DAYS} days`
+            : `it works until ${new Date(r.expiresAt).toUTCString()} (about ${Math.max(1, Math.round((Date.parse(r.expiresAt) - Date.now()) / 60000))} minutes), when ${provider || 'the provider'} stops the computer; tell the user how long it lasts`;
+          shown = { live: r.url, note: `This is the running app (website and API), kept running after you answer; ${lasts}. Say this link first.` };
         }
       } else if (action.type === 'publish') {
         emit({ type: 'publish', path: action.path });

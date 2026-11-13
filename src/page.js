@@ -868,7 +868,7 @@ async function run(task){
         else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
         else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.live)link=ev.live;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
         else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
-        else if(ev.type==='pod_kept')step('Computer kept running for the live app: it sleeps when idle, wakes on a visit, deleted after '+Number(ev.days)+' days','ok','power');
+        else if(ev.type==='pod_kept')step(ev.days?'Computer kept running for the live app: it sleeps when idle, wakes on a visit, deleted after '+Number(ev.days)+' days':'Computer kept running for the live app until '+(ev.until?new Date(ev.until).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'the provider stops it'),'ok','power');
         else if(ev.type==='widget'){const w=drawWidget(ev);if(w){turn.appendChild(w);down();}}
         else if(ev.type==='answer')answer=ev.text;
         else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
