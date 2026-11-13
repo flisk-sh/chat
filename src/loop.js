@@ -36,9 +36,12 @@ Rules:
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
   1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; export PATH=$HOME/.local/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
-  2. "write" your code: the API into ~/app/api/src/index.js (keep its port and /health), the page into the website's index.html. For data use SQLite inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'), not a database server.
+  2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port and /health), the page into the website's index.html. For data use SQLite inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'), not a database server.
   3. {"run": "export PATH=$HOME/.local/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
-  4. Check it with curl on the ports from that log (place an order, read it back), then "say" what works, with the commands and their output. The computer stops as soon as you answer, so never tell the user to open a localhost address.
+  4. Check it with curl on the ports from that log (place an order, read it back).
+  5. The computer stops as soon as you answer, so the running app cannot be opened and a localhost address is useless. In the same task "write" ONE self-contained index.html copy of the page (the same screens and features, data kept in localStorage, no calls to the API), "publish" it, then "say" the link FIRST, then what you checked with curl. Tell the user plainly that the link is the one-file copy (data stays in their browser) and that the API version runs again with flisk up.
+- Every build (website, app, shop, dashboard) ends with a published link in the same answer. Never end with an offer to publish later or with only a localhost address.
+- Each task starts on a fresh computer: files and servers from earlier answers are gone. If the user asks for the link to something built earlier, build it again, then publish it.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
 ${widgetPrompt()}
@@ -351,6 +354,8 @@ export async function runTask({ task, history = [], model, computer, publish, sa
     return { answer, error, steps, links, provider, ms: Date.now() - t0 };
   };
   let emptyRetries = 0;
+  let startedServer = false;
+  let askedForLink = false;
   try {
     for (let step = 1; step <= maxSteps; step++) {
       emit({ type: 'thinking', step });
@@ -375,6 +380,14 @@ export async function runTask({ task, history = [], model, computer, publish, sa
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });
         messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
+        continue;
+      }
+      // A server was started on the computer but nothing was published: the computer stops with this answer, so the user
+      // would get an app they cannot open and have to ask for the link. Ask for the published copy once.
+      if (action.type === 'say' && !last && podId && startedServer && !links.length && !askedForLink) {
+        askedForLink = true;
+        emit({ type: 'retry' });
+        messages.push({ role: 'user', content: 'No public link yet, and the computer stops when you answer, so the running app cannot be opened. "write" ONE self-contained index.html copy of the page (same screens, data kept in localStorage, no API calls), "publish" it, then "say" the link first and tell the user it is the one-file copy. Next action as JSON only.' });
         continue;
       }
       if (action.type === 'say' || last) {
@@ -430,6 +443,7 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         }
       } else if (action.type === 'run') {
         emit({ type: 'run', command: action.command });
+        if (/\b(flisk up|nohup)\b/.test(action.command)) startedServer = true;
         const r = await computer.run(podId, action.command);
         shown = r.error ? { error: r.error } : { exitCode: r.data.exitCode, stdout: clip(r.data.stdout), stderr: clip(r.data.stderr, 600) };
       } else if (action.type === 'write') {
