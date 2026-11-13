@@ -99,12 +99,12 @@ form.ask{border-top:0}
 .trow.new{animation:rowin .22s ease-out}
 @keyframes rowin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.trow,.sq{animation:none;transition:none}}
-.trow .q{width:120px;flex:none;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--dim);padding-top:12px}
+.trow .q{width:120px;flex:none;font:12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);padding-top:12px}
 .sq{flex:1;border:0;border-radius:0;padding:12px;font:14px/1.3 var(--sans);cursor:pointer;min-height:50px;text-align:left;transition:flex .25s,transform .25s,box-shadow .2s}
 .sq:hover,.sq:focus-visible,.sq.on{flex:1.8;box-shadow:inset 0 0 0 3px var(--ink);outline:0}
 .p0{background:#D9622B;color:#171715}.p1{background:#E8C21A;color:#171715}.p2{background:#3FD3D6;color:#171715}.p3{background:#DB7BB2;color:#171715}
 .zchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.zchip{font:11px var(--mono);text-transform:uppercase;border-radius:0;padding:4px 10px;background:var(--card);border:1px solid rgba(23,23,21,.15);color:var(--dim)}
+.zchip{font:12px var(--mono);text-transform:uppercase;border-radius:0;padding:5px 10px;background:var(--card);border:1px solid rgba(23,23,21,.35);color:var(--ink)}
 .zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
 .zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
 @media (max-width:640px){.trow{flex-wrap:wrap}.trow{margin-left:0!important}.trow .q{width:100%;padding:0}}
@@ -141,7 +141,7 @@ form.ask textarea:focus-visible{outline:0}.dock:focus-within{box-shadow:0 0 0 3p
 @media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
 `;
 
-const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
+const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23D9622B'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='700' text-anchor='middle' fill='%23171715'%3Ec%3C/text%3E%3C/svg%3E"><meta name="theme-color" content="#EFEBDD"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 export const homePage = () =>
   shell(
@@ -274,7 +274,7 @@ export function appPage({ login, connected = [] }) {
         ? connected.map((id) => `<li class="on">${esc(PROVIDER_NAMES[id] || id)}</li>`).join('')
         : `<li class="off">${login ? 'None connected yet' : 'Sign in to see yours'}</li>`
     }</ul>${login ? '<p style="margin:8px 0 0;font-size:12px;color:var(--dim)">A task asks for a key when it needs one. Remove keys in fleet (manage). Keys are stored encrypted in fleet; your own AI key is never saved.</p>' : ''}</section>
-<section><h4>Coming soon</h4><div class="soon">🎙 Voice talk <span class="tag">soon</span></div><div class="soon">🎬 Video generation <span class="tag">soon</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--dim)">Talk to chat and hear it answer in Ava, the warm voice from Flisk videos.</p></section>
+<section><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div><div class="soon">Video generation <span class="tag">soon</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--dim)">Talk to chat and hear it answer in Ava, the warm voice from Flisk videos.</p></section>
 </aside><div class="main">
 <div class="hero"><h1>What should we <em>get done?</em></h1>
 <p class="sub">${!login ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.' : connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
@@ -289,7 +289,7 @@ export function appPage({ login, connected = [] }) {
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 </div>
 <div id="comp" hidden><h3>Computer</h3><div id="screen" aria-label="What the computer did"></div></div>
-<div class="dock"><div class="tools"><button type="button" disabled title="Coming soon">🎙 Voice · soon</button><button type="button" disabled title="Coming soon">🎬 Video · soon</button></div>
+<div class="dock"><div class="tools"><button type="button" disabled title="Coming soon">Voice · soon</button><button type="button" disabled title="Coming soon">Video · soon</button></div>
 <form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form></div>
 </div></div></div>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};` + APP_JS,
