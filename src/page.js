@@ -429,8 +429,28 @@ function drawList(){const q=mq.value.trim().toLowerCase();mlist.textContent='';l
   else if(railOn==='openrouter'&&!q)mlist.appendChild(node('div','mgroup','Search above for any of '+OR.length+' OpenRouter models.'));
   if(!mlist.children.length)mlist.appendChild(node('div','mgroup','No model matches.'));}
 const SUGG={anthropic:['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5','claude-fable-5-2'],openai:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o4-mini'],openrouter:['google/gemini-2.5-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','qwen/qwen3-coder','meta-llama/llama-3.3-70b-instruct']};
-const lsGet=(k)=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
-const lsSet=(k,v)=>{try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
+// API keys are never kept as plain text. They are encrypted with AES-GCM; the encryption key is a non-extractable WebCrypto key held in IndexedDB,
+// so the key text cannot be read out of the browser's storage (localStorage, a copied profile or a storage dump). Other settings stay in localStorage.
+const VAULT={};let vdb=null,master=null,vq=Promise.resolve();
+const isSecret=(k)=>k.indexOf('chat_key_')===0;
+const idbReq=(r)=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+async function vaultSave(k,v){if(!vdb||!master)return;
+  if(!v){await idbReq(vdb.transaction('v','readwrite').objectStore('v').delete('k:'+k));return;}
+  const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},master,new TextEncoder().encode(v));
+  await idbReq(vdb.transaction('v','readwrite').objectStore('v').put({iv,ct},'k:'+k));}
+const vaultReady=(async()=>{try{
+  vdb=await new Promise((res,rej)=>{const r=indexedDB.open('chat_vault',1);r.onupgradeneeded=()=>r.result.createObjectStore('v');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+  master=await idbReq(vdb.transaction('v').objectStore('v').get('master'));
+  if(!master){master=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);await idbReq(vdb.transaction('v','readwrite').objectStore('v').put(master,'master'));}
+  const keys=await idbReq(vdb.transaction('v').objectStore('v').getAllKeys());
+  for(const id of keys){if(String(id).indexOf('k:')!==0)continue;const rec=await idbReq(vdb.transaction('v').objectStore('v').get(id));
+    try{VAULT[String(id).slice(2)]=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:rec.iv},master,rec.ct));}catch(e){}}
+  // Keys saved by an older version as plain text: encrypt them, then delete the plain copy.
+  try{for(const k of Object.keys(localStorage).filter(isSecret)){const v=localStorage.getItem(k);if(v&&!VAULT[k]){VAULT[k]=v;await vaultSave(k,v);}localStorage.removeItem(k);}}catch(e){}
+}catch(e){vdb=null;master=null;}})();
+const lsGet=(k)=>{if(isSecret(k))return VAULT[k]||'';try{return localStorage.getItem(k)||'';}catch(e){return '';}};
+const lsSet=(k,v)=>{if(isSecret(k)){if(v)VAULT[k]=v;else delete VAULT[k];vq=vq.then(()=>vaultReady).then(()=>vaultSave(k,VAULT[k]||'')).catch(()=>{});return;}
+  try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
 const byStat=$('bystat'),byRm=$('byrm'),bySave=$('bysave'),bySug=$('bysug'),byWarn=$('bywarn');let orLoaded=false,sugList=[],orNames={};
 // Search every word of what was typed against the id and the name; best matches first (starts with, then contains), free ones marked.
 const rank=(q)=>{const w=q.toLowerCase().split(' ').filter(Boolean);if(!w.length)return sugList.slice(0,40);
@@ -444,7 +464,7 @@ const fillSugg=(list)=>{sugList=list;if(document.activeElement===byoModel)drawSu
 const fixModel=(m)=>{if(cur.key!=='openrouter'||!sugList.length||!m||sugList.indexOf(m)>=0)return {ok:true,model:m};
   const t=sugList.filter(id=>id.endsWith('/'+m));if(t.length===1)return {ok:true,model:t[0],fixed:true};
   const near=rank(m).slice(0,4);return {ok:false,near};};
-const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Saved in this browser only, never on our servers.':'Saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
+const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Encrypted and saved in this browser only, never on our servers.':'Encrypted and saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
 async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(!ids.length){orLoaded=false;return;}
   OR=d.map(x=>orModel(x.id,x.name,(Number(x.pricing&&x.pricing.prompt)||0)*1e6,x.context_length));if(cur.key==='openrouter')fillSugg(ids);else sugList=ids;const same=OR.find(m=>m.id===cur.id);if(same&&same.name!==cur.name)pick(same);else if(!pop.hidden)drawList();}catch(e){orLoaded=false;}}
 byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
@@ -452,7 +472,7 @@ byoModel.addEventListener('input',()=>{shownName();if(!cur.free&&!cur.model)lsSe
 byoModel.addEventListener('focus',drawSug);byoModel.addEventListener('blur',()=>{bySug.hidden=true;byoModel.setAttribute('aria-expanded','false');const f=fixModel(byoModel.value.trim());
   if(f.ok&&f.fixed){byoModel.value=f.model;lsSet('chat_model_'+cur.key,f.model);}else if(!f.ok&&byoModel.value.trim()){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;}});
 bySave.onclick=()=>{const m=byoModel.value.trim(),k=byoKey.value.trim();if(!k){byoKey.focus();byStat.textContent='Paste your API key first.';return;}const f=fixModel(m);if(!f.ok){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;byoModel.focus();return;}
-  if(f.fixed)byoModel.value=f.model;lsSet('chat_key_'+cur.key,k);if(!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());stat();byStat.textContent='Saved ✓ in this browser only, never on our servers.';bySave.textContent='Saved ✓';setTimeout(()=>{bySave.textContent='Save';},1500);closePop();box.focus();};
+  if(f.fixed)byoModel.value=f.model;lsSet('chat_key_'+cur.key,k);if(!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());stat();byStat.textContent='Saved ✓ encrypted in this browser only, never on our servers.';bySave.textContent='Saved ✓';setTimeout(()=>{bySave.textContent='Save';},1500);closePop();box.focus();};
 byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');byoKey.value='';if(!cur.model)byoModel.value='';stat();byoKey.focus();};
 // The button names what will run: a typed model name replaces the generic provider name.
 function shownName(){const t=byoModel.value.trim();mpBtn.querySelector('.mpname').textContent=!cur.free&&!cur.model&&t?cur.providerName+' · '+t.split('/').pop():cur.name;}
@@ -468,6 +488,8 @@ mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',()
 pop.addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const t=e.target;if(t.tagName!=='INPUT')return;e.preventDefault();e.stopPropagation();
   if(t===mq){const first=mlist.querySelector('.mi');if(first)first.click();}else if(t===byoModel&&!bySug.hidden&&bySug.firstChild&&bySug.firstChild.querySelector('b')){bySug.firstChild.onmousedown(e);}else if(t===byoModel&&!byoKey.value.trim()&&!byoKey.parentElement.parentElement.hidden){byoKey.focus();}else{closePop();box.focus();}});
 pick(cur);
+// The encrypted keys load a moment after the page: fill the key field when they arrive.
+vaultReady.then(()=>{if(!cur.free&&!byoKey.value)pick(cur);});
 // Computers menu.
 const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$('sbsum');
 const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);

@@ -503,4 +503,11 @@ test('OpenRouter models are real rows in the model list: name, id, price, free b
 
 test('a free-model error never prints an empty model name', () => {
   expect(explainModelError({ error: { code: 404, message: 'x' } }, 200, { free: true, model: '' }).error).toContain('Flisk Wolf');
+test('API keys are encrypted in the browser, never kept as plain text in localStorage', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain("AES-GCM");
+  expect(page).toContain("generateKey({name:'AES-GCM',length:256},false");
+  expect(page).toContain("const isSecret=(k)=>k.indexOf('chat_key_')===0");
+  expect(page).toContain('Encrypted and saved in this browser only');
+  expect(page).not.toContain("localStorage.setItem('chat_key");
 });
