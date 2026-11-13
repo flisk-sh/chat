@@ -221,6 +221,24 @@ export const homePage = () =>
 export const messagePage = (title, text) =>
   shell(`${title} · chat`, `<main class="col" style="padding-top:14vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">${esc(title)}</h1><p style="color:var(--dim)">${esc(text)}</p><a class="btn" href="/">Back to chat</a></main>`);
 
+// Where a person saves the AI that reviews their pull requests (@flisk-chat review). The key is never shown again.
+export const reviewsPage = ({ login, saved, stored, limit, flash }) =>
+  shell(
+    'PR reviews · chat',
+    `<main class="col" style="padding-top:10vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">Pull request reviews</h1>
+<p style="color:var(--dim)">Install the <b>flisk-chat</b> GitHub App on a repo, then comment <code>@flisk-chat review</code> on a pull request. You get one review with a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
+${flash ? `<p style="color:var(--green)">${flash === 'saved' ? 'Saved.' : 'Deleted.'}</p>` : ''}
+<p>${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
+${stored ? `<form method="post" action="/reviews/save" style="display:grid;gap:10px;max-width:420px">
+<label>AI<br><select name="ai" style="width:100%;padding:8px"><option value="openrouter">OpenRouter</option><option value="anthropic">Claude</option><option value="openai">OpenAI</option></select></label>
+<label>Model name<br><input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" style="width:100%;padding:8px" value="${esc(saved?.model || '')}"></label>
+<label>API key<br><input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off" style="width:100%;padding:8px"></label>
+<p style="color:var(--dim);font-size:13px;margin:0">The key is encrypted before it is stored and never shown again.</p>
+<button class="btn" type="submit">Save for reviews</button></form>` : '<p style="color:var(--dim)">Saving a key is not switched on yet.</p>'}
+${saved ? '<form method="post" action="/reviews/delete" style="margin-top:14px"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
+</main>`,
+  );
+
 // Starter ideas per kind, for people who never write code.
 const CATS = [
   { id: 'website', label: 'Website', ideas: ['Make me a one-page website for a coffee shop called Moon Roast.', 'A wedding page with the date, the place and an RSVP form.', 'A menu page for my bakery, with prices and opening hours.'] },
