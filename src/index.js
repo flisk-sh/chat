@@ -58,7 +58,9 @@ export function talkReply(raw, heard = '', history = []) {
     else if (BUILD_ASK.test(heard)) build = heard;
     build = build.slice(0, 2000);
   }
-  const text = spokenReply(t) || (build ? 'On it. I am building that now.' : '');
+  // When building, only the first sentence is spoken: the task itself goes to the computer, not to the speaker.
+  const said = spokenReply(t);
+  const text = (build ? said.split(/(?<=[.!?…])\s+/)[0] : said) || (build ? 'On it. I am building that now.' : '');
   return { text, build };
 }
 // Whisper's language code -> the name the model understands, so the reply comes back in the language spoken.
