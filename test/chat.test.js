@@ -160,6 +160,12 @@ describe('safety', () => {
     expect(home).toContain('Sign in with GitHub');
     expect(home).toContain('id="ask"');
     expect(home).toContain('window.__SIGNED__=false');
+    // Dogfood fixes: the model picker must survive its list re-rendering, the limit card button must not close it,
+    // and a task that already says what it is must not be asked "What is it?".
+    expect(home).toContain('e.target.isConnected');
+    expect(home).toContain('k.onclick=(e)=>{e.stopPropagation()');
+    expect(home).toContain('grid-template-rows:minmax(0,1fr)');
+    expect(home).toContain("pick=[kind]");
     for (const m of home.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
