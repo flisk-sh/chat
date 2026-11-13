@@ -675,15 +675,15 @@ async function run(task){
   l.append(node('span','spin'),wt);work.append(l,ws);turn.appendChild(work);
   if(blind){const bn=node('div','blind');bn.textContent=cur.free?'Flisk Wolf cannot see pictures: it only gets the file on the computer (size, metadata). To ask about what is in the picture, pick a model with your own key that sees images, such as Claude, GPT or Gemini.':'This model cannot see pictures: it only gets the file on the computer. To ask about what is in the picture, pick a model marked "sees images".';const pk2=node('button','btn','Pick a model');pk2.type='button';pk2.onclick=()=>openPop();bn.appendChild(pk2);turn.appendChild(bn);}
   const box2=node('details','stepsbox'),sum2=node('summary','','Steps'),list=node('ol','steps');box2.open=true;box2.append(sum2,list);box2.hidden=true;turn.appendChild(box2);
-  const t0=Date.now(),tick=()=>{wt.textContent='Working for '+secs(Date.now()-t0);};tick();const timer=setInterval(tick,1000);
+  const t0=Date.now(),tick=()=>{const e=Date.now()-t0;wt.textContent='Working for '+secs(e)+(e>45000?' · slow: press Stop to give up':'');};let stopped=false;const ac=new AbortController();const stop=node('button','btn','Stop');stop.type='button';stop.onclick=()=>{stopped=true;ac.abort();};work.appendChild(stop);tick();const timer=setInterval(tick,1000);
   let live=null,count=0,answer=null,failed=false,link=null,video=null,lastNote='';
   const step=(html,cls,ic)=>{if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add('ok');}const li=node('li','st '+(cls||'live')),si=node('span','si'),t=node('div','t');si.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+(SI[ic]||SI.sparkles)+'</svg>';t.innerHTML=html;li.append(si,t);list.appendChild(li);box2.hidden=false;count++;sum2.textContent='Steps ('+count+')';live=li;down();return li;};
   const code=(s)=>{const c=document.createElement('code');c.textContent=s;return c.outerHTML;};
   const txt=(s)=>{const c=document.createElement('span');c.textContent=s;return c.innerHTML;};
   const out=(s,bad)=>{if(!live||!s)return;const p=node('pre','',s.length>1500?s.slice(0,1500)+'\\n…':s);live.querySelector('.t').appendChild(p);if(bad){live.classList.remove('live','ok');live.classList.add('bad');live.querySelector('.si').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SI.alert+'</svg>';}down();};
-  const end=(ok)=>{clearInterval(timer);if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
+  const end=(ok)=>{clearInterval(timer);stop.remove();if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
   try{
-    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
+    const res=await fetch('/api/run',{signal:ac.signal,method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');saveChat();setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
@@ -707,7 +707,7 @@ async function run(task){
         else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
         else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
       }}
-  }catch(err){failed=true;errCard(turn,String(err.message||err),err.kind||'other',task);}
+  }catch(err){failed=true;if(stopped)turn.appendChild(node('div','err','You stopped this task.'));else errCard(turn,String(err.message||err),err.kind||'other',task);}
   end(!failed||answer!==null);
   if(answer!==null){const a=node('div','a');md(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();if(voiceOn)talkBack(answer);
     const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
