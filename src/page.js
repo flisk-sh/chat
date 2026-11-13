@@ -268,7 +268,7 @@ details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),
 const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
-const DESC = 'Flisk Chat: describe a website, a small app or a task. It runs on a real computer and gives you the result and a live link. Free model, sign in with GitHub.';
+const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, sign in with GitHub.';
 const shell = (title, body, script = '', index = false) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
 
@@ -277,7 +277,7 @@ const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:
 export const homePage = () =>
   shell(
     'Flisk Chat',
-    `<main class="col" style="padding-top:14vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk's free model plans it, runs it on a real computer from your own sandbox account, and gives you the result and a live link.</p><a class="btn go" href="/auth/start">Sign in with GitHub</a></main>`,
+    `<main class="col" style="padding-top:14vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website, an app or a whole system. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk's free model plans it, runs it on a real computer from your own sandbox account, and gives you the result and a live link. Bigger asks work too: several services that run together, started and checked on the computer.</p><a class="btn go" href="/auth/start">Sign in with GitHub</a></main>`,
   );
 
 export const messagePage = (title, text) =>
@@ -326,6 +326,7 @@ ${saved ? '<form method="post" action="/reviews/delete"><button class="btn" type
 const CATS = [
   { id: 'website', label: 'Website', ideas: ['Make me a one-page website for a coffee shop called Moon Roast.', 'A wedding page with the date, the place and an RSVP form.', 'A menu page for my bakery, with prices and opening hours.'] },
   { id: 'app', label: 'Small app', ideas: ['Build a tip calculator web page with a dark theme.', 'A countdown timer page for my product launch on December 1.', 'A simple to-do list page that remembers my items.'] },
+  { id: 'system', label: 'System', ideas: ['Build a back office with orders, stock, billing and customers as separate services, and check they all answer.', 'A booking platform: bookings, staff, payments and reminders as four services.', 'Start a support suite with tickets, users, notifications and reports, and show me which parts are healthy.'] },
   { id: 'answer', label: 'Answer', ideas: ['What is the 40th Fibonacci number? Check it with Python.', 'How many working days are there between today and New Year?', 'Turn 72 degrees Fahrenheit into Celsius and show the formula.'] },
   { id: 'video', label: 'Video', ideas: ['Make a 30-second promo video for my coffee shop called Moon Roast.', 'A short explainer video: how to brew pour-over coffee in 5 steps.', 'A birthday video for my friend Sam with 4 happy messages.'] },
   { id: 'check', label: 'Check a page', ideas: ['Fetch https://flisk.si and tell me its page title.', 'Is https://example.com up, and how fast does it answer?', 'List the links on https://flisk.sh.'] },
@@ -333,7 +334,7 @@ const CATS = [
 
 // Zachman questions for the tree of squares: each answer has its own smaller squares, shown when you hover it.
 const ZQ = [
-  ['What', 'What is it?', [['A website', 'website', ['Landing page', 'Shop', 'Portfolio']], ['A small app', 'app', ['Calculator', 'Tracker', 'Booking form']], ['A video', 'video', ['Promo', 'Explainer', 'Social short']], ['An answer or check', 'answer', ['Maths', 'Facts from the web', 'Check a site']]]],
+  ['What', 'What is it?', [['A website', 'website', ['Landing page', 'Shop', 'Portfolio']], ['A small app', 'app', ['Calculator', 'Tracker', 'Booking form']], ['A system of services', 'system', ['Orders, stock, billing', 'Customers and invoices', 'A back office']], ['A video', 'video', ['Promo', 'Explainer', 'Social short']], ['An answer or check', 'answer', ['Maths', 'Facts from the web', 'Check a site']]]],
   ['Who', 'Who is it for?', [['Customers', '', ['People nearby', 'Online buyers', 'Regulars']], ['My team', '', ['In the office', 'Remote', 'Clients too']], ['Just me', '', ['Personal', 'Learning', 'A hobby']], ['Kids or students', '', ['Under 10', 'Teens', 'University']]]],
   ['Why', 'Why do you need it?', [['Sell more', '', ['Bookings', 'Online orders', 'Sign-ups']], ['Look professional', '', ['Trust', 'Show my work', 'Press']], ['Try an idea', '', ['Test demand', 'Show investors', 'Just for fun']], ['Save time', '', ['Automate a chore', 'All in one place', 'Fewer emails']]]],
   ['Where', 'Where should it live?', [['A live link', '', ['Phone first', 'Desktop first', 'Both']], ['Code I can keep', '', ['One HTML file', 'A GitHub repo', 'A zip']], ['Only this chat', '', ['Plain text', 'A table', 'A chart']], ['Social media', '', ['Instagram', 'TikTok', 'LinkedIn']]]],
@@ -774,6 +775,8 @@ async function run(task){
         else if(ev.type==='write'){step('Wrote '+code(ev.path)+' '+txt('('+Number(ev.bytes||0).toLocaleString()+' characters)'),'','pen');ws.textContent='Writing files';}
         else if(ev.type==='read')step('Read '+code(ev.path),'','file');
         else if(ev.type==='publish'){step('Publishing '+code(ev.path),'','upload');ws.textContent='Publishing';}
+        else if(ev.type==='system_plan'){step('Building a system of '+ev.services.length+' services: '+txt(ev.services.join(', ')),'','app');ws.textContent='Building a system';}
+        else if(ev.type==='system_start'){step('Starting all services with Flisk','','app');}
         else if(ev.type==='video_start'){step('Making a video: '+txt(ev.title)+' '+txt('('+ev.scenes+' scenes)'),'','film');ws.textContent='Making a video';}
         else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
         else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
@@ -859,7 +862,7 @@ function ask6(task){
   const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Hover a square to choose it and see more, or type your own answer.'));
   const rows=node('div');rows.style.cssText='display:flex;flex-direction:column;gap:14px';const chips=node('div','zchips');wrap.append(rows,chips);
   let pick=[],sub=[],sent=false,prevLen=0;
-  const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
+  const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(erp|back office|platform|services|microservices?|suite)\\b/i.test(task)?'A system of services':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
   if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
   const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();chips.querySelectorAll('.zchip:not(.ok)').forEach(c=>c.remove());
@@ -974,7 +977,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <button type="button" id="oend" class="oend" aria-label="End voice talk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
-    `window.__SIGNED__=${login ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
+    `window.__SIGNED__=${login ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS,
     true,
   );

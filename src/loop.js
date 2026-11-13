@@ -1,5 +1,6 @@
 import { widgetPrompt, parseWidget } from './widgets.js';
 import { cleanVideo, makeVideo } from './video.js';
+import { cleanSystem, makeSystem, MAX_SERVICES } from './system.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
 export const MAX_STEPS = 8;
@@ -20,6 +21,7 @@ Pick exactly one of these shapes:
 {"read": "<file>"}
 {"publish": "<path to an index.html>"}
 {"video": {"title": "<short title>", "scenes": [{"text": "<words on screen, at most 10>", "say": "<one spoken sentence>"}]}}
+{"system": {"title": "<name>", "services": [{"name": "<lowercase-name>", "does": "<one short phrase>"}]}}
 {"widget": {"kind": "<widget>", ...}}
 {"say": "<answer for the user>"}
 
@@ -30,6 +32,7 @@ Rules:
 - Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
 - To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
 - To make a video (the user asks for a video, a clip or a promo, or the answers say "What: A video"): send ONE "video" action with 4 to 6 scenes. Chat draws the scenes, records a voice-over and makes an mp4 on the computer (it takes a few minutes), then tells you the link. Then "say" the link in one sentence. Never invent a phone number, email address or street address.
+- For a system of many services (the user asks for a back office, an ERP-style suite, a platform, "several services", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} services named after the business areas (orders, stock, billing, customers...). Chat writes each service (its own folder, service.json, /health and a records API), a web page in front of all of them, starts everything with Flisk as plain processes and smoke-tests every part. Then change what matters with "write" (a service lives in /tmp/flisk-system/<name>/server.js; keep its PORT and /health) and "say" the measured result: how many services answered, in a table. Be honest: it is a working scaffold with records in memory, not a finished product, and the computer stops when you answer. Never call it production ready.
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
   1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; export PATH=$HOME/.local/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
@@ -68,10 +71,14 @@ export function parseAction(text) {
         const spec = cleanVideo(a.video);
         if (spec) return { type: 'video', spec };
       }
+      if (a?.system) {
+        const spec = cleanSystem(a.system);
+        if (spec) return { type: 'system', spec };
+      }
       if (a?.widget && typeof a.widget === 'object') return { type: 'widget', raw: a.widget };
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
-    if (/^\s*\{\s*"(run|write|read|publish|video|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
+    if (/^\s*\{\s*"(run|write|read|publish|video|system|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
 
   // If it still looks like a tool call or XML, force a retry.
@@ -419,6 +426,10 @@ export async function runTask({ task, history = [], model, computer, publish, sa
           links.push(made.url);
           shown = { video: made.url };
         }
+      } else if (action.type === 'system') {
+        emit({ type: 'system_plan', title: action.spec.title, services: action.spec.services.map((x) => x.name) });
+        const made = await makeSystem({ computer, podId, spec: action.spec, emit });
+        shown = made.error ? { error: made.error } : { exitCode: 0, stdout: made.summary, stderr: '' };
       } else if (action.type === 'publish') {
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);
