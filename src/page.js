@@ -420,7 +420,7 @@ function videoCard(video){const v=node('div','vres'),pl=document.createElement('
   vb.append(cp,dl);v.append(pl,vb);return v;}
 // Own-site result links in a saved answer: /s/<16 hex> is a website, /v/<16 hex>.mp4 a video.
 function resultLinks(text){const o=location.origin.replace(/[.]/g,'[.]'),site=new RegExp(o+'/s/[a-f0-9]{16}','g'),vid=new RegExp(o+'/v/[a-f0-9]{16}[.]mp4','g'),t=String(text||'');return {site:(t.match(site)||[])[0]||'',video:(t.match(vid)||[])[0]||''};}
-function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});drawHist();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});const lastM=history[history.length-1];if(lastM&&lastM.role==='user'){const ic=node('div','errbox');ic.appendChild(node('div','err','This task was interrupted: the page was closed before it finished.'));const n=node('div','next');const rb=node('button','btn go','Run it again');rb.type='button';rb.onclick=()=>{ic.remove();run(lastM.content);};n.appendChild(rb);ic.appendChild(n);add(ic);}drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
 const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
@@ -776,6 +776,8 @@ function limitCard(turn,task,b){
 // question opens below, until all six are answered. "Other…" takes a typed answer.
 const ZQ=window.__ZQ__||[];
 let treeAnswer=null;
+// Leaving mid-task loses its live progress (the answer is saved only when it arrives), so ask first.
+addEventListener('beforeunload',e=>{if(document.querySelector('.work:not(.done):not(.fail)')){e.preventDefault();e.returnValue='';}});
 function ask6(task){
   chatting(true);
   const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Hover a square to choose it and see more, or type your own answer.'));
@@ -785,7 +787,7 @@ function ask6(task){
   if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
   const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();chips.querySelectorAll('.zchip:not(.ok)').forEach(c=>c.remove());
-    const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+ans(i)).join('; ')+'.':task;history.push({role:'user',content:full});run(full);};
+    const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+ans(i)).join('; ')+'.':task;history.push({role:'user',content:full});saveChat();run(full);};
   treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);sub=sub.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
   // Hover chooses only when a mouse really moves over a square: a new row that appears under a still pointer (the
   // chat scrolls as rows are added) must not choose itself, and a tap on a phone is a click, not a hover.
@@ -816,7 +818,7 @@ form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}dropLimit();userMsg(task);
-  if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+  if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});saveChat();run(task);};
 drawHist();
 try{if(matchMedia('(pointer:fine)').matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');try{const pf=JSON.parse(sessionStorage.getItem('chat_pending_files')||'[]');if(Array.isArray(pf))attached=pf.slice(0,3);}catch(e){}sessionStorage.removeItem('chat_pending_files');userMsg(t);history.push({role:'user',content:t});run(t);}}catch(e){}}
