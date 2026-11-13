@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES } from '../src/index.js';
-import { parseAction, resolveModel, runTask } from '../src/loop.js';
+import { modelLabel, parseAction, resolveModel, runTask } from '../src/loop.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -719,5 +719,18 @@ describe('the bar on a published page', () => {
       expect(text).not.toContain('flisk-sh/fleet');
       expect(text).toContain(html.includes('last') ? 'last line' : 'no body tag');
     }
+  });
+});
+
+describe('the model knows its own name', () => {
+  const sysOf = async (modelName) => {
+    let sys;
+    await runTask({ task: 'which model are you', model: async (m) => ((sys = m[0].content), { text: '{"say":"x"}' }), computer: {}, modelName });
+    return sys;
+  };
+  test('the prompt names the picked model, and says nothing when there is no name', async () => {
+    expect(await sysOf(modelLabel(resolveModel({ ai: 'anthropic', key: 'sk-ant-12345678', model: 'claude-sonnet-5-5' })))).toContain('The AI model behind you is claude-sonnet-5-5');
+    expect(await sysOf(modelLabel(resolveModel(undefined)))).toContain('Flisk Wolf');
+    expect(await sysOf('')).not.toContain('The AI model behind you');
   });
 });

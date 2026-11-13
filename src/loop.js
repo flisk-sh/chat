@@ -103,6 +103,9 @@ export const BYO = {
 };
 
 // choice: undefined or { ai: 'wolf' } or { ai: 'anthropic'|'openai'|'openrouter', key, model }. Returns { error } for a bad choice.
+// What to call the chosen AI when the user asks "which model are you".
+export const modelLabel = (chosen) => (chosen?.free ? 'Flisk Wolf, a free model hosted by Flisk (a smaller backup model answers when it is busy)' : `${chosen?.model || ''} (through the visitor's own ${String(chosen?.ai || '')} key)`.trim());
+
 export function resolveModel(choice) {
   const ai = choice?.ai || 'wolf';
   if (ai === 'wolf') return { ai, free: true };
@@ -325,7 +328,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -336,7 +339,9 @@ export async function runTask({ task, history = [], model, computer, publish, sa
   const past = Array.isArray(history) ? history.slice() : [];
   const lastPast = past[past.length - 1];
   if (lastPast?.role === 'user' && String(lastPast.content || '').trim() === String(task).trim()) past.pop();
-  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`);
+  // Asked "which model are you", the model would say it does not know: tell it what the visitor picked.
+  const who = modelName ? `\n\nThe AI model behind you is ${String(modelName).slice(0, 120)}. If the user asks which model you are, say that, in "say".` : '';
+  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who;
   const messages = [{ role: 'system', content: system }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;

@@ -1,6 +1,6 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
-import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, resolveModel, runTask, WORKERS_AI_PER_DAY } from './loop.js';
+import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, modelLabel, resolveModel, runTask, WORKERS_AI_PER_DAY } from './loop.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
@@ -408,7 +408,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));
