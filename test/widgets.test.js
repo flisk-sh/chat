@@ -95,3 +95,41 @@ describe('page', () => {
     for (const id of Object.keys(WIDGETS)) expect(html).toMatch(new RegExp(`\\b${id}\\(d\\)\\{`));
   });
 });
+
+describe('services widget finds the project folder', () => {
+  const { SERVICES_CMD } = require('../src/widgets.js');
+  const { mkdtempSync, mkdirSync, writeFileSync, realpathSync } = require('node:fs');
+  const { tmpdir } = require('node:os');
+  const { join } = require('node:path');
+  const run = (home, bin) => {
+    const sh = Bun.spawnSync(['sh', '-c', SERVICES_CMD], { env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home }, cwd: home });
+    return sh.stdout.toString().trim();
+  };
+  // A fake flisk that answers with the folder it was started in, as the real one only sees the project from inside it.
+  const fakeFlisk = (bin) => {
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'flisk'), '#!/bin/sh\npwd\n', { mode: 0o755 });
+  };
+  test('runs flisk status in ~/app, not in the home folder', () => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), 'home-')));
+    mkdirSync(join(home, 'app', 'api'), { recursive: true });
+    writeFileSync(join(home, 'app', 'api', 'service.json'), '{}');
+    fakeFlisk(join(home, '.local', 'bin'));
+    expect(run(home, '/nonexistent').endsWith('/app')).toBe(true);
+  });
+  test('finds another project folder under home, and falls back to home when there is none', () => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), 'home-')));
+    fakeFlisk(join(home, '.local', 'bin'));
+    mkdirSync(join(home, 'shop', '.flisk'), { recursive: true });
+    expect(run(home, '/nonexistent').endsWith('/shop')).toBe(true);
+    const empty = realpathSync(mkdtempSync(join(tmpdir(), 'home-')));
+    fakeFlisk(join(empty, '.local', 'bin'));
+    expect(run(empty, '/nonexistent')).toBe(empty);
+  });
+  test('the widget runs that command', async () => {
+    const seen = [];
+    const computer = { run: async (_p, cmd) => (seen.push(cmd), { data: { stdout: '' } }) };
+    await WIDGETS.services.run({}, { computer, podId: 'p1' });
+    expect(seen[0]).toBe(SERVICES_CMD);
+  });
+});
