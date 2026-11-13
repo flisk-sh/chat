@@ -165,7 +165,8 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);padding:4px 11px 4px 5px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;max-width:240px}
 .chip>span{overflow:hidden;text-overflow:ellipsis}.chip svg{border-radius:var(--radius);flex:none}.chip:hover{border-color:var(--ink)}
-.chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:not-allowed}.chip.plain:hover{border-color:var(--line)}
+.chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:pointer}.chip.plain:hover{border-color:var(--ink)}
+.chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b}
 .chev{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);flex:none;opacity:.6}
 .send{margin-left:auto;width:38px;height:38px;border:0;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
 .send:hover{background:var(--green-d)}.send[disabled]{background:var(--line2);cursor:wait}
@@ -226,7 +227,7 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
 .side.open{transform:none}.scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(27,27,24,.35);opacity:0;pointer-events:none;transition:opacity .2s}.side.open~.scrim{opacity:1;pointer-events:auto}
 .composer{position:relative}.mp{position:static}.pop{left:0;right:0;width:auto}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
-.u{max-width:90%}.composer .chip.plain{display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
+.u{max-width:90%}.composer .chip.plain:not(#voice){display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
 @media (min-width:861px){.only-m{display:none}}
 `;
 
@@ -493,6 +494,21 @@ fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){errMsg
   const ext=(f.name.split('.').pop()||'').toLowerCase(),text=TEXTY.indexOf(ext)>=0||(f.type||'').indexOf('text/')===0,r=new FileReader();
   r.onload=()=>{let c=String(r.result||'');if(!text)c=c.slice(c.indexOf(',')+1);attached.push({name:f.name,content:c,b64:!text});drawFiles();};r.onerror=()=>errMsg('Could not read '+f.name+'.');
   if(text)r.readAsText(f);else r.readAsDataURL(f);});fileIn.value='';};
+// Voice, free and in the browser: the mic types what you say, Voice reads each answer aloud. No key, nothing leaves the browser but the speech service your browser uses.
+const voiceBtn=$('voice'),micBtn=$('mic'),SR=window.SpeechRecognition||window.webkitSpeechRecognition,TTS=window.speechSynthesis;
+let voiceOn=lsGet('chat_voice')==='1',rec=null;
+const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').trim().slice(0,1500);
+const stopTalk=()=>{try{TTS&&TTS.cancel();}catch(e){}};
+const talkBack=(t)=>{if(!TTS||!t)return;stopTalk();try{const u=new SpeechSynthesisUtterance(spoken(t));u.lang=navigator.language||'en-US';const vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2)===u.lang.slice(0,2));u.voice=vs.find(v=>!v.localService)||vs[0]||null;TTS.speak(u);}catch(e){}};
+const drawVoice=()=>{voiceBtn.textContent='Voice · '+(voiceOn?'on':'off');voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);};
+if(!TTS){voiceBtn.title='This browser cannot speak';voiceBtn.disabled=true;}
+voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Voice is on.');};
+drawVoice();
+if(SR){micBtn.hidden=false;micBtn.onclick=()=>{if(rec){rec.stop();return;}stopTalk();rec=new SR();rec.lang=navigator.language||'en-US';rec.interimResults=true;rec.continuous=false;const base=box.value?box.value.trim()+' ':'';
+  rec.onresult=(e)=>{let t='';for(const r of e.results)t+=r[0].transcript;box.value=(base+t).slice(0,2000);};
+  rec.onerror=(e)=>{if(e.error==='not-allowed'||e.error==='service-not-allowed')errMsg('Allow the microphone for this site to talk.');};
+  rec.onend=()=>{rec=null;micBtn.classList.remove('rec');micBtn.setAttribute('aria-label','Speak your task');box.focus();};
+  try{rec.start();micBtn.classList.add('rec');micBtn.setAttribute('aria-label','Stop listening');}catch(e){rec=null;}};}
 const secs=(ms)=>Math.max(0,Math.round(ms/1000))+'s';
 // Step icons, from Lucide (lucide.dev, ISC license): each kind of step gets its own, the way T3 Code shows tool calls.
 const SI={terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
@@ -558,7 +574,7 @@ async function run(task){
       }}
   }catch(err){failed=true;errCard(turn,String(err.message||err),err.kind||'other',task);}
   end(!failed||answer!==null);
-  if(answer!==null){const a=node('div','a');md(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();
+  if(answer!==null){const a=node('div','a');md(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();if(voiceOn)talkBack(answer);
     const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
     dl2.onclick=()=>{const u=URL.createObjectURL(new Blob([answer],{type:'text/markdown'})),x=document.createElement('a');x.href=u;x.download='flisk-chat-answer.md';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);dl2.textContent='Saved ✓';setTimeout(()=>dl2.textContent='Save as file',1500);};
     cp2.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(answer).then(()=>{cp2.textContent='Copied';setTimeout(()=>cp2.textContent='Copy',1500);});};sv.append(dl2,cp2);turn.appendChild(sv);}
@@ -638,7 +654,7 @@ function ask6(task){
 }
 const BUILD=/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|video|clip|promo|reel|build|make|create|design)\\b/i,ASK=/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell|list|turn)\\b/i;
 let lastSend=0;
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
+form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}userMsg(task);
@@ -684,7 +700,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search your chats" aria-label="Search your chats" autocomplete="off"></label>
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
-<section class="sidesec"><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div></section>
+<section class="sidesec"><h4>Voice</h4><div class="soon">Voice talk: tap Voice, then the mic <span class="tag">new</span></div></section>
 <div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
 <div id="scrim" class="scrim" aria-hidden="true"></div>
@@ -707,7 +723,8 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
 <div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
 <details class="pick"><summary class="chip">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
-<button type="button" class="chip plain" disabled title="Coming soon">Voice · soon</button>
+<button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+<button type="button" id="voice" class="chip plain" aria-pressed="false" title="Read answers aloud">Voice · off</button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
 <p class="fine">Runs on a real computer from your own sandbox account. Enter sends, Shift+Enter adds a line.</p>
