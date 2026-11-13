@@ -356,7 +356,7 @@ const fit=()=>{box.style.height='auto';box.style.height=Math.min(box.scrollHeigh
 const aiSel=$('ai'),byo=$('byo'),byoKey=$('byokey'),byoModel=$('byomodel'),mpBtn=$('mpbtn'),pop=$('mppop'),mlist=$('mlist'),rail=$('rail'),mq=$('mq');
 let cur=MODELS[0],railOn='';
 // One OpenRouter model as a row of its own: picking it fills in the model id, so only the key is left to paste.
-const orModel=(id,name,ppm,ctx)=>({id:'or:'+id,name:name||id,provider:'openrouter',providerName:'OpenRouter',description:id+(ctx?' · '+Math.round(ctx/1000)+'K context':''),price:ppm===0?'free':ppm<1?'$':ppm<5?'$$':'$$$',free:false,key:'openrouter',model:id,orFree:ppm===0});
+const orModel=(id,name,ppm,ctx)=>({id:'or:'+id,name:(name||id.split('/').pop()).replace(/^[^:]*: /,''),provider:'openrouter',providerName:'OpenRouter',description:id+(ctx?' · '+Math.round(ctx/1000)+'K context':''),price:ppm===0?'free':ppm<1?'$':ppm<5?'$$':'$$$',free:false,key:'openrouter',model:id,orFree:ppm===0});
 let OR=[];
 try{const v=sessionStorage.getItem('chat_model');const m=MODELS.find(x=>x.id===v)||(v&&v.indexOf('or:')===0?orModel(v.slice(3),'',1,0):null);if(m)cur=m;}catch(e){}
 const svgAt=(svg,size)=>svg.replace('<svg ','<svg width="'+size+'" height="'+size+'" aria-hidden="true" ');
