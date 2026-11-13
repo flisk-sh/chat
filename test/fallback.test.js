@@ -159,3 +159,38 @@ test('a refusal that names temperature is retried once without it', async () => 
   expect(r.text).toBe('ok');
   expect(sent.map((b) => 'temperature' in b)).toEqual([true, false]);
 });
+
+test('a Claude key gets room for thinking plus the answer, and sends max_tokens', async () => {
+  let sent;
+  await modelFrom({}, async (u, init) => { sent = bodyOf(init); return answer('hi'); }, claude)(msgs);
+  expect(sent.max_tokens).toBe(16000);
+  expect(sent.model).toBe('claude-sonnet-5-5');
+});
+
+test('an OpenAI key is called with max_completion_tokens and no temperature', async () => {
+  let sent;
+  await modelFrom({}, async (u, init) => { sent = bodyOf(init); return answer('hi'); }, { ...claude, ai: 'openai', model: 'gpt-x' })(msgs);
+  expect('max_tokens' in sent).toBe(false);
+  expect(sent.max_completion_tokens).toBe(4096);
+  expect('temperature' in sent).toBe(false);
+});
+
+test('a provider that wants max_completion_tokens is retried once with it', async () => {
+  const sent = [];
+  const fetchImpl = async (u, init) => {
+    const b = bodyOf(init); sent.push(b);
+    return 'max_tokens' in b
+      ? Response.json({ error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead." } }, { status: 400 })
+      : answer('ok');
+  };
+  const r = await modelFrom({}, fetchImpl, { ...claude, ai: 'openrouter', model: 'x/new' })(msgs);
+  expect(r.text).toBe('ok');
+  expect(sent.length).toBe(2);
+});
+
+test('a refused setting is not reported as "model not available"', async () => {
+  const fetchImpl = async () => Response.json({ error: { message: '`temperature` is deprecated for this model.' } }, { status: 400 });
+  const r = await modelFrom({}, fetchImpl, { ...claude, ai: 'openrouter', model: 'x/new' })(msgs);
+  expect(r.kind).toBe('setting');
+  expect(r.error).not.toMatch(/is not available/);
+});

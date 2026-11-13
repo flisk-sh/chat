@@ -248,7 +248,7 @@ describe('the two pickers', () => {
     const res = await post(e, w, '/api/run', body({ ai: { ai: 'anthropic', key: 'sk-ant-secret-key-1' } }), await authed(e));
     const text = await res.text();
     expect(text).not.toContain('sk-ant-secret');
-    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'api.anthropic.com', auth: 'Bearer sk-ant-secret-key-1', model: 'claude-sonnet-5-5', max: 4096 });
+    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'api.anthropic.com', auth: 'Bearer sk-ant-secret-key-1', model: 'claude-sonnet-5-5', max: 16000 });
     expect(JSON.stringify(e.DB.raw.query('SELECT * FROM sites').all())).not.toContain('sk-ant');
   });
 

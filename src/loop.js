@@ -130,7 +130,8 @@ export function explainModelError(body, status, chosen = {}) {
   const who = meta.provider_name ? ` from ${meta.provider_name}` : '';
   const hay = `${msg} ${detail}`.toLowerCase();
   let kind = 'other';
-  if (code === 401 || code === 403 || /api key|unauthori|invalid.*key|no auth/.test(hay)) kind = 'key';
+  if (/temperature|top_p|max_tokens|max_completion_tokens|unsupported (parameter|value)|not supported with this model/.test(hay) && code === 400) kind = 'setting';
+  else if (code === 401 || code === 403 || /api key|unauthori|invalid.*key|no auth/.test(hay)) kind = 'key';
   else if (code === 402 || code === 429 || /credit|quota|rate.?limit|insufficient|too many/.test(hay)) kind = 'limit';
   else if (code === 404 || code === 400 && /model/.test(hay) || /no endpoints|not a valid model|model.*not (found|exist)|does not exist|unknown model/.test(hay)) kind = 'model';
   else if (code >= 500 || /provider returned error|overloaded|timeout/.test(hay)) kind = 'provider';
@@ -138,6 +139,7 @@ export function explainModelError(body, status, chosen = {}) {
     key: `Your ${chosen.free ? 'Flisk Wolf' : chosen.ai || 'provider'} API key was refused`,
     limit: 'Out of credit or rate limited',
     model: `The model "${chosen.free ? 'Flisk Wolf' : chosen.model || 'you chose'}" is not available`,
+    setting: `The AI refused a setting Flisk Chat sent (HTTP ${code || 'unknown'})`,
     provider: `The model provider${who} had a problem (HTTP ${code || 'unknown'})`,
     other: `The model answered with an error (HTTP ${code || 'unknown'})`,
   }[kind];
@@ -150,26 +152,36 @@ function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true
   const url = chosen.free ? env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions' : chosen.url;
   const model = chosen.free ? env.INFERENCE_MODEL || 'flisk-wolf-chat' : chosen.model;
   const key = chosen.free ? env.INFERENCE_KEY : chosen.key;
-  const maxTokens = chosen.free || chosen.referer ? 1024 : 4096;
+  // Claude 5 thinks before it answers and thinking counts against max_tokens, so a Claude key gets room for both.
+  const maxTokens = chosen.free || chosen.referer ? 1024 : chosen.ai === 'anthropic' ? 16000 : 4096;
   // The free model is another Worker on our own domain: Cloudflare refuses a Worker calling it by its public address
   // (error 1033), so the call goes through a service binding when there is one.
   const call = chosen.free && env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl;
   return async (messages) => {
     if (!key) return { error: 'chat has no model key yet (INFERENCE_KEY)' };
-    // Newer Claude and OpenAI models refuse `temperature` ("`temperature` is deprecated for this model"), so a model the
-    // visitor brings is called without it, and a refusal that names it is retried once without it.
-    const send = async (withTemperature) => {
+    // Newer models refuse settings other models take: Claude 4.7 and later answer 400 to any `temperature` below 1, and
+    // OpenAI's newer models want `max_completion_tokens` instead of `max_tokens`. So a model the visitor brings is called
+    // without `temperature` (and OpenAI with `max_completion_tokens`), and a 400 that names one of them is retried once
+    // with that setting fixed. (Anthropic's docs: platform.claude.com/docs/en/api/openai-sdk, "Request fields".)
+    const opts = { temperature: chosen.free || chosen.referer || chosen.ai === 'openrouter', completion: chosen.ai === 'openai' };
+    const send = async () => {
       const r = await call(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat', ...(chosen.referer ? { 'http-referer': 'https://chat.flisk.si', 'x-title': 'Flisk Chat' } : {}) },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, ...(withTemperature ? { temperature: 0 } : {}) }),
+        body: JSON.stringify({ model, messages, [opts.completion ? 'max_completion_tokens' : 'max_tokens']: maxTokens, ...(opts.temperature ? { temperature: 0 } : {}) }),
       });
       return { res: r, body: await r.json().catch(() => null) };
     };
     let res, body;
     try {
-      ({ res, body } = await send(chosen.free || chosen.referer || chosen.ai === 'openrouter'));
-      if (!res.ok && /temperature/i.test(JSON.stringify(body?.error ?? ''))) ({ res, body } = await send(false));
+      ({ res, body } = await send());
+      for (let again = 0; again < 2 && !res.ok; again++) {
+        const why = JSON.stringify(body?.error ?? '');
+        if (opts.temperature && /temperature/i.test(why)) opts.temperature = false;
+        else if (!opts.completion && /max_completion_tokens/i.test(why)) opts.completion = true;
+        else break;
+        ({ res, body } = await send());
+      }
     } catch (e) {
       return { error: `the model did not answer: ${String(e?.message || e).slice(0, 150)}`, kind: 'provider' };
     }
