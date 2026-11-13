@@ -168,6 +168,8 @@ describe('safety', () => {
     expect(home).toContain("pick=[kind]");
     expect(home).toContain("pop.addEventListener('keydown'");
     expect(home).toContain("addEventListener('loadedmetadata',down)");
+    expect(home).toContain('msgs:history,res:results');
+    expect(home).toContain('add(linkCard(r.link))');
     for (const m of home.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');

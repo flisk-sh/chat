@@ -272,16 +272,16 @@ const asstMsg=(t)=>{const d=node('div','a');linkify(d,t);return add(d);};
 const errMsg=(t)=>add(node('div','err',t));
 const chatting=(on)=>{welcome.classList.toggle('gone',on);};
 // Past chats live in this browser only (localStorage), never on our server.
-const KEY='chat_history_v1';let chatId=null;
+const KEY='chat_history_v1';let chatId=null,results={};
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
 const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
-const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.split('\\n')[0].slice(0,80),msgs:history});saveAll(all);drawHist();};
+const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.split('\\n')[0].slice(0,80),msgs:history,res:results});saveAll(all);drawHist();};
 function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
   all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
 $('q').addEventListener('input',drawHist);
-function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
-function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>m.role==='user'?userMsg(m.content):asstMsg(m.content));drawHist();}
+function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;results={};talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);results=Object.assign({},c.res||{});history.forEach((m,i)=>{if(m.role==='user'){userMsg(m.content);return;}asstMsg(m.content);const r=results[i];if(r&&r.link)add(linkCard(r.link));if(r&&r.video)add(videoCard(r.video));});drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
 const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
@@ -409,16 +409,22 @@ async function run(task){
   }catch(err){failed=true;turn.appendChild(node('div','err',String(err.message||err)));}
   end(!failed||answer!==null);
   if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();}
-  if(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
+  if(link){turn.appendChild(linkCard(link));noteRes({link});}
+  if(video){turn.appendChild(videoCard(video));noteRes({video});}
+  down();go.disabled=false;box.focus();
+}
+// Result cards (a live page, a finished video), also redrawn when an old chat is reopened.
+function linkCard(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
     const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
-    const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);turn.appendChild(r);}
-  if(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';pl.style.aspectRatio='16/9';pl.addEventListener('loadedmetadata',down);
+    const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);
+  return r;}
+function videoCard(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';pl.style.aspectRatio='16/9';pl.addEventListener('loadedmetadata',down);
     const vb=node('div','vb');vb.innerHTML=svgAt(IC.video,30);vb.appendChild(node('b','','Your video is ready'));
     const dl=node('a','btn go','Download mp4');dl.href=video;dl.download='flisk-video.mp4';
     const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(video).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
-    vb.append(cp,dl);v.append(pl,vb);turn.appendChild(v);}
-  down();go.disabled=false;box.focus();
-}
+    vb.append(cp,dl);v.append(pl,vb);
+  return v;}
+const noteRes=(r)=>{if(!history.length||history[history.length-1].role!=='assistant')return;results[history.length-1]=Object.assign(results[history.length-1]||{},r);saveChat();};
 // The free model's daily cap: say when it comes back and offer the way round it, and keep the task.
 function limitCard(turn,task,b){
   if(history.length&&history[history.length-1].content===task)history.pop();
