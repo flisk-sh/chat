@@ -1,13 +1,14 @@
 // "@flisk-chat review" in a pull request comment: a GitHub App webhook, the model reads the diff, one review is posted.
 // Compact on purpose (Workers Free: 10 ms CPU, 50 subrequests): about 8 calls per review, the diff is cut to a size cap.
 import { loadSettings } from './keys.js';
+import { startRun } from './run.js';
 import { modelFrom, resolveModel } from './loop.js';
 
 const API = 'https://api.github.com';
 export const WOLF_DIFF = 14_000; // the free model answers at most 1024 tokens, so it only reads this much
 export const OWN_KEY_DIFF = 120_000;
 export const REVIEWS_PER_DAY = 10; // on the free model, per login
-const TRIGGER = /(?:^|[\s(])@(?:flisk-chat|chat)\b[^\n]*?\b(review|auto\s+(?:on|off))\b/i;
+const TRIGGER = /(?:^|[\s(])@(?:flisk-chat|chat)\b[^\n]*?\b(review(?:\s+run)?|auto\s+(?:on|off))\b/i;
 const commandOf = (text) => (TRIGGER.exec(text || '')?.[1] || '').toLowerCase().replace(/\s+/, ' ');
 const WRITE = new Set(['write', 'maintain', 'admin']);
 const enc = new TextEncoder();
@@ -34,7 +35,12 @@ async function appJwt(env, now = Date.now()) {
   return `${head}.${body}.${b64url(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(`${head}.${body}`)))}`;
 }
 
-function gh(token, fetchImpl) {
+export async function installToken(env, id, scope, fetchImpl, now = Date.now()) {
+  const res = await fetchImpl(`${API}/app/installations/${id}/access_tokens`, { method: 'POST', headers: { authorization: `Bearer ${await appJwt(env, now)}`, accept: 'application/vnd.github+json', 'user-agent': 'flisk-chat-review', ...(scope ? { 'content-type': 'application/json' } : {}) }, body: scope ? JSON.stringify(scope) : undefined });
+  return res.ok ? (await res.json()).token : null;
+}
+
+export function gh(token, fetchImpl) {
   return async (path, { method = 'GET', body, accept = 'application/vnd.github+json' } = {}) => {
     const res = await fetchImpl(`${API}${path}`, { method, headers: { authorization: `Bearer ${token}`, accept, 'user-agent': 'flisk-chat-review', 'x-github-api-version': '2022-11-28', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
     return { status: res.status, ok: res.ok, text: res.ok || res.status === 422 ? await res.text() : '' };
@@ -92,10 +98,7 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   const { repository, issue, comment, installation } = event;
   const repo = repository.full_name;
   const sender = comment.user.login;
-  const token = await (async () => {
-    const res = await fetchImpl(`${API}/app/installations/${installation.id}/access_tokens`, { method: 'POST', headers: { authorization: `Bearer ${await appJwt(env, now)}`, accept: 'application/vnd.github+json', 'user-agent': 'flisk-chat-review' } });
-    return res.ok ? (await res.json()).token : null;
-  })();
+  const token = await installToken(env, installation.id, undefined, fetchImpl, now);
   if (!token) return { error: 'no installation token' };
   const api = gh(token, fetchImpl);
   const say = (text) => api(`/repos/${repo}/issues/${issue.number}/comments`, { method: 'POST', body: { body: text } });
@@ -154,7 +157,9 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   if (!res.ok && comments.length) res = await post(event_, []);
   if (!res.ok && event_ !== 'COMMENT') res = await post('COMMENT', []);
   if (!res.ok) await say(`@${sender} ${review.summary}${foot}`);
-  return { posted: true, verdict: review.verdict, comments: comments.length };
+  let run = null;
+  if (!event.auto && commandOf(comment.body) === 'review run') run = await startRun(env, { repo, pr: issue.number, installationId: installation.id, sender, isPrivate: !!repository.private, fetchImpl, say });
+  return { posted: true, verdict: review.verdict, comments: comments.length, run };
 }
 
 // The webhook: checked, answered at once, and the review runs after the answer.
