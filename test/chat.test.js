@@ -484,3 +484,14 @@ test('signed out, every computer asks to sign in first; on a phone a backdrop cl
   expect(out).toContain('<div id="scrim" class="scrim" aria-hidden="true"></div>');
   expect(out).toContain("$('scrim').onclick=closeSide");
 });
+
+test('OpenRouter models are real rows in the model list: name, id, price, free badge; the id field never covers the key', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  const js = page.slice(page.lastIndexOf('<script>') + 8, page.lastIndexOf('</script>'));
+  const line = js.split('\n').find((l) => l.startsWith('const orModel'));
+  const orModel = new Function(`${line};return orModel`)();
+  expect(orModel('particle-ai/particle-1:free', 'Particle AI: Particle-1 (free)', 0, 32768)).toMatchObject({ id: 'or:particle-ai/particle-1:free', name: 'Particle-1 (free)', model: 'particle-ai/particle-1:free', key: 'openrouter', price: 'free', orFree: true, description: 'particle-ai/particle-1:free · 33K context' });
+  expect(orModel('google/gemini-2.5-pro', 'Google: Gemini 2.5 Pro', 1.25, 0).price).toBe('$$');
+  expect(page).not.toContain('e.g. particle');
+  expect(page).toContain('.bysug{list-style:none;margin:2px 0 0;padding:0;position:static');
+});

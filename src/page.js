@@ -191,7 +191,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #byo{border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}#byo[hidden]{display:none}
 #byo .bystat{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}#byo #byrm{font:12px var(--mono);text-transform:uppercase;background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:4px 8px;color:var(--ink);cursor:pointer}#byo #byrm:hover{border-color:var(--red);color:var(--red)}
 #byo label{font-size:12px;color:var(--dim)}
-#byo>div{position:relative}.bysug{list-style:none;margin:2px 0 0;padding:0;position:absolute;left:0;right:0;z-index:5;max-height:220px;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 10px 30px -18px rgba(27,27,24,.35)}.bysug[hidden]{display:none}
+#byo>div{position:relative}.bysug{list-style:none;margin:2px 0 0;padding:0;position:static;max-height:168px;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 10px 30px -18px rgba(27,27,24,.35)}.bysug[hidden]{display:none}
 .bysug li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;cursor:pointer;font-size:13px}.bysug li:hover{background:var(--bg)}.bysug li b{font:13px var(--mono);font-weight:500;color:var(--ink)}.bysug li span{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bysug li.none{cursor:default;color:var(--dim)}.bysug .fr{font-style:normal;font-size:11px;color:var(--green);border:1px solid currentColor;border-radius:var(--radius);padding:0 5px;margin-left:auto}
 .bywarn{font-size:12px;color:var(--red);margin-top:4px}.bywarn[hidden]{display:none}
 #byo .byacts{display:flex;gap:6px}#byo #bysave{font:12px var(--mono);text-transform:uppercase;background:var(--ink);color:var(--panel);border:1px solid var(--ink);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
@@ -332,19 +332,30 @@ const fit=()=>{box.style.height='auto';box.style.height=Math.min(box.scrollHeigh
 // Model picker. The list comes from inference.flisk.si/v1/catalog (server side), so new models need no chat change.
 const aiSel=$('ai'),byo=$('byo'),byoKey=$('byokey'),byoModel=$('byomodel'),mpBtn=$('mpbtn'),pop=$('mppop'),mlist=$('mlist'),rail=$('rail'),mq=$('mq');
 let cur=MODELS[0],railOn='';
-try{const v=sessionStorage.getItem('chat_model');const m=MODELS.find(x=>x.id===v);if(m)cur=m;}catch(e){}
+// One OpenRouter model as a row of its own: picking it fills in the model id, so only the key is left to paste.
+const orModel=(id,name,ppm,ctx)=>({id:'or:'+id,name:(name||id.split('/').pop()).replace(/^[^:]*: /,''),provider:'openrouter',providerName:'OpenRouter',description:id+(ctx?' · '+Math.round(ctx/1000)+'K context':''),price:ppm===0?'free':ppm<1?'$':ppm<5?'$$':'$$$',free:false,key:'openrouter',model:id,orFree:ppm===0});
+let OR=[];
+try{const v=sessionStorage.getItem('chat_model');const m=MODELS.find(x=>x.id===v)||(v&&v.indexOf('or:')===0?orModel(v.slice(3),'',1,0):null);if(m)cur=m;}catch(e){}
 const svgAt=(svg,size)=>svg.replace('<svg ','<svg width="'+size+'" height="'+size+'" aria-hidden="true" ');
 const tile=(m,size)=>m.provider==='flisk'?svgAt(IC.wolf,size):LG[m.provider]?'<span class="lg" style="width:'+size+'px;height:'+size+'px" aria-hidden="true"><img src="'+LG[m.provider]+'" alt=""></span>':'<span class="lt" aria-hidden="true">'+((m.providerName||'?').replace(/[^A-Z]/g,'').slice(0,2)||(m.providerName||'?')[0])+'</span>';
 const providers=[...new Map(MODELS.map(m=>[m.provider,m])).values()];
 function drawRail(){rail.textContent='';const all=node('button');all.type='button';all.title='All models';all.setAttribute('aria-label','All models');all.setAttribute('aria-pressed',String(!railOn));all.innerHTML='<span class="lt" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 1h5v5H1zM8 1h5v5H8zM1 8h5v5H1zM8 8h5v5H8z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></span><span>All</span>';all.onclick=()=>{railOn='';drawRail();drawList();};rail.appendChild(all);
-  providers.forEach(p=>{const b=node('button');b.type='button';b.title=p.providerName;b.setAttribute('aria-label',p.providerName);b.setAttribute('aria-pressed',String(railOn===p.provider));b.innerHTML=tile(p,28);b.appendChild(node('span','',p.providerName));b.onclick=()=>{railOn=p.provider;drawRail();drawList();};rail.appendChild(b);});}
+  providers.forEach(p=>{const b=node('button');b.type='button';b.title=p.providerName;b.setAttribute('aria-label',p.providerName);b.setAttribute('aria-pressed',String(railOn===p.provider));b.innerHTML=tile(p,28);b.appendChild(node('span','',p.providerName));b.onclick=()=>{railOn=p.provider;if(railOn==='openrouter')loadOr();drawRail();drawList();};rail.appendChild(b);});}
+// OpenRouter models to show: with no search, the newest model of each big vendor (OpenRouter lists newest first), then the free ones; with a search, every word must match.
+const OR_TOP=['anthropic','google','openai','deepseek','moonshotai','qwen','x-ai','mistralai','meta-llama'];
+const orShown=(q)=>{const w=q.split(' ').filter(Boolean);if(w.length)return OR.filter(m=>{const h=(m.model+' '+m.name).toLowerCase();return w.every(x=>h.indexOf(x)>=0);}).sort((a,b)=>a.model.length-b.model.length).slice(0,60);
+  const top=OR_TOP.map(v=>OR.find(m=>m.model.indexOf(v+'/')===0&&!m.orFree)).filter(Boolean);return top.concat(OR.filter(m=>m.orFree&&top.indexOf(m)<0).slice(0,12));};
 function drawList(){const q=mq.value.trim().toLowerCase();mlist.textContent='';let last='';
-  MODELS.filter(m=>(!railOn||m.provider===railOn)&&(!q||(m.name+' '+m.providerName+' '+m.description).toLowerCase().includes(q))).forEach(m=>{
-    if(m.providerName!==last){last=m.providerName;mlist.appendChild(node('div','mgroup',m.providerName+(m.free?'':' · your key')));}
+  const ors=(railOn==='openrouter'||(!railOn&&q))?orShown(q):[];
+  MODELS.filter(m=>(!railOn||m.provider===railOn)&&(!q||(m.name+' '+m.providerName+' '+m.description).toLowerCase().includes(q))).concat(ors).forEach(m=>{
+    const g=m.orFree!==undefined?'OpenRouter models · your key':m.providerName+(m.free?'':' · your key');
+    if(g!==last){last=g;mlist.appendChild(node('div','mgroup',g));}
     const b=node('button','mi'+(m.id===cur.id?' on':''));b.type='button';b.setAttribute('role','option');b.setAttribute('aria-selected',String(m.id===cur.id));
     b.innerHTML=tile(m,28)+'<span><span class="n"></span><span class="d"></span></span><svg class="ck" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const n=b.querySelector('.n');n.textContent=m.name;const pr=node('span','price'+(m.free?' free':''),m.free?'free':m.price);n.appendChild(pr);b.querySelector('.d').textContent=m.description;
+    const n=b.querySelector('.n');n.textContent=m.name;const pr=node('span','price'+(m.free||m.orFree?' free':''),m.free?'free':m.price);n.appendChild(pr);b.querySelector('.d').textContent=m.description;
     b.onclick=()=>{pick(m);if(m.free)closePop();else{(m.model?byoKey:byoModel).focus();}};mlist.appendChild(b);});
+  if(railOn==='openrouter'&&!OR.length)mlist.appendChild(node('div','mgroup','Loading OpenRouter models…'));
+  else if(railOn==='openrouter'&&!q)mlist.appendChild(node('div','mgroup','Search above for any of '+OR.length+' OpenRouter models.'));
   if(!mlist.children.length)mlist.appendChild(node('div','mgroup','No model matches.'));}
 const SUGG={anthropic:['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5','claude-fable-5-2'],openai:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o4-mini'],openrouter:['google/gemini-2.5-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','qwen/qwen3-coder','meta-llama/llama-3.3-70b-instruct']};
 const lsGet=(k)=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
@@ -363,7 +374,8 @@ const fixModel=(m)=>{if(cur.key!=='openrouter'||!sugList.length||!m||sugList.ind
   const t=sugList.filter(id=>id.endsWith('/'+m));if(t.length===1)return {ok:true,model:t[0],fixed:true};
   const near=rank(m).slice(0,4);return {ok:false,near};};
 const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Saved in this browser only, never on our servers.':'Saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
-async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(ids.length&&cur.key==='openrouter')fillSugg(ids);else orLoaded=false;}catch(e){orLoaded=false;}}
+async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(!ids.length){orLoaded=false;return;}
+  OR=d.map(x=>orModel(x.id,x.name,(Number(x.pricing&&x.pricing.prompt)||0)*1e6,x.context_length));if(cur.key==='openrouter')fillSugg(ids);else sugList=ids;const same=OR.find(m=>m.id===cur.id);if(same&&same.name!==cur.name)pick(same);else if(!pop.hidden)drawList();}catch(e){orLoaded=false;}}
 byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
 byoModel.addEventListener('input',()=>{if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());byWarn.hidden=true;drawSug();});
 byoModel.addEventListener('focus',drawSug);byoModel.addEventListener('blur',()=>{bySug.hidden=true;byoModel.setAttribute('aria-expanded','false');const f=fixModel(byoModel.value.trim());
@@ -377,7 +389,7 @@ function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.valu
   mpBtn.querySelector('.mpname').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
-mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',drawList);
+mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',()=>{if(mq.value.trim())loadOr();drawList();});
 // The picker lives inside the composer form: Enter there must never send the task. Search: choose the first match.
 // Model name: on to the key. Key (or both filled): done, close the picker and go back to the task box.
 pop.addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const t=e.target;if(t.tagName!=='INPUT')return;e.preventDefault();e.stopPropagation();
@@ -618,7 +630,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
-<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Search models, e.g. particle" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
+<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
 <details class="pick"><summary class="chip">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
 <button type="button" class="chip plain" disabled title="Coming soon">Voice · soon</button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
