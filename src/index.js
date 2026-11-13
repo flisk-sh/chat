@@ -179,11 +179,35 @@ async function videoResponse(env, id, request) {
 }
 
 // The page opens in its own sandbox (no cookies, no access to chat), with a bar saying who made it.
+// The sandbox has no allow-same-origin on purpose, so the browser makes every localStorage/sessionStorage access THROW. Model-written
+// pages use localStorage for their data, and a throwing save aborts the click handler before it redraws: buttons look dead.
+// This shim runs first and, only when real storage is blocked, gives the page a stand-in that keeps data in memory and in
+// window.name (survives a reload of the same tab, never leaves the browser, shared with no other page).
+export const STORAGE_SHIM = `<script>(function(){try{window.localStorage.getItem('x');return}catch(e){}
+var P='flisk-site-storage:',d={local:{},session:{}};
+try{if(window.name.indexOf(P)==0)d=JSON.parse(window.name.slice(P.length))||d}catch(e){}
+function save(){try{window.name=P+JSON.stringify(d)}catch(e){}}
+function mk(k){var o=d[k]=d[k]||{};return{getItem:function(n){n=String(n);return Object.prototype.hasOwnProperty.call(o,n)?o[n]:null},setItem:function(n,v){o[String(n)]=String(v);save()},removeItem:function(n){delete o[String(n)];save()},clear:function(){for(var n in o)delete o[n];save()},key:function(i){var a=Object.keys(o);return i<a.length?a[i]:null},get length(){return Object.keys(o).length}}}
+var l=mk('local'),s=mk('session');
+try{Object.defineProperty(window,'localStorage',{configurable:true,get:function(){return l}});Object.defineProperty(window,'sessionStorage',{configurable:true,get:function(){return s}})}catch(e){}})()</script>`;
+
+// Put the shim before any script of the page, without dropping the page into quirks mode (no text before the doctype).
+export function withStorageShim(html) {
+  for (const tag of [/<head(\s[^>]*)?>/i, /<html(\s[^>]*)?>/i, /<!doctype[^>]*>/i]) {
+    const m = tag.exec(html);
+    if (m) return html.slice(0, m.index + m[0].length) + STORAGE_SHIM + html.slice(m.index + m[0].length);
+  }
+  return STORAGE_SHIM + html;
+}
+
 function siteResponse(row) {
-  const bar = `<div style="position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;font:12px ui-monospace,Menlo,monospace;padding:6px 10px;z-index:2147483647">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site · <a style="color:#7ee787" href="https://github.com/flisk-sh/chat/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
+  // One line that never wraps (a wrapped bar grew to 3 lines on a phone and sat over the page's bottom tabs), and it lets taps through
+  // to the page below; only the report link takes taps.
+  const bar = `<div style="position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;background:#111;color:#eee;font:12px/16px ui-monospace,Menlo,monospace;padding:4px 10px;z-index:2147483647;pointer-events:none"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site</span><a style="color:#7ee787;flex:none;pointer-events:auto" href="https://github.com/flisk-sh/chat/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
   // The bar is fixed to the bottom edge: leave room under the page so its last line is not hidden behind it.
   const room = '<style>body{padding-bottom:40px!important}</style>';
-  const body = /<\/body>/i.test(row.html) ? row.html.replace(/<\/body>/i, `${room}${bar}</body>`) : row.html + room + bar;
+  const page = withStorageShim(row.html);
+  const body = /<\/body>/i.test(page) ? page.replace(/<\/body>/i, () => `${room}${bar}</body>`) : page + room + bar;
   return new Response(body, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
