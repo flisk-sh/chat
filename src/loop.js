@@ -514,6 +514,8 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         ? `Error: ${shown.error}`
         : shown.summary
           ? shown.summary
+        : shown.live
+          ? `Shared. The running app's public link is ${shown.live}. ${shown.note}`
         : shown.published
           ? `Published. The live link is ${shown.published}`
           : shown.video
