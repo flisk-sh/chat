@@ -20,6 +20,8 @@ describe('system of services', () => {
     expect(a.spec.services).toHaveLength(2);
     expect(SYSTEM).toContain('"system"');
     expect(SYSTEM).toContain('ERP-style');
+    // The services stop with the answer, so the model must also publish a page the user can click.
+    expect(SYSTEM).toMatch(/ALWAYS finish with a page the user can click/);
   });
 
   test('the page offers it: a System idea tab and a "system of services" answer', () => {

@@ -833,6 +833,13 @@ describe('a build ends with a public link', () => {
     expect(r.answer).toContain('https://chat.flisk.si/s/abc');
   });
 
+  test('a system of services that is built and then described gets sent back to publish a clickable page', async () => {
+    const { seen, model } = script(['{"system":{"title":"Team CRM","services":["customers","deals"]}}', '{"say":"7 of 7 answered, no public link"}', '{"write":{"path":"/tmp/s/index.html","content":"<html></html>"}}', '{"publish":"/tmp/s/index.html"}', '{"say":"Here: https://chat.flisk.si/s/abc"}']);
+    const r = await runTask2({ task: 'build crm via flisk', model, computer: fakeComputer(), publish: async () => ({ url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
+    expect(seen.some((m) => m.startsWith('No public link yet'))).toBe(true);
+    expect(r.links).toEqual(['https://chat.flisk.si/s/abc']);
+  });
+
   test('it asks only once, and never when a link is already published', async () => {
     const stubborn = script(['{"run":"nohup node s.js &"}', '{"say":"done"}', '{"say":"still done"}']);
     const a = await runTask2({ task: 'x', model: stubborn.model, computer: fakeComputer(), publish: async () => ({}), maxSteps: 8 });
