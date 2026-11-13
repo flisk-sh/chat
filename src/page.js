@@ -739,6 +739,8 @@ function errCard(turn,msg,kind,task){
   c.appendChild(n);turn.appendChild(c);down();
 }
 // The free model's daily cap: say when it comes back and offer the way round it, and keep the task.
+// The limit card said the task was back in the box; once it is sent again, drop the card and the old copy of the task above it.
+function dropLimit(){const t=document.querySelector('.turn[data-limit]');if(!t)return;const u=t.previousElementSibling;if(u&&u.classList.contains('u'))u.remove();t.remove();}
 function limitCard(turn,task,b){
   if(history.length&&history[history.length-1].content===task)history.pop();
   const ms=Number(b.resetsIn)||0,h=Math.floor(ms/3600000),m=Math.round((ms%3600000)/60000),n=b.limit||20;
@@ -748,7 +750,7 @@ function limitCard(turn,task,b){
   c.querySelector('.ring').textContent=n+'/'+n;
   const k=node('button','btn go','Use my API key');k.type='button';k.onclick=(e)=>{e.stopPropagation();openPop();const p=MODELS.find(x=>!x.free);if(p){railOn=p.provider;drawRail();drawList();}};
   const cp=node('button','btn','Copy my task');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(task).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy my task',1500);});};
-  c.querySelector('.acts').append(k,cp);turn.appendChild(c);box.value=task;fit();down();
+  c.querySelector('.acts').append(k,cp);turn.setAttribute('data-limit','1');turn.appendChild(c);box.value=task;fit();down();
 }
 // Zachman questions as a tree of squares: hover (or tap) one to choose it and see its smaller squares; the next
 // question opens below, until all six are answered. "Other…" takes a typed answer.
@@ -793,7 +795,7 @@ let lastSend=0;
 form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
-  lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}userMsg(task);
+  lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}dropLimit();userMsg(task);
   if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 try{if(matchMedia('(pointer:fine)').matches)box.focus();}catch(e){}
