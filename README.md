@@ -8,23 +8,9 @@ Ask for a task or a website. A free model plans it, a real computer from [fleet]
 - "Make a website": the model writes one `index.html`, chat stores it and serves it at `/s/<id>` in a sandbox (no cookies, noindex, 7 days, 5 per person, 200 KB).
 - 20 tasks a day per person.
 
-## Review your pull requests
+## Pull request reviews
 
-Chat reviews a pull request when you ask: a summary, comments on exact lines, one-click suggested fixes and a verdict.
-
-1. Install the [flisk-chat GitHub App](https://github.com/apps/flisk-chat/installations/new) on your repos (once).
-2. Open a pull request and write one of these in a comment:
-
-| Comment | What happens |
-| --- | --- |
-| `@flisk-chat review` | Reads the diff and posts one review (about 20 seconds). |
-| `@flisk-chat review run` | The same, and also checks the PR out on one of your computers, runs install, lint, typecheck and tests, and posts the output. |
-| `@flisk-chat auto on` | Reviews every new non-draft pull request in that repo by itself, with your AI and limit. `auto off` stops it. |
-
-- Only people who can push to the repo can ask. Nothing runs on a pull request unless someone asks, or `auto on` was written in that repo.
-- Write `@flisk-chat`, not `@chat` (that pings a real GitHub user).
-- Which AI: the free Flisk Wolf model (10 reviews a day per person, first 14 KB of the diff), or your own OpenRouter, Claude or OpenAI key. Save it at [chat.flisk.si/reviews](https://chat.flisk.si/reviews) (Settings), or tick "Also use this AI for PR reviews" in the chat key box. The key is encrypted with `KEY_SECRET` and one button deletes it.
-- `auto on` only works if the App also subscribes to the **Pull request** event.
+Chat can review pull requests when someone comments `@flisk-chat review`. How to use it is in the Flisk contributor guide: [Review a pull request](https://github.com/flisk-sh/flisk/blob/main/docs/contributing/04-review-a-pr.md#review-with-flisk-chat). Setup for this repo is in the deploy list below.
 
 ## Run the tests
 
