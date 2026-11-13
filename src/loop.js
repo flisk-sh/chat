@@ -164,7 +164,11 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
     const text = body?.choices?.[0]?.message?.content;
     if (typeof text === 'string' && text.trim()) return { text };
     if (text && typeof text === 'object') return { text: JSON.stringify(text) };
-    return { error: 'the model sent an empty answer' };
+    // Reasoning models sometimes spend the whole answer thinking and write nothing; say so, and let the loop retry.
+    const finish = body?.choices?.[0]?.finish_reason;
+    const thought = body?.choices?.[0]?.message?.reasoning;
+    const why = finish === 'length' ? ' (it ran out of answer length' + (thought ? ' while thinking' : '') + ')' : finish ? ` (finish reason: ${String(finish).slice(0, 30)})` : '';
+    return { error: `the model sent an empty answer${why}`, kind: 'empty' };
   };
 }
 
@@ -223,12 +227,22 @@ export async function runTask({ task, history = [], model, computer, publish, sa
     }
     return { answer, error, steps, links, provider, ms: Date.now() - t0 };
   };
+  let emptyRetries = 0;
   try {
     for (let step = 1; step <= maxSteps; step++) {
       emit({ type: 'thinking', step });
       const last = step === maxSteps;
       if (last) messages.push({ role: 'user', content: 'That was the last action. Reply with {"say": ...} now.' });
       const reply = await model(messages);
+      // An empty reply is usually a one-off (a long command output, a reasoning model that only thought): ask again, twice at most,
+      // without using up a step.
+      if (reply.kind === 'empty' && emptyRetries < 2) {
+        emptyRetries++;
+        emit({ type: 'retry' });
+        messages.push({ role: 'user', content: 'Your last reply was empty. Reply now with the next action as one short JSON object.' });
+        step--;
+        continue;
+      }
       if (reply.error) {
         emit({ type: 'error', error: reply.error, kind: reply.kind });
         return await finish(null, reply.error);
