@@ -1,6 +1,6 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
-import { MAX_TASK, modelFrom, runTask } from './loop.js';
+import { MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
 import { appPage, homePage, messagePage, PROVIDER_CARDS } from './page.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 
@@ -112,7 +112,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
   if (request.method === 'GET' && path === '/') {
     if (!session) return html(homePage());
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
-    return html(appPage({ login: session.login, connected: Object.keys(connections).map((p) => PROVIDER_CARDS.find((c) => c.id === p)?.label || p) }));
+    return html(appPage({ login: session.login, connected: Object.keys(connections) }));
   }
 
   if (path.startsWith('/api/')) {
@@ -137,12 +137,19 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       const connections = await fleet.connections().catch(() => null);
       if (connections === null) return json(502, { error: 'chat could not reach fleet, try again in a minute' });
       if (!Object.keys(connections).length) return json(409, { error: 'connect a computer first', needProvider: true });
-      if (await overDailyLimit(login, { cache: env.LIMIT_CACHE })) return json(429, { error: `at most ${TASKS_PER_DAY} tasks a day each. Come back tomorrow` });
+      // Which AI answers, and which of the user's computers may be used (empty = fleet picks the cheapest).
+      const chosen = resolveModel(body.ai);
+      if (chosen.error) return json(400, { error: chosen.error });
+      const order = Array.isArray(body.providers) ? [...new Set(body.providers.map(String))].slice(0, 20) : [];
+      const missing = order.find((p) => !connections[p]);
+      if (missing) return json(400, { error: `${missing} is not connected yet. Connect it, or tick another computer` });
+      // Only the shared free model counts against the daily cap; the visitor's own key costs us nothing.
+      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE }))) return json(429, { error: `at most ${TASKS_PER_DAY} free tasks a day each. Come back tomorrow, or pick "my API key"` });
       const { readable, writable } = new TransformStream();
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl), computer: fleet, publish: (content) => publishSite(env, login, content, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, order, publish: (content) => publishSite(env, login, content, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

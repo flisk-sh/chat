@@ -14,7 +14,8 @@ export function fleetClient(env, login, fetchImpl = fetch) {
   return {
     connections: async () => (await call('GET', '/v1/connections')).data.connections || {},
     connect: async (provider, key) => call('PUT', `/v1/connections/${encodeURIComponent(provider)}`, { key }),
-    start: async () => call('POST', '/v1/pods', { cpu: 2, ram: 4 }),
+    // order: provider ids to use, in this order; empty means fleet picks the cheapest of the connected ones.
+    start: async (order = []) => call('POST', '/v1/pods', { cpu: 2, ram: 4, ...(order.length ? { order } : {}) }),
     run: async (id, command) => call('POST', `/v1/pods/${encodeURIComponent(id)}/run`, { command, timeout: 60 }),
     write: async (id, path, content) => call('PUT', `/v1/pods/${encodeURIComponent(id)}/files`, { path, content }),
     read: async (id, path) => call('GET', `/v1/pods/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path)}`),
