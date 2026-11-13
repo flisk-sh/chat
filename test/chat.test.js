@@ -292,3 +292,8 @@ test('app page asks the six Zachman questions as squares before the first task',
   for (const q of ['What is it?', 'Who is it for?', 'Why do you need it?', 'Where should it live?', 'When do you need it?', 'How should it feel?']) expect(page).toContain(q);
   expect(page).toContain('Skip, just run it');
 });
+
+test('signed-out visitors are sent to sign-in from the computers menu', () => {
+  expect(appPageUi({ login: null, connected: [] })).toContain('href="/auth/start">sign in to connect</a>');
+  expect(appPageUi({ login: 'ann', connected: [] })).toContain('href="#setup">connect</a>');
+});
