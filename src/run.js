@@ -50,7 +50,7 @@ export async function startRun(env, { repo, pr, installationId, sender, isPrivat
   const cloneUrl = scoped ? `https://x-access-token:${scoped}@github.com/${repo}.git` : `https://github.com/${repo}.git`;
   const script = runScript({ pr, cloneUrl, callback: `${env.PUBLIC_ORIGIN}/github/run-result?${q}` });
   const w = await fleet.write(id, '/tmp/run.sh', script);
-  const r = w.error ? w : await fleet.run(id, 'nohup sh /tmp/run.sh >/dev/null 2>&1 &');
+  const r = w.error ? w : await fleet.run(id, 'setsid nohup sh /tmp/run.sh >/dev/null 2>&1 </dev/null &');
   if (r.error) {
     await fleet.stop(id);
     await say(`@${sender} the test run could not start: ${r.error}`);
@@ -60,7 +60,7 @@ export async function startRun(env, { repo, pr, installationId, sender, isPrivat
 }
 
 // The computer calls this when it is done. The signature proves chat started that run; stopping the pod makes it one-shot.
-export async function runResult(request, env, { fetchImpl = fetch } = {}) {
+export async function runResult(request, env, { fetchImpl = fetch, waitUntil = null } = {}) {
   const u = new URL(request.url);
   const [inst, repo, pr, pod, login, sig] = ['inst', 'repo', 'pr', 'pod', 'login', 'sig'].map((k) => u.searchParams.get(k) || '');
   if (!/^\d+$/.test(inst) || !/^[\w.-]+\/[\w.-]+$/.test(repo) || !/^\d+$/.test(pr) || !pod || !login) return new Response('bad request', { status: 400 });
@@ -69,11 +69,16 @@ export async function runResult(request, env, { fetchImpl = fetch } = {}) {
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ (sig.charCodeAt(i) || 0);
   if (diff !== 0) return new Response('bad signature', { status: 401 });
   const out = (await request.text()).slice(-6000).replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').replace(/```/g, "'''");
-  const stopped = await fleetClient(env, login, fetchImpl).stop(pod);
-  if (stopped.error) return new Response('already done', { status: 200 });
-  const token = await installToken(env, Number(inst), undefined, fetchImpl);
-  if (!token) return new Response('no token', { status: 502 });
-  const fence = '```';
-  await gh(token, fetchImpl)(`/repos/${repo}/issues/${pr}/comments`, { method: 'POST', body: { body: `@${login} the test run finished on your computer (a checkout of this PR, the last 6 KB of output):\n\n${fence}\n${out}\n${fence}\n<sub>The computer was stopped. Output can be cut; read it before you merge.</sub>` } });
+  // One-shot: the first call for a pod wins. (Stopping the pod first would cut this very request off.)
+  const first = await env.DB.prepare('INSERT OR IGNORE INTO run_done (pod, created) VALUES (?, ?)').bind(pod, new Date().toISOString()).run();
+  if (!first.meta.changes) return new Response('already done', { status: 200 });
+  const job = (async () => {
+    const token = await installToken(env, Number(inst), undefined, fetchImpl);
+    const fence = '```';
+    if (token) await gh(token, fetchImpl)(`/repos/${repo}/issues/${pr}/comments`, { method: 'POST', body: { body: `@${login} the test run finished on your computer (a checkout of this PR, the last 6 KB of output):\n\n${fence}\n${out}\n${fence}\n<sub>The computer was stopped. Output can be cut; read it before you merge.</sub>` } });
+    await fleetClient(env, login, fetchImpl).stop(pod);
+  })().catch(() => {});
+  if (waitUntil) waitUntil(job);
+  else await job;
   return new Response('posted', { status: 200 });
 }

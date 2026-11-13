@@ -34,3 +34,9 @@ CREATE TABLE IF NOT EXISTS auto_repos (
   login TEXT NOT NULL,
   updated TEXT NOT NULL
 );
+
+-- A test run's result is accepted once per computer.
+CREATE TABLE IF NOT EXISTS run_done (
+  pod TEXT PRIMARY KEY,
+  created TEXT NOT NULL
+);
