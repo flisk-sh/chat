@@ -1,7 +1,9 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
 import { MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
-import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS } from './page.js';
+import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
+import { deleteSettings, loadSettings, saveSettings } from './keys.js';
+import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 
 export const TASKS_PER_DAY = 20;
@@ -47,9 +49,9 @@ const readJson = async (request) => {
 };
 
 // A counter per login per day in Cloudflare's Cache API: no storage writes, and not exact across data centres.
-export async function overDailyLimit(login, { cache = globalThis.caches?.default, now = Date.now(), limit = TASKS_PER_DAY } = {}) {
+export async function overDailyLimit(login, { cache = globalThis.caches?.default, now = Date.now(), limit = TASKS_PER_DAY, scope = 'chat-limit' } = {}) {
   if (!cache) return false;
-  const url = `https://chat-limit.invalid/${encodeURIComponent(login)}/${new Date(now).toISOString().slice(0, 10)}`;
+  const url = `https://${scope}.invalid/${encodeURIComponent(login)}/${new Date(now).toISOString().slice(0, 10)}`;
   try {
     const hit = await cache.match(url);
     const count = hit ? Number(await hit.text()) || 0 : 0;
@@ -148,6 +150,9 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
     return json(200, { fleet: await probe(`${fleet}/v1/prices`), inference: await probe(`${inference}/v1/models`, env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl) });
   }
 
+  // GitHub App: "@flisk-chat review" on a pull request (signed webhook, no session).
+  if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
   if (sm && request.method === 'GET') {
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(sm[1]).first();
@@ -191,6 +196,24 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
     if (!session) return html(appPage({ login: null, connected: [], models }));
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
     return html(appPage({ login: session.login, connected: Object.keys(connections), models }));
+  }
+
+  if (request.method === 'GET' && path === '/reviews') {
+    if (!session) return redirect('/auth/start');
+    return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY, flash: url.searchParams.get('ok') || '' }));
+  }
+  if (request.method === 'POST' && (path === '/reviews/save' || path === '/reviews/delete')) {
+    if (!session) return redirect('/auth/start');
+    if (!sameOrigin(request, origin)) return html(messagePage('Not allowed', 'This only works from the chat page.'), 403);
+    if (path === '/reviews/delete') {
+      await deleteSettings(env, session.login);
+      return redirect('/reviews?ok=deleted');
+    }
+    const f = await request.formData().catch(() => null);
+    const chosen = resolveModel({ ai: String(f?.get('ai') || ''), key: String(f?.get('key') || ''), model: String(f?.get('model') || '') });
+    if (chosen.error || chosen.free) return html(messagePage('Not saved', chosen.error || 'pick an AI'), 400);
+    const r = await saveSettings(env, session.login, { ai: chosen.ai, model: chosen.model, key: chosen.key });
+    return r.error ? html(messagePage('Not saved', r.error), 503) : redirect('/reviews?ok=saved');
   }
 
   if (path.startsWith('/api/')) {

@@ -18,3 +18,12 @@ CREATE TABLE IF NOT EXISTS videos (
   PRIMARY KEY (id, part)
 );
 CREATE INDEX IF NOT EXISTS videos_login ON videos (login, created);
+
+-- The AI a person picked for PR reviews. The key is encrypted with the KEY_SECRET Worker secret; one button deletes it.
+CREATE TABLE IF NOT EXISTS ai_settings (
+  login TEXT PRIMARY KEY,
+  ai TEXT NOT NULL,             -- anthropic | openai | openrouter
+  model TEXT NOT NULL,
+  key_enc TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
