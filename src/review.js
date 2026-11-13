@@ -155,7 +155,7 @@ export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil
   try { ev = JSON.parse(body); } catch { return new Response('bad json', { status: 400 }); }
   if (ev.action !== 'created' || !ev.issue?.pull_request || ev.issue.state !== 'open' || ev.comment?.user?.type === 'Bot' || !TRIGGER.test(ev.comment?.body || '') || !ev.installation?.id) return new Response('ignored', { status: 202 });
   if (!env.GITHUB_APP_KEY || !env.GITHUB_APP_ID) return new Response('not set up', { status: 503 });
-  const job = reviewPullRequest(env, ev, { fetchImpl, overLimit }).catch(() => {});
+  const job = reviewPullRequest(env, ev, { fetchImpl, overLimit }).then((r) => console.log('review', JSON.stringify(r))).catch((e) => console.log('review failed', String(e?.message || e).slice(0, 300)));
   if (waitUntil) waitUntil(job);
   else await job;
   return new Response('reviewing', { status: 202 });
