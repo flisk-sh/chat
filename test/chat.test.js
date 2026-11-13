@@ -765,6 +765,15 @@ describe('a published page can save to localStorage inside the sandbox', () => {
     expect(reloaded.localStorage.length).toBe(0);
   });
 
+  test('another page in the same tab starts empty', () => {
+    const a = run('<html></html>', Object.assign(blocked(), { location: { pathname: '/s/aaaa' } }));
+    a.localStorage.setItem('pop-crm-v1', 'A');
+    const b = run('<html></html>', Object.assign(blocked(), { name: a.name, location: { pathname: '/s/bbbb' } }));
+    expect(b.localStorage.getItem('pop-crm-v1')).toBeNull();
+    const again = run('<html></html>', Object.assign(blocked(), { name: a.name, location: { pathname: '/s/aaaa' } }));
+    expect(again.localStorage.getItem('pop-crm-v1')).toBe('A');
+  });
+
   test('where real storage works the shim leaves it alone', () => {
     const real = { getItem() {} };
     const win = { name: '', localStorage: real, sessionStorage: real };

@@ -182,9 +182,10 @@ async function videoResponse(env, id, request) {
 // The sandbox has no allow-same-origin on purpose, so the browser makes every localStorage/sessionStorage access THROW. Model-written
 // pages use localStorage for their data, and a throwing save aborts the click handler before it redraws: buttons look dead.
 // This shim runs first and, only when real storage is blocked, gives the page a stand-in that keeps data in memory and in
-// window.name (survives a reload of the same tab, never leaves the browser, shared with no other page).
+// window.name (survives a reload of the same tab, never leaves the browser). The key holds the page's own path, so two pages
+// opened one after the other in a tab never see each other's data.
 export const STORAGE_SHIM = `<script>(function(){try{window.localStorage.getItem('x');return}catch(e){}
-var P='flisk-site-storage:',d={local:{},session:{}};
+var P='flisk-site-storage:'+((window.location&&window.location.pathname)||'')+':',d={local:{},session:{}};
 try{if(window.name.indexOf(P)==0)d=JSON.parse(window.name.slice(P.length))||d}catch(e){}
 function save(){try{window.name=P+JSON.stringify(d)}catch(e){}}
 function mk(k){var o=d[k]=d[k]||{};return{getItem:function(n){n=String(n);return Object.prototype.hasOwnProperty.call(o,n)?o[n]:null},setItem:function(n,v){o[String(n)]=String(v);save()},removeItem:function(n){delete o[String(n)];save()},clear:function(){for(var n in o)delete o[n];save()},key:function(i){var a=Object.keys(o);return i<a.length?a[i]:null},get length(){return Object.keys(o).length}}}
