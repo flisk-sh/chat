@@ -523,6 +523,14 @@ test('the model box keeps the full OpenRouter list, never sends an empty model, 
   expect(page).not.toContain("errMsg(f.name+' is over 150 KB.')");
 });
 
+test('a reopened chat rebuilds the website and video cards from the links in its answer', async () => {
+  const { appPage } = await import('../src/page.js');
+  const page = appPage({ login: 'ann', connected: [], models: [] });
+  expect(page).toContain('function siteCard(link)');
+  expect(page).toContain('function videoCard(video)');
+  expect(page).toContain('const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));');
+});
+
 describe('attached pictures', () => {
   const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), write: async () => ({ status: 200, data: {} }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
   const pic = cleanFiles([{ name: 'demo.jpg', type: 'image/jpeg', b64: true, content: 'AAAA' }]);
