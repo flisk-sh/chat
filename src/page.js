@@ -324,6 +324,10 @@ function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.valu
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
 mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',drawList);
+// The picker lives inside the composer form: Enter there must never send the task. Search: choose the first match.
+// Model name: on to the key. Key (or both filled): done, close the picker and go back to the task box.
+pop.addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const t=e.target;if(t.tagName!=='INPUT')return;e.preventDefault();e.stopPropagation();
+  if(t===mq){const first=mlist.querySelector('.mi');if(first)first.click();}else if(t===byoModel&&!byoKey.value.trim()&&!byoKey.parentElement.parentElement.hidden){byoKey.focus();}else{closePop();box.focus();}});
 pick(cur);
 // Computers menu.
 const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$('sbsum');

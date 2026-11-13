@@ -166,6 +166,7 @@ describe('safety', () => {
     expect(home).toContain('k.onclick=(e)=>{e.stopPropagation()');
     expect(home).toContain('grid-template-rows:minmax(0,1fr)');
     expect(home).toContain("pick=[kind]");
+    expect(home).toContain("pop.addEventListener('keydown'");
     for (const m of home.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
