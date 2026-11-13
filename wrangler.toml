@@ -1,0 +1,22 @@
+# chat.flisk.si: sign in with GitHub, type a task, a model plans it, a computer from fleet does it.
+name = "flisk-chat"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+routes = [{ pattern = "chat.flisk.si", custom_domain = true }]
+
+[vars]
+PUBLIC_ORIGIN = "https://chat.flisk.si"
+FLEET_URL = "https://fleet.flisk.si"
+INFERENCE_URL = "https://inference.flisk.si/v1/chat/completions"
+INFERENCE_MODEL = "flisk-wolf-chat"
+
+# Made sites. Create once: bunx wrangler@4 d1 create flisk-chat, put its id below, then
+#   bunx wrangler@4 d1 execute flisk-chat --remote --file schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "flisk-chat"
+database_id = "REPLACE_WITH_D1_ID"
+
+# Secrets: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET (OAuth app, callback https://chat.flisk.si/auth/callback),
+# SESSION_SECRET (long random), FLEET_SERVICE_SECRET (same value as CHAT_SERVICE_SECRET on fleet, 32+ characters),
+# INFERENCE_KEY (one key from inference.flisk.si; chat counts each person's tasks itself).
