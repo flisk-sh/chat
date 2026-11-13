@@ -1,6 +1,6 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
-import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
+import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, resolveModel, runTask, WORKERS_AI_PER_DAY } from './loop.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
@@ -114,6 +114,12 @@ export async function overDailyLimit(login, { cache = globalThis.caches?.default
   return false;
 }
 
+// The free model's last fallback (Workers AI on our account) has one daily cap for everyone, so chat keeps to its share.
+export const freeModelOpts = (env) => ({
+  overLimit: () => overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
+  log: (tried) => console.log('free model fallbacks all failed', JSON.stringify(tried).slice(0, 600)),
+});
+
 const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 // A site a task made: stored as one HTML file, linked by an unguessable id, kept 7 days, the oldest dropped over 5.
@@ -213,7 +219,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   }
 
   // GitHub App: "@flisk-chat review" on a pull request (signed webhook, no session).
-  if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+  if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin, freeModelLimit: freeModelOpts(env).overLimit }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
 
   if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil });
 
@@ -347,7 +353,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
       if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: TALK_PER_DAY, scope: 'talk-limit' }))) return json(429, { error: `That's today's ${TALK_PER_DAY} free voice replies. Come back tomorrow, or pick your own AI key.` });
-      const r = await modelFrom(env, fetchImpl, chosen)(messages);
+      const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env))(messages);
       if (r.error) return json(502, { error: r.error, kind: r.kind });
       const text = spokenReply(r.text);
       return text ? json(200, { heard, lang, text }) : json(502, { error: 'the model sent an empty answer' });
@@ -377,7 +383,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

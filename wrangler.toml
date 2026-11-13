@@ -30,6 +30,8 @@ database_id = "fea52917-992e-4d99-98c9-cf007f233fd7"
 # Secrets: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET (OAuth app, callback https://chat.flisk.si/auth/callback),
 # SESSION_SECRET (long random), FLEET_SERVICE_SECRET (same value as CHAT_SERVICE_SECRET on fleet, 32+ characters),
 # INFERENCE_KEY (one key from inference.flisk.si; chat counts each person's tasks itself).
+# Optional OPENROUTER_KEY (a free key from openrouter.ai/keys): when free Flisk Wolf is out of its daily budget, the
+# free choice falls back to OpenRouter's free models, then to a small Workers AI model (src/loop.js modelFrom).
 
 # PR reviews ("@flisk-chat review"): a GitHub App with webhook https://chat.flisk.si/github/webhook, permissions Pull requests
 # read+write, Issues read+write, Contents read, Metadata read, events "Issue comment" and "Pull request" (the second one only for automatic reviews). Secrets: GITHUB_APP_ID, GITHUB_APP_KEY

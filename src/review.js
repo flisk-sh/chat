@@ -134,7 +134,7 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   const diff = cut ? dres.text.slice(0, cap) : dres.text;
   const files = diffLines(diff);
 
-  const ask = modelFrom(env, fetchImpl, chosen);
+  const ask = modelFrom(env, fetchImpl, chosen, { overLimit: env.freeModelLimit });
   let review = null;
   let err = '';
   for (let i = 0; i < 2 && !review; i++) {

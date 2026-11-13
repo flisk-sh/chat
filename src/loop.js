@@ -138,12 +138,12 @@ export function explainModelError(body, status, chosen = {}) {
   return { error: `${head}${why ? `: ${why}` : ''}`.slice(0, 500), kind };
 }
 
-// Calls the model (OpenAI-compatible). Errors come back as { error }.
-export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }) {
+// Calls one model (OpenAI-compatible). Errors come back as { error }.
+function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }) {
   const url = chosen.free ? env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions' : chosen.url;
   const model = chosen.free ? env.INFERENCE_MODEL || 'flisk-wolf-chat' : chosen.model;
   const key = chosen.free ? env.INFERENCE_KEY : chosen.key;
-  const maxTokens = chosen.free ? 1024 : 4096;
+  const maxTokens = chosen.free || chosen.referer ? 1024 : 4096;
   // The free model is another Worker on our own domain: Cloudflare refuses a Worker calling it by its public address
   // (error 1033), so the call goes through a service binding when there is one.
   const call = chosen.free && env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl;
@@ -153,7 +153,7 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
     try {
       res = await call(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat' },
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat', ...(chosen.referer ? { 'http-referer': 'https://chat.flisk.si', 'x-title': 'Flisk Chat' } : {}) },
         body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0 }),
       });
     } catch (e) {
@@ -171,6 +171,78 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
     return { error: `the model sent an empty answer${why}`, kind: 'empty' };
   };
 }
+
+// The free choice never shows a budget or rate-limit error. Flisk Wolf answers first; when it cannot (its shared daily
+// budget is used up, or it fails), the same messages go to OpenRouter's free models (with OPENROUTER_KEY), then to a
+// small Workers AI model on our own account (capped per day). Only when every one fails does the visitor see an error,
+// and it says the free AI is busy, not why.
+export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+export const OPENROUTER_PREFERRED = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-super-vl:free'];
+export const WORKERS_AI_FALLBACK = '@cf/meta/llama-3.1-8b-instruct-fast';
+export const WORKERS_AI_PER_DAY = 300; // about 1,500 neurons at most: chat's share of the account's free 10,000
+export const FREE_BUSY = 'The free AI is busy right now. Try again in a minute, or pick your own AI in the model menu.';
+const WOLF_REST_MS = 10 * 60 * 1000;
+let wolfOutUntil = 0; // after a budget or rate-limit answer, skip Wolf for a while instead of asking it every step
+let orModels = { at: 0, ids: null };
+
+// OpenRouter's free models right now (they come and go), in our preferred order first, kept 1 hour.
+export async function freeOpenRouterModels(fetchImpl = fetch, now = Date.now()) {
+  if (orModels.ids && now - orModels.at < 3_600_000) return orModels.ids;
+  let live = [];
+  try {
+    const res = await fetchImpl('https://openrouter.ai/api/v1/models', { signal: AbortSignal.timeout(4000) });
+    const data = (await res.json())?.data || [];
+    live = data.filter((m) => String(m?.id || '').endsWith(':free') && !/vl|omni|code/i.test(m.id) && (m.context_length || 0) >= 32000).map((m) => m.id);
+  } catch {}
+  const ids = live.length ? [...OPENROUTER_PREFERRED.filter((id) => live.includes(id)), ...live.filter((id) => !OPENROUTER_PREFERRED.includes(id))] : OPENROUTER_PREFERRED;
+  orModels = { at: now, ids };
+  return ids;
+}
+
+function workersAiModel(env, overLimit) {
+  return async (messages) => {
+    if (!env.AI) return { error: 'no Workers AI binding', kind: 'provider' };
+    if (overLimit && (await overLimit())) return { error: 'the Workers AI fallback is used up for today', kind: 'limit' };
+    try {
+      const r = await env.AI.run(WORKERS_AI_FALLBACK, { messages, max_tokens: 1024, temperature: 0 });
+      const text = typeof r?.response === 'string' ? r.response : r?.response ? JSON.stringify(r.response) : '';
+      return text.trim() ? { text } : { error: 'the model sent an empty answer', kind: 'empty' };
+    } catch (e) {
+      return { error: String(e?.message || e).slice(0, 200), kind: 'provider' };
+    }
+  };
+}
+
+export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true }, { overLimit = null, now = () => Date.now(), log = () => {} } = {}) {
+  if (!chosen.free) return oneModel(env, fetchImpl, chosen);
+  const wolf = oneModel(env, fetchImpl, chosen);
+  const workers = workersAiModel(env, overLimit);
+  return async (messages) => {
+    const tried = [];
+    if (now() >= wolfOutUntil) {
+      const r = await wolf(messages);
+      if (!r.error) return { ...r, by: 'wolf' };
+      tried.push(`wolf: ${r.error}`);
+      if (r.kind === 'limit') wolfOutUntil = now() + WOLF_REST_MS;
+    }
+    if (env.OPENROUTER_KEY) {
+      const ids = (await freeOpenRouterModels(fetchImpl)).slice(0, 3);
+      for (const id of ids) {
+        const r = await oneModel(env, fetchImpl, { ai: 'openrouter', url: OPENROUTER_URL, model: id, key: env.OPENROUTER_KEY, referer: true })(messages);
+        if (!r.error) return { ...r, by: id };
+        tried.push(`${id}: ${r.error}`);
+      }
+    }
+    const r = await workers(messages);
+    if (!r.error) return { ...r, by: WORKERS_AI_FALLBACK };
+    tried.push(`workers-ai: ${r.error}`);
+    log(tried);
+    return { error: FREE_BUSY, kind: 'busy' };
+  };
+}
+
+// Tests only: forget that Wolf was out and the cached OpenRouter list.
+export function resetFallbacks() { wolfOutUntil = 0; orModels = { at: 0, ids: null }; }
 
 
 export const MAX_FILES = 3;
