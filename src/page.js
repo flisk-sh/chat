@@ -185,6 +185,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 @keyframes oring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}@keyframes othink{50%{transform:scale(.88)}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.12)}}
 .ostate{margin:0;font-size:15px;color:#cfe0d3;min-height:22px}.ocap{max-width:600px;width:100%;text-align:center;min-height:90px}
 .oyou{margin:0 0 10px;color:#9fb0a3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
+.ohear{margin-top:14px;padding:10px 18px;border-radius:999px;border:1px solid #9fb0a3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
 .oend{width:58px;height:58px;border-radius:50%;border:0;background:#c0392b;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.oend:hover{background:#a93226}
 @media (prefers-reduced-motion:reduce){.oracle .ocore,.oracle .oring{animation:none!important}}
 .chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b;animation:micp 1.2s ease-in-out infinite}#mic.busy{opacity:.6;cursor:progress}@keyframes micp{50%{box-shadow:0 0 0 5px rgba(192,57,43,.25)}}
@@ -603,17 +604,22 @@ const utter=(x,lang,v)=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang
 const sentences=(t)=>{const out=[];spoken(t).replace(/([.!?…]) +/g,'$1|').split('|').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(out.length&&(out[out.length-1].length<40||out.length>=8))out[out.length-1]+=' '+x;else out.push(x);});return out;};
 // Ava's voice streams from /voice, so it starts on the first chunk. When it has not started within 6 s, or fails
 // before it starts, the browser's own voice reads the answer instead.
-const playVoice=(text,lang,gen)=>new Promise((ok)=>{if(gen!==sayGen||!window.__SIGNED__){ok(false);return;}let started=false,w=0,t=0;
+const playVoice=(text,lang,gen,budget)=>new Promise((ok)=>{if(gen!==sayGen||!window.__SIGNED__){ok(false);return;}let started=false,w=0,t=0;
   const fin=(r)=>{AUD.onended=AUD.onerror=AUD.onplaying=null;clearInterval(w);clearTimeout(t);ok(r);};
   AUD.onplaying=()=>{started=true;clearTimeout(t);};AUD.onended=()=>fin(true);AUD.onerror=()=>{try{AUD.pause();}catch(e){}fin(started);};
-  t=setTimeout(()=>{if(!started){try{AUD.pause();AUD.removeAttribute('src');AUD.load();}catch(e){}fin(false);}},6000);
+  t=setTimeout(()=>{if(!started){try{AUD.pause();AUD.removeAttribute('src');AUD.load();}catch(e){}fin(false);}},budget||6000);
   w=setInterval(()=>{if(gen!==sayGen){try{AUD.pause();}catch(e){}fin(true);}},150);
   AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(text.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{if(!started)fin(false);});});
-const browserSay=(x,lang,gen)=>new Promise((ok)=>{if(!TTS||gen!==sayGen){ok();return;}const u=utter(x,lang,pickVoice(lang));let done=false,w=0;
-  const fin=()=>{if(done)return;done=true;clearInterval(w);ok();};u.onend=u.onerror=fin;w=setInterval(()=>{if(gen!==sayGen){try{TTS.cancel();}catch(e){}fin();}},150);TTS.speak(u);setTimeout(fin,4000+x.length*120);});
-async function say(t,hint){stopTalk();const gen=sayGen,lang=langOf(t,hint),words=spoken(t);if(!words)return;
-  if(await playVoice(words,lang,gen))return;
-  for(const x of sentences(t)){if(gen!==sayGen)return;await browserSay(x,lang,gen);}}
+const browserSay=(x,lang,gen)=>new Promise((ok)=>{if(!TTS||gen!==sayGen){ok(false);return;}const u=utter(x,lang,pickVoice(lang));let done=false,w=0,began=false;
+  const fin=()=>{if(done)return;done=true;clearInterval(w);ok(began);};u.onstart=()=>{began=true;};u.onend=u.onerror=fin;w=setInterval(()=>{if(gen!==sayGen){try{TTS.cancel();}catch(e){}fin();}},150);TTS.speak(u);setTimeout(fin,4000+x.length*120);});
+// Ava gets 'budget' ms to start (voice talk waits only 3 s: a quiet wait feels broken), then the browser's own voice
+// reads it at once. When neither makes a sound (a blocked autoplay, a muted tab), 'onSilent' offers a button, because a
+// tap is always allowed to play sound.
+async function say(t,hint,opts){stopTalk();opts=opts||{};const gen=sayGen,lang=langOf(t,hint),words=spoken(t);if(!words)return;
+  if(await playVoice(words,lang,gen,opts.budget))return;
+  let heard=false;
+  for(const x of sentences(t)){if(gen!==sayGen)return;if(await browserSay(x,lang,gen))heard=true;else if(!heard)break;}
+  if(!heard&&gen===sayGen&&opts.onSilent)opts.onSilent(words,lang);}
 const talkBack=(t,hint)=>{if(t)say(t,hint);};
 if(TTS&&TTS.onvoiceschanged!==undefined)TTS.onvoiceschanged=()=>{};
 const SV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',SPK_ON=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',SPK_OFF=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>';
@@ -666,7 +672,8 @@ if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.oncl
 const oracle=$('oracle'),orb=$('orb'),oState=$('ostate'),oYou=$('oyou'),oSay=$('osay');
 let oLang='',oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
 const oSet=(st,msg)=>{oracle.className='oracle '+st;oState.textContent=msg;};
-const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;try{await say(t,hint);}finally{oSpeaking=false;}};
+const oHear=$('ohear');
+const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;oHear.hidden=true;try{await say(t,hint,{budget:3000,onSilent:(words,lang)=>{oHear.hidden=false;oHear.onclick=()=>{oHear.hidden=true;stopTalk();AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(words.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{});};}});}finally{oSpeaking=false;}};
 // Record one utterance: starts on speech, stops after 1 s of quiet (1.5 s after a short opening like "Hi!", so a greeting
 // and its question stay one turn), or 30 s; gives up after 9 s of silence.
 const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
@@ -676,7 +683,7 @@ const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','aud
   const tick=()=>{an.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++)sum+=buf[i]*buf[i];const rms=Math.sqrt(sum/buf.length),now=Date.now(),dt=now-last;last=now;
     orb.style.setProperty('--lv',Math.min(1,rms*12).toFixed(3));
     if(rms>0.02){spoke=true;quiet=0;talked+=dt;}else if(spoke)quiet+=dt;
-    if((spoke&&quiet>(talked<2000?1500:1000))||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
+    if((spoke&&quiet>(talked<2000?1100:750))||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
   oStop=()=>{if(r.state!=='inactive')r.stop();};
   r.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
   r.onstop=()=>{clearInterval(raf);try{src.disconnect();}catch(e){}orb.style.setProperty('--lv',0);oRec=null;oStop=null;done(spoke?new Blob(chunks,{type:r.mimeType||type||'audio/webm'}):null);};
@@ -975,7 +982,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div class="otop"><span class="otitle">Flisk Oracle</span><span class="ohint">Talk. Pause when you are done. Tap the circle to interrupt.</span></div>
 <button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"></span></button>
 <p id="ostate" class="ostate" aria-live="polite">Starting…</p>
-<div class="ocap"><p id="oyou" class="oyou"></p><p id="osay" class="osay"></p></div>
+<div class="ocap"><p id="oyou" class="oyou"></p><p id="osay" class="osay"></p><button type="button" id="ohear" class="ohear" hidden>Tap to hear the answer</button></div>
 <button type="button" id="oend" class="oend" aria-label="End voice talk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
