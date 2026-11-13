@@ -5,17 +5,23 @@ export const MAX_TASK = 2000;
 const OUT_CHARS = 1500;
 
 export const SYSTEM = `You are Flisk Chat. You do the user's task on a real Linux computer (sh, curl and usually python3).
-Reply with exactly one JSON object and nothing else. Pick one:
-{"run": "<shell command>"}                         run a command; you see its exit code and output
-{"write": {"path": "<file>", "content": "<text>"}} write a text file
-{"read": "<file>"}                                 read a text file
-{"publish": "<path to an index.html>"}             give the user a live link to that one HTML file
-{"say": "<answer for the user>"}                   finish: the final answer, plain text
+
+CRITICAL: Your entire reply must be exactly one JSON object and nothing else.
+No markdown, no XML, no tags, no <|DSML|>, no tool-call wrappers, no explanations before or after.
+Only the JSON.
+
+Pick exactly one of these shapes:
+{"run": "<shell command>"}
+{"write": {"path": "<file>", "content": "<text>"}}
+{"read": "<file>"}
+{"publish": "<path to an index.html>"}
+{"say": "<answer for the user>"}
+
 Rules:
 - Use the computer for anything you can check: maths, code, data, files, web pages (curl).
 - One action per reply. Keep commands short. Never wait for input; add -y to installs.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
-- The reply must be valid JSON: escape every \" inside a string as \\\" and every newline as \\\\n.
+- Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
 - To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
 - For multi-service apps: Fleet pods have no Docker or Tilt. Use Flisk in local-process mode only (services that declare a \"command\" field). First install the CLI with:
   curl -fsSL https://flisk.sh/install.sh | sh
@@ -26,10 +32,21 @@ Rules:
   This starts the services as plain processes with health checks and no containers. Prefer this over hand-written scripts when the task needs more than one process.
   If the curl install fails, fall back to installing Node first then npm install -g @flisk-sh/flisk.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
-- In "say", give the result itself (numbers, the content, the link), not a description of the steps.`;
+- In "say", give the result itself (numbers, the content, the link), not a description of the steps.
+
+Remember: reply is only the JSON object. Nothing else.`;
 
 export function parseAction(text) {
-  const s = String(text ?? '').trim();
+  let s = String(text ?? '').trim();
+
+  // Strip common tool-call / DSML / XML wrappers the free model sometimes emits.
+  s = s
+    .replace(/<\|DSML\|>[\s\S]*?<\|\/DSML\|>/gi, '')
+    .replace(/<\/?invoke[^>]*>/gi, '')
+    .replace(/<\/?parameter[^>]*>/gi, '')
+    .replace(/<\|[^|]+\|>/g, '')
+    .trim();
+
   const start = s.indexOf('{');
   const end = s.lastIndexOf('}');
   if (start >= 0 && end > start) {
@@ -43,6 +60,12 @@ export function parseAction(text) {
     } catch {}
     if (/^\s*\{\s*"(run|write|read|publish)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
+
+  // If it still looks like a tool call or XML, force a retry.
+  if (/<\|DSML\||<invoke|<parameter|tool_call|function_call/i.test(String(text))) {
+    return { type: 'bad', text: String(text) };
+  }
+
   return { type: 'say', text: s || '(no answer)' };
 }
 
@@ -139,7 +162,7 @@ export async function runTask({ task, history = [], model, computer, publish, or
       const action = parseAction(reply.text);
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });
-        messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object (escape " as \\" inside strings).' });
+        messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
         continue;
       }
       if (action.type === 'say' || last) {
@@ -196,7 +219,7 @@ export async function runTask({ task, history = [], model, computer, publish, or
             : shown.written
               ? `Wrote ${shown.written}`
               : `Content:\n${shown.content}`;
-      messages.push({ role: 'user', content: `${note}\n\nNext action as JSON.` });
+      messages.push({ role: 'user', content: `${note}\n\nNext action as JSON only.` });
     }
     return await finish(null, 'ran out of steps');
   } catch (e) {
