@@ -28,7 +28,7 @@ export const SPEAK_PER_DAY = 600; // answers read aloud by the Ava voice, per lo
 export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
 - Answer in one or two short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
 - Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
-- If the person asks you to build or make something (a website, an app, a video), say in one sentence what you would make, then tell them to say "build it" or type it in the chat to have it made on a real computer.
+- If the person asks you to build or make something (a website, an app, a video, a system) or says "build it", reply with ONLY this JSON and nothing else: {"say":"one short sentence saying you are building it now","build":"the full task in plain words, with every detail they gave, using the earlier turns if they said build it"}. A real computer then builds it. Never say you cannot build.
 - Never invent phone numbers, emails, prices or addresses. If you do not know, say so in a few words.
 - Reply in the language the person speaks.`;
 
@@ -42,6 +42,24 @@ export function spokenReply(text) {
     } catch {}
   }
   return t.replace(/```[\s\S]*?```/g, ' ').replace(/[*_#>|`~]/g, '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+}
+// Voice talk builds when asked: the model answers {say, build}; if it only talked, a plain "build / make / create a ..."
+// request (or "build it" after one) still starts the build.
+const BUILD_ASK = /\b(build|make|create|generate|develop)\b[\s\S]{0,60}\b(app|application|website|web ?site|site|page|video|dashboard|bot|game|tool|api|shop|store|system|calculator|landing)\b/i;
+const BUILD_IT = /^\W*(ok(ay)?\W+|yes\W+|please\W+)*(build|make|do) it\W*$/i;
+export function talkReply(raw, heard = '', history = []) {
+  let t = String(raw || '').trim(), build = '';
+  const j = t.match(/\{[\s\S]*\}/);
+  if (j && (t.startsWith('{') || t.startsWith('```'))) {
+    try { const o = JSON.parse(j[0]); build = String(o.build || o.task || '').trim().slice(0, 2000); t = String(o.say || o.answer || o.text || o.reply || '').trim(); } catch {}
+  }
+  if (!build && heard) {
+    if (BUILD_IT.test(heard)) build = [...history].reverse().find((m) => m.role === 'user' && !BUILD_IT.test(m.content) && BUILD_ASK.test(m.content))?.content || '';
+    else if (BUILD_ASK.test(heard)) build = heard;
+    build = build.slice(0, 2000);
+  }
+  const text = spokenReply(t) || (build ? 'On it. I am building that now.' : '');
+  return { text, build };
 }
 // Whisper's language code -> the name the model understands, so the reply comes back in the language spoken.
 export const LANG_NAMES = { en: 'English', uk: 'Ukrainian', ru: 'Russian', es: 'Spanish', de: 'German', fr: 'French', it: 'Italian', pt: 'Portuguese', pl: 'Polish', nl: 'Dutch', tr: 'Turkish', cs: 'Czech', sk: 'Slovak', ro: 'Romanian', hu: 'Hungarian', sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', el: 'Greek', bg: 'Bulgarian', sr: 'Serbian', hr: 'Croatian', be: 'Belarusian', ka: 'Georgian', he: 'Hebrew', ar: 'Arabic', fa: 'Persian', hi: 'Hindi', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai', id: 'Indonesian', ms: 'Malay', kk: 'Kazakh', lt: 'Lithuanian', lv: 'Latvian', et: 'Estonian', sl: 'Slovenian' };
@@ -456,8 +474,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (chosen.free && (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_TALK_PER_DAY : TALK_PER_DAY, scope: anon ? 'talk-anon' : 'talk-limit' }))) return json(429, { error: `That's your ${anon ? ANON_TALK_PER_DAY : TALK_PER_DAY} free voice replies for today.${anon ? ' Sign in with GitHub for more.' : ''} Keep going free with your own OpenRouter account in the model menu, or come back tomorrow.` });
       const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon))(messages);
       if (r.error) return json(502, { error: r.error, kind: r.kind });
-      const text = spokenReply(r.text);
-      return text ? json(200, { heard, lang, text }) : json(502, { error: 'the model sent an empty answer' });
+      const { text, build } = talkReply(r.text, heard || String(messages[messages.length - 1]?.content || ''), messages);
+      return text ? json(200, { heard, lang, text, ...(build ? { build } : {}) }) : json(502, { error: 'the model sent an empty answer' });
     }
 
     if (path === '/api/run') {
