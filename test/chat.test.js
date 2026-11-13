@@ -531,6 +531,15 @@ test('a reopened chat rebuilds the website and video cards from the links in its
   expect(page).toContain('const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));');
 });
 
+test('a task is saved when it is sent, a reopened unfinished chat offers Run it again, and leaving mid-task asks first', async () => {
+  const { appPage } = await import('../src/page.js');
+  const page = appPage({ login: 'ann', connected: [], models: [] });
+  expect(page).toContain("history.push({role:'user',content:task});saveChat();run(task);");
+  expect(page).toContain("history.push({role:'user',content:full});saveChat();run(full);");
+  expect(page).toContain('Run it again');
+  expect(page).toContain("addEventListener('beforeunload'");
+});
+
 describe('attached pictures', () => {
   const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), write: async () => ({ status: 200, data: {} }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
   const pic = cleanFiles([{ name: 'demo.jpg', type: 'image/jpeg', b64: true, content: 'AAAA' }]);
