@@ -238,6 +238,9 @@ describe('the two pickers', () => {
     expect(resolveModel({ ai: 'openai', key: 'sk-long-enough-key', model: 'a b;rm' }).error).toContain('model name');
     expect(resolveModel({ ai: 'openrouter', key: 'sk-long-enough-key', model: 'anthropic/claude-sonnet-5-5' })).toMatchObject({ free: false, url: 'https://openrouter.ai/api/v1/chat/completions' });
     expect(resolveModel(undefined)).toEqual({ ai: 'wolf', free: true });
+    // The page picks its buttons from the kind, so a missing key or model name must say which it is.
+    expect(resolveModel({ ai: 'anthropic', key: '' }).kind).toBe('key');
+    expect(resolveModel({ ai: 'openrouter', key: 'sk-long-enough-key' }).kind).toBe('model');
   });
 
   test('the 20-a-day cap counts only the free model', async () => {

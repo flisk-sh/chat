@@ -98,8 +98,8 @@ export function resolveModel(choice) {
   if (!p) return { error: 'pick one of the listed AI models' };
   const key = String(choice.key || '').trim();
   const model = String(choice.model || '').trim() || p.model;
-  if (key.length < 8 || key.length > 300 || /\s/.test(key)) return { error: `paste your ${p.label.split(' (')[0]} API key` };
-  if (!model || !/^[A-Za-z0-9._:\/-]{1,80}$/.test(model)) return { error: 'type the model name, for example the one shown on your provider\'s model list' };
+  if (key.length < 8 || key.length > 300 || /\s/.test(key)) return { error: `paste your ${p.label.split(' (')[0]} API key`, kind: 'key' };
+  if (!model || !/^[A-Za-z0-9._:\/-]{1,80}$/.test(model)) return { error: 'type the model name, for example the one shown on your provider\'s model list', kind: 'model' };
   return { ai, free: false, url: p.url, key, model };
 }
 
