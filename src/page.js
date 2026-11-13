@@ -107,7 +107,7 @@ form.ask{border-top:0}
 .zchip{font:11px var(--mono);text-transform:uppercase;border-radius:0;padding:4px 10px;background:var(--card);border:1px solid rgba(23,23,21,.15);color:var(--dim)}
 .zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
 .zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
-@media (max-width:640px){.trow{flex-wrap:wrap}.trow .q{width:100%;padding:0}}
+@media (max-width:640px){.trow{flex-wrap:wrap}.trow{margin-left:0!important}.trow .q{width:100%;padding:0}}
 /* particle.ai look */
 :root{--paper:#EFEBDD;--card:#F8F5EA;--green:#C4501C;--yellow:#E8C21A;--orange:#D9622B;--cyan:#3FD3D6;--pink:#DB7BB2}
 h1 em{color:var(--orange)}
