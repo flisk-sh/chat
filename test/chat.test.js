@@ -160,6 +160,9 @@ describe('safety', () => {
     expect(home).toContain('Sign in with GitHub');
     expect(home).toContain('id="ask"');
     expect(home).toContain('window.__SIGNED__=false');
+    // The composer's button row must keep every control inside it: balanced divs between <div class="bar"> and </form>.
+    const bar = home.slice(home.indexOf('<div class="bar">'), home.indexOf('</form>'));
+    expect((bar.match(/<div\b/g) || []).length).toBe((bar.match(/<\/div>/g) || []).length);
     // Dogfood fixes: video keeps its box so the page can scroll to it, a closed drawer is not focusable, dated history, dark theme.
     expect(home).toContain("addEventListener('loadedmetadata',down)");
     expect(home).toContain('.side{visibility:hidden;');
