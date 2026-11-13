@@ -126,7 +126,7 @@ body:not(.chatting) .dock .tools{border-top:0}
 body:not(.chatting) .hero{border-bottom:0;padding-bottom:18px}
 body:not(.chatting) .ideas{border-top:1px solid var(--ink)}
 .chatting .dock{border-top:1px solid var(--ink)}
-form.ask textarea{font-size:17px;min-height:76px}
+form.ask textarea{font-size:17px;min-height:76px;max-height:200px;overflow-y:auto}
 form.ask .btn{border-width:0 0 0 1px;font-size:13px}
 .ideas{counter-reset:i}
 .ideas button{display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:center;padding:18px 22px}
@@ -257,6 +257,7 @@ function ask6(task){
 let lastSend=0;
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length&&/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|build|make|create|design)\\b/i.test(task)&&!/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell)\\b/i.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
+const fit=()=>{box.style.height="auto";box.style.height=Math.min(box.scrollHeight,200)+"px";};box.addEventListener("input",fit);form.addEventListener("submit",()=>setTimeout(fit,0));
 const pk=document.querySelector("details.pick");document.addEventListener("click",e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;});document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pk&&pk.open){pk.open=false;pk.querySelector("summary").focus();}});
 try{if(matchMedia("(pointer:fine)").matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
