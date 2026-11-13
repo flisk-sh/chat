@@ -135,6 +135,8 @@ form.ask .btn{border-width:0 0 0 1px;font-size:13px}
 .mark{background:var(--orange);color:var(--ink)}
 .comps .on::before{color:var(--orange)}
 :focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+input[type=checkbox]{accent-color:var(--ink)}
+details.pick .menu{max-height:260px;box-shadow:6px 6px 0 var(--ink)}
 form.ask textarea:focus-visible{outline:0}.dock:focus-within{box-shadow:0 0 0 3px var(--orange)}
 @media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
 `;
@@ -235,8 +237,9 @@ function ask6(task){
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+p).join('; ')+'.':task;
     history.push({role:'user',content:full});run(full);};
   treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
-  const draw=()=>{rows.textContent='';
-    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className="trow"+(i===pick.length?" new":"");row.style.marginLeft=(i*14)+'px';
+  let prevLen=0;
+  const draw=()=>{const grew=pick.length>prevLen;prevLen=pick.length;rows.textContent='';
+    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className="trow"+(grew&&i===pick.length?" new":"");row.style.marginLeft=(i*14)+'px';
       const q=document.createElement('div');q.className='q';q.textContent=ZQ[i][1];row.appendChild(q);
       ZQ[i][2].forEach((t,k)=>{const s=document.createElement('button');s.type='button';s.className='sq p'+((i+k)%4)+(pick[i]===t?' on':'');s.textContent=t;
         const choose=()=>{if(sent||pick[i]===t)return;pick=pick.slice(0,i);pick[i]=t;draw();};
@@ -251,6 +254,7 @@ function ask6(task){
 let lastSend=0;
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
+const pk=document.querySelector("details.pick");document.addEventListener("click",e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;});document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pk&&pk.open){pk.open=false;pk.querySelector("summary").focus();}});
 try{if(matchMedia("(pointer:fine)").matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
