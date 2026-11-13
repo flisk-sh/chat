@@ -226,16 +226,17 @@ export const reviewsPage = ({ login, saved, stored, limit, flash }) =>
   shell(
     'PR reviews · chat',
     `<main class="col" style="padding-top:10vh;overflow:auto;height:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">Pull request reviews</h1>
-<p style="color:var(--dim)">Install the <b>flisk-chat</b> GitHub App on a repo, then comment <code>@flisk-chat review</code> on a pull request. You get one review with a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
+<p style="color:var(--dim)"><a href="https://github.com/apps/flisk-chat/installations/new">Install the <b>flisk-chat</b> GitHub App</a> on a repo, then comment <code>@flisk-chat review</code> on a pull request. You get one review with a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
 ${flash ? `<p style="color:var(--green)">${flash === 'saved' ? 'Saved.' : 'Deleted.'}</p>` : ''}
 <p>${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
 ${stored ? `<form method="post" action="/reviews/save" style="display:grid;gap:10px;max-width:420px">
-<label>AI<br><select name="ai" style="width:100%;padding:8px"><option value="openrouter">OpenRouter</option><option value="anthropic">Claude</option><option value="openai">OpenAI</option></select></label>
+<label>AI<br><select name="ai" style="width:100%;padding:8px"><option value="openrouter"${saved?.ai === 'openrouter' ? ' selected' : ''}>OpenRouter</option><option value="anthropic"${saved?.ai === 'anthropic' ? ' selected' : ''}>Claude</option><option value="openai"${saved?.ai === 'openai' ? ' selected' : ''}>OpenAI</option></select></label>
 <label>Model name<br><input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" style="width:100%;padding:8px" value="${esc(saved?.model || '')}"></label>
 <label>API key<br><input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off" style="width:100%;padding:8px"></label>
 <p style="color:var(--dim);font-size:13px;margin:0">The key is encrypted before it is stored and never shown again.</p>
-<button class="btn" type="submit">Save for reviews</button></form>` : '<p style="color:var(--dim)">Saving a key is not switched on yet.</p>'}
+<button class="btn go" type="submit">Save for reviews</button></form>` : '<p style="color:var(--dim)">Saving a key is not switched on yet.</p>'}
 ${saved ? '<form method="post" action="/reviews/delete" style="margin-top:14px"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
+<p style="margin-top:22px"><a class="btn" href="/">Back to chat</a></p>
 </main>`,
   );
 

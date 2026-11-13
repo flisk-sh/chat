@@ -133,6 +133,9 @@ describe('saved key', () => {
     const text = await page.text();
     expect(text).toContain('gpt-x');
     expect(text).not.toContain('sk-plain-secret-9');
+    expect(text).toContain('<option value="openai" selected>');
+    expect(text).toContain('github.com/apps/flisk-chat/installations/new');
+    expect(text).toContain('Back to chat');
     const del = await handle(new Request('https://chat.test/reviews/delete', { method: 'POST', headers: { cookie, origin: 'https://chat.test' } }), env);
     expect(del.status).toBe(303);
     expect(await loadSettings(env, 'odykyi')).toBeNull();
