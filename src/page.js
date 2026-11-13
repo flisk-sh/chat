@@ -173,10 +173,10 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .mp{position:relative}
 .scrim{display:none}
 .pop{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(520px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);overflow:hidden}
-.pop[hidden]{display:none}
+.pop[hidden]{display:none}.pop{max-height:calc(100vh - 150px);overflow:auto}
 .pop .ps{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--soft)}
 .pop .ps input{flex:1;border:0;outline:0;font:14px var(--sans);background:transparent;color:var(--ink);min-width:0}
-.pgrid{display:grid;grid-template-columns:78px minmax(0,1fr);grid-template-rows:minmax(0,1fr);max-height:min(360px,40vh);min-height:0}
+.pgrid{display:grid;grid-template-columns:78px minmax(0,1fr);grid-template-rows:minmax(0,1fr);max-height:min(420px,48vh);min-height:0}
 .rail{border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;overflow:auto}
 .rail button{width:68px;border-radius:var(--radius);border:1px solid transparent;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 2px;font-size:11px;line-height:1.2;color:var(--dim)}.rail button>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rail button:hover{background:var(--bg)}.rail button[aria-pressed=true]{background:var(--tint);color:#173404}
@@ -528,13 +528,14 @@ async function run(task){
 function errCard(turn,msg,kind,task){
   const c=node('div','errbox');c.appendChild(node('div','err',msg));const n=node('div','next');n.appendChild(node('small','','What to do next'));
   const btn=(t,f,primary)=>{const b=node('button','btn'+(primary?' go':''),t);b.type='button';b.onclick=f;n.appendChild(b);};
-  const openAi=(focusKey)=>{openPop();const p=MODELS.find(x=>!x.free&&x.key===aiSel.value)||MODELS.find(x=>!x.free);if(p&&aiSel.value==='wolf')pick(p);if(!byo.hidden)(focusKey?byoKey:byoModel).focus();};
-  const retry=()=>{c.remove();if(history.length&&history[history.length-1].role==='assistant')history.pop();run(task);};
+  // Deferred: this click also reaches the document handler that closes the picker on any outside click, so opening at once would close it again.
+  const openAi=(focusKey)=>setTimeout(()=>{openPop();const p=MODELS.find(x=>!x.free&&x.key===aiSel.value)||MODELS.find(x=>!x.free);if(p&&aiSel.value==='wolf')pick(p);if(!byo.hidden)(focusKey?byoKey:byoModel).focus();},0);
+  const retry=()=>{turn.remove();if(history.length&&history[history.length-1].role==='assistant')history.pop();run(task);};
   if(kind==='key'){btn('Set up the key again',()=>{lsSet('chat_key_'+cur.key,'');byoKey.value='';stat();openAi(true);},true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
   else if(kind==='model'){btn('Choose another model',()=>openAi(false),true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
   else if(kind==='limit'){btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();},true);btn('Change provider',()=>openAi(true));}
   else if(kind==='computer'){btn('Connect a computer',()=>{pending=task;setup.hidden=false;setup.scrollIntoView({block:'start'});},true);btn('Try again',retry);}
-  else{btn('Try again',retry,true);btn('Change model or provider',()=>openAi(false));}
+  else{btn('Try again',retry,true);btn('Change model or provider',()=>setTimeout(openPop,0));}
   c.appendChild(n);turn.appendChild(c);down();
 }
 // The free model's daily cap: say when it comes back and offer the way round it, and keep the task.
