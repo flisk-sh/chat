@@ -50,6 +50,8 @@ const CSS = `
 .setcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
 .setcard h2{font:600 18px/1.3 var(--sans);margin:0 0 8px}.setcard p{margin:8px 0}
 .howto{list-style:decimal;padding-left:22px;margin:8px 0;color:var(--dim)}
+.steps{padding-left:0;margin:12px 0;display:flex;flex-direction:column;gap:14px;list-style:none}.steps li::marker{font-weight:600}.steps .row{margin-top:8px}
+.cmds{display:grid;gap:8px;margin-top:10px}.cmd{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);padding:10px 12px}.cmd code{font:14px var(--mono);color:var(--ink)}.cmd span{grid-column:1/-1;color:var(--dim);font-size:13px}.cmd .cp{padding:3px 10px;font-size:12px}
 .row{display:flex;flex-wrap:wrap;gap:8px}
 .setform{display:grid;gap:12px;max-width:440px}.setform label{display:grid;gap:4px;font-size:14px}
 .setform select,.setform input{width:100%;padding:8px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);font:inherit}
@@ -290,10 +292,18 @@ export const reviewsPage = ({ login, saved, stored, limit, flash, error = '', fo
 <main class="setmain">
 <h1>Settings</h1>
 ${error ? `<p class="flash" role="alert" style="background:#FCE8E6;color:var(--red)">Not saved: ${esc(error)}</p>` : flash === 'saved' ? '<p class="flash" role="status">Saved. Your next review uses this AI.</p>' : flash === 'deleted' ? '<p class="flash" role="status">Deleted. Reviews use the free Flisk Wolf model again.</p>' : ''}
-<section id="github" class="setcard"><h2>Pull request reviews</h2>
-<p>Comment <code>@flisk-chat review</code> on a pull request and get one review: a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
-<ol class="howto"><li>Install the app on the repos you want reviewed.</li><li>Open a pull request and comment <code>@flisk-chat review</code>.</li><li>Optional: comment <code>@flisk-chat review run</code> to also check out the pull request on one of your computers and run its lint, typecheck and tests; the output is posted when it finishes.</li><li>Optional: comment <code>@flisk-chat auto on</code> to review every new pull request on its own (it uses your AI and limit), <code>auto off</code> to stop.</li><li>Optional: save your own AI below for no daily limit.</li></ol>
-<p class="row"><a class="btn go" href="${GITHUB_APP_URL}/installations/new" target="_blank" rel="noopener">Install the GitHub App</a><a class="btn" href="${GITHUB_APP_URL}" target="_blank" rel="noopener">View on GitHub</a><a class="btn" href="https://github.com/settings/installations" target="_blank" rel="noopener">Manage installed repos</a></p></section>
+<section id="github" class="setcard"><h2>Get a code review on any pull request</h2>
+<p>Chat reads your pull request and writes a review on GitHub: a summary, comments on the exact lines, one-click fixes and a verdict. You ask for it by writing a comment.</p>
+<ol class="steps"><li><b>1. Install the app once.</b> Pick the repos you want it on.<br><span class="row"><a class="btn go" href="${GITHUB_APP_URL}/installations/new" target="_blank" rel="noopener">Install the GitHub App</a></span></li>
+<li><b>2. Open any pull request on GitHub</b> and write one of these in the comment box at the bottom, then press Comment.
+<div class="cmds">
+<div class="cmd"><code>@flisk-chat review</code><button type="button" class="btn cp" data-copy="@flisk-chat review">Copy</button><span>Reads the changes and posts a review. Takes about 20 seconds.</span></div>
+<div class="cmd"><code>@flisk-chat review run</code><button type="button" class="btn cp" data-copy="@flisk-chat review run">Copy</button><span>The same, and also runs the project's lint and tests on one of your computers. The results are posted when it finishes.</span></div>
+<div class="cmd"><code>@flisk-chat auto on</code><button type="button" class="btn cp" data-copy="@flisk-chat auto on">Copy</button><span>Reviews every new pull request in this repo by itself. Write <code>@flisk-chat auto off</code> to stop.</span></div>
+</div></li>
+<li><b>3. Read the review</b> on the pull request. Nothing is merged or changed for you.</li></ol>
+<p class="hint">Only people who can push to the repo can ask. Reviews use the AI chosen below. A model can be wrong, so read before you merge.</p>
+<p class="row"><a class="btn" href="${GITHUB_APP_URL}" target="_blank" rel="noopener">View on GitHub</a><a class="btn" href="https://github.com/settings/installations" target="_blank" rel="noopener">Manage installed repos</a></p></section>
 <section id="ai" class="setcard"><h2>AI for reviews</h2>
 <p class="cur-ai">${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
 ${stored ? `<form method="post" action="/reviews/save" class="setform">
@@ -306,7 +316,7 @@ ${stored ? `<form method="post" action="/reviews/save" class="setform">
 ${saved ? '<form method="post" action="/reviews/delete"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
 </section>
 </main></div>`,
-    `const sel=document.getElementById('aisel');if(sel){const show=()=>document.querySelectorAll('.keylink').forEach((a)=>{a.hidden=a.dataset.for!==sel.value});sel.addEventListener('change',show);show();}`,
+    `document.querySelectorAll('.cp').forEach((b)=>b.addEventListener('click',()=>{const t=b.dataset.copy;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1500);}).catch(()=>{b.textContent='Select and copy';});}));const sel=document.getElementById('aisel');if(sel){const show=()=>document.querySelectorAll('.keylink').forEach((a)=>{a.hidden=a.dataset.for!==sel.value});sel.addEventListener('change',show);show();}`,
   );
 
 // Starter ideas per kind, for people who never write code.
