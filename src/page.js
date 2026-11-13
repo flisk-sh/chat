@@ -108,6 +108,33 @@ form.ask{border-top:0}
 .zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
 .zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
 @media (max-width:640px){.trow{flex-wrap:wrap}.trow .q{width:100%;padding:0}}
+/* particle.ai look */
+:root{--paper:#EFEBDD;--card:#F8F5EA;--green:#C4501C;--yellow:#E8C21A;--orange:#D9622B;--cyan:#3FD3D6;--pink:#DB7BB2}
+h1 em{color:var(--orange)}
+.btn{background:var(--yellow);border-color:var(--ink);color:var(--ink)}.btn:hover{background:var(--ink);color:var(--yellow);border-color:var(--ink)}
+header a.cta:hover{background:var(--yellow);color:var(--ink)}
+.rail{background:#E8E3D2}
+.cols{display:flex;flex-direction:column}
+body:not(.chatting) .dock{order:-1;position:static;margin:0 40px 28px;border:1px solid var(--ink);background:var(--card)}
+.dock{display:flex;flex-direction:column}
+body:not(.chatting) .dock .tools{order:2;padding:0 18px 12px;background:transparent}
+body:not(.chatting) form.ask textarea{padding:18px}
+.pickers{align-items:flex-end}details.pick{align-self:flex-end}
+body:not(.chatting) .dock .tools{border-top:0}
+body:not(.chatting) .hero{border-bottom:0;padding-bottom:18px}
+body:not(.chatting) .ideas{border-top:1px solid var(--ink)}
+.chatting .dock{border-top:1px solid var(--ink)}
+form.ask textarea{font-size:17px;min-height:76px}
+form.ask .btn{border-width:0 0 0 1px;font-size:13px}
+.ideas{counter-reset:i}
+.ideas button{display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:center;padding:18px 22px}
+.ideas button::before{content:counter(i,decimal-leading-zero);counter-increment:i;display:grid;place-items:center;width:44px;height:44px;margin:0;font:500 13px/1 var(--mono);color:var(--ink);background:var(--orange)}
+.ideas button:nth-child(2)::before{background:var(--yellow)}.ideas button:nth-child(3)::before{background:var(--cyan)}.ideas button:nth-child(4)::before{background:var(--pink)}
+.ideas button:hover{background:var(--card)}.ideas button:hover::before{color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.pick select{appearance:none;-webkit-appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23171715'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:32px}
+.mark{background:var(--orange);color:var(--ink)}
+.comps .on::before{color:var(--orange)}
+@media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
 `;
 
 const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
