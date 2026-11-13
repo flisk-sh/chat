@@ -1,3 +1,4 @@
+import { widgetPrompt, parseWidget } from './widgets.js';
 import { cleanVideo, makeVideo } from './video.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
@@ -17,6 +18,7 @@ Pick exactly one of these shapes:
 {"read": "<file>"}
 {"publish": "<path to an index.html>"}
 {"video": {"title": "<short title>", "scenes": [{"text": "<words on screen, at most 10>", "say": "<one spoken sentence>"}]}}
+{"widget": {"kind": "<widget>", ...}}
 {"say": "<answer for the user>"}
 
 Rules:
@@ -35,6 +37,8 @@ Rules:
   This starts the services as plain processes with health checks and no containers. Prefer this over hand-written scripts when the task needs more than one process.
   If the curl install fails, fall back to installing Node first then npm install -g @flisk-sh/flisk.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
+- Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
+${widgetPrompt()}
 - In "say", give the result itself (numbers, the content, the link), not a description of the steps.
 - "say" is shown as Markdown: **bold**, "- " lists, and "| a | b |" tables. For weather, prices, schedules or any comparison over days or items, give one line with the current state, then a table (for weather: Day | Sky | High / Low | Rain chance, for the next 7 days), then 2 or 3 bullets with what it means for the user. Keep plain questions short with no table.
 
@@ -64,9 +68,10 @@ export function parseAction(text) {
         const spec = cleanVideo(a.video);
         if (spec) return { type: 'video', spec };
       }
+      if (a?.widget && typeof a.widget === 'object') return { type: 'widget', raw: a.widget };
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
-    if (/^\s*\{\s*"(run|write|read|publish|video)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
+    if (/^\s*\{\s*"(run|write|read|publish|video|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
 
   // If it still looks like a tool call or XML, force a retry.
@@ -187,7 +192,7 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), order = [], files = [], emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], emit = () => {}, maxSteps = MAX_STEPS }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task + where }];
   let podId = null;
@@ -224,6 +229,27 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         emit({ type: 'answer', text });
         return await finish(text);
       }
+      let widget = null;
+      if (action.type === 'widget') {
+        const w = parseWidget(action.raw);
+        if (w.error) {
+          messages.push({ role: 'user', content: `Error: ${w.error}\n\nNext action as JSON only.` });
+          continue;
+        }
+        widget = w;
+        if (!w.widget.needsComputer) {
+          const r = await w.widget.run(w.input, { fetch: fetchImpl });
+          if (r.error) {
+            emit({ type: 'output', error: r.error });
+            messages.push({ role: 'user', content: `Error: ${r.error}\n\nNext action as JSON only.` });
+          } else {
+            emit({ type: 'widget', kind: w.widget.id, data: r.data });
+            steps.push({ action, widget: w.widget.id });
+            messages.push({ role: 'user', content: `${r.summary}\n\nNext action as JSON only (usually "say").` });
+          }
+          continue;
+        }
+      }
       if (!podId) {
         emit({ type: 'pod_starting' });
         const made = await computer.start(order);
@@ -241,7 +267,14 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         }
       }
       let shown;
-      if (action.type === 'run') {
+      if (widget) {
+        const r = await widget.widget.run(widget.input, { fetch: fetchImpl, computer, podId });
+        if (r.error) shown = { error: r.error };
+        else {
+          emit({ type: 'widget', kind: widget.widget.id, data: r.data });
+          shown = { widget: widget.widget.id, summary: r.summary };
+        }
+      } else if (action.type === 'run') {
         emit({ type: 'run', command: action.command });
         const r = await computer.run(podId, action.command);
         shown = r.error ? { error: r.error } : { exitCode: r.data.exitCode, stdout: clip(r.data.stdout), stderr: clip(r.data.stderr, 600) };
@@ -276,9 +309,11 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         shown = r.error ? { error: r.error } : { content: clip(r.data.content) };
       }
       steps.push({ action, ...shown });
-      emit({ type: 'output', ...shown });
+      if (!shown.widget) emit({ type: 'output', ...shown });
       const note = shown.error
         ? `Error: ${shown.error}`
+        : shown.summary
+          ? shown.summary
         : shown.published
           ? `Published. The live link is ${shown.published}`
           : shown.video

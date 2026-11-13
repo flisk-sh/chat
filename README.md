@@ -14,6 +14,10 @@ Ask for a task or a website. A free model plans it, a real computer from [fleet]
 bun test
 ```
 
+## Widgets and tools
+
+Answers can come as cards (weather, charts, running services). See [docs/add-a-widget.md](docs/add-a-widget.md) to add a widget or a tool.
+
 ## Deploy
 
 ```bash
