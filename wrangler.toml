@@ -4,6 +4,10 @@ main = "src/index.js"
 compatibility_date = "2026-10-01"
 routes = [{ pattern = "chat.flisk.si", custom_domain = true }]
 
+# Hourly: delete computers past their time (shared apps after 7 days, leftovers of crashed tasks). src/index.js cleanPods.
+[triggers]
+crons = ["17 * * * *"]
+
 [vars]
 PUBLIC_ORIGIN = "https://chat.flisk.si"
 FLEET_URL = "https://fleet.flisk.si"

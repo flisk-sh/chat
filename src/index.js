@@ -5,6 +5,7 @@ import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, revi
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
+import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { weatherNote } from './weather.js';
@@ -162,6 +163,38 @@ export async function saveVideo(env, login, parts, title, origin) {
   await env.DB.batch(parts.map((data, i) => env.DB.prepare('INSERT INTO videos (id, part, login, title, data, created) VALUES (?, ?, ?, ?, ?, ?)').bind(id, i, login, String(title || '').slice(0, 60), data, created)));
   await env.DB.prepare('DELETE FROM videos WHERE login = ? AND id NOT IN (SELECT id FROM videos WHERE login = ? GROUP BY id ORDER BY MAX(created) DESC LIMIT ?)').bind(login, login, VIDEOS_PER_LOGIN).run();
   return { url: `${origin}/v/${id}.mp4` };
+}
+
+// Computers chat started. Every one is written down when it starts, so none is left running by accident: a task's computer is
+// deleted when the task ends, a shared app's computer after KEEP_DAYS, the oldest shared one when a login shares more than
+// KEPT_PER_LOGIN, and whatever a crashed task left behind after two hours (cleanPods, run by the hourly cron).
+const hoursFromNow = (h) => new Date(Date.now() + h * 3600_000).toISOString();
+export function podTracker(env, login, fleet) {
+  return {
+    started: (id) => env.DB.prepare('INSERT OR REPLACE INTO pods (id, login, url, created, until) VALUES (?, ?, NULL, ?, ?)').bind(id, login, new Date().toISOString(), hoursFromNow(2)).run(),
+    stopped: (id) => env.DB.prepare('DELETE FROM pods WHERE id = ?').bind(id).run(),
+    kept: async (id, url) => {
+      await env.DB.prepare('UPDATE pods SET url = ?, until = ? WHERE id = ?').bind(url, hoursFromNow(KEEP_DAYS * 24), id).run();
+      const { results = [] } = await env.DB.prepare('SELECT id FROM pods WHERE login = ? AND url IS NOT NULL ORDER BY created DESC LIMIT -1 OFFSET ?').bind(login, KEPT_PER_LOGIN).all();
+      for (const old of results) {
+        const s = await fleet.stop(old.id).catch(() => null);
+        if (s && (s.status === 200 || s.status === 404 || s.status === 410)) await env.DB.prepare('DELETE FROM pods WHERE id = ?').bind(old.id).run();
+      }
+    },
+  };
+}
+
+export async function cleanPods(env, fetchImpl = fetch, now = new Date().toISOString()) {
+  const { results = [] } = await env.DB.prepare('SELECT id, login FROM pods WHERE until < ? ORDER BY until LIMIT 25').bind(now).all();
+  let stopped = 0;
+  for (const p of results) {
+    const s = await fleetClient(env, p.login, fetchImpl).stop(p.id).catch(() => null);
+    if (s && (s.status === 200 || s.status === 404 || s.status === 410)) {
+      await env.DB.prepare('DELETE FROM pods WHERE id = ?').bind(p.id).run();
+      stopped++;
+    }
+  }
+  return { due: results.length, stopped };
 }
 
 const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -451,7 +484,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, track: podTracker(env, login, fleet), fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));
@@ -465,4 +498,6 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 export default {
   fetch: (request, env, ectx) =>
     handle(request, env, { waitUntil: ectx?.waitUntil ? (p) => ectx.waitUntil(p) : null }).catch((e) => json(500, { error: 'chat failed: ' + String(e?.message || e).slice(0, 200) })),
+  // Hourly (wrangler.toml [triggers]): delete computers that are past their time.
+  scheduled: (event, env, ectx) => ectx.waitUntil(cleanPods(env).then((r) => console.log('cleanPods', JSON.stringify(r)))),
 };

@@ -1,6 +1,7 @@
 import { widgetPrompt, parseWidget } from './widgets.js';
 import { cleanVideo, makeVideo } from './video.js';
 import { cleanSystem, makeSystem, MAX_SERVICES } from './system.js';
+import { cleanShare, KEEP_DAYS, shareApp } from './share.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
 export const MAX_STEPS = 8;
@@ -36,11 +37,11 @@ Rules:
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
   1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; export PATH=$HOME/.local/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
-  2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port and /health), the page into the website's index.html. For data use SQLite inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'), not a database server.
+  2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port from process.env.PORT and /health; every other route starts with /api, for example /api/contacts), the page into the website's index.html. The page calls the API with fetch('/api/...') on its own address, never localhost or a port number: Flisk's website forwards /api to the API. For data use SQLite in a file inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'; new DatabaseSync('data.db')), not a database server.
   3. {"run": "export PATH=$HOME/.local/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
-  4. Check it with curl on the ports from that log (place an order, read it back).
-  5. The computer stops as soon as you answer, so the running app cannot be opened and a localhost address is useless. In the same task "write" ONE self-contained index.html copy of the page (the same screens and features, data kept in localStorage, no calls to the API), "publish" it, then "say" the link FIRST, then what you checked with curl. Tell the user plainly that the link is the one-file copy (data stays in their browser) and that the API version runs again with flisk up.
-- Every build (website, app, shop, dashboard) ends with a published link in the same answer. Never end with an offer to publish later or with only a localhost address.
+  4. Check it with curl through the website's port (curl the page, then add a record with POST /api/... and read it back), so the check goes the same way a visitor's clicks do.
+  5. {"share": <the website's port from that log>} gives the running app a public link: the real website and the real API, kept running after you answer. Then "say" that link FIRST, then what you checked with curl. Only if share answers an error that says the computer cannot have a public link: "write" ONE self-contained index.html copy of the page (data kept in localStorage, no API calls), "publish" it, say that link first and tell the user plainly it is a one-file copy.
+- Every build (website, app, shop, dashboard) ends with a shared or published link in the same answer. Never end with an offer to publish later or with only a localhost address.
 - Each task starts on a fresh computer: files and servers from earlier answers are gone. If the user asks for the link to something built earlier, build it again, then publish it.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
@@ -78,10 +79,14 @@ export function parseAction(text) {
         const spec = cleanSystem(a.system);
         if (spec) return { type: 'system', spec };
       }
+      if (a?.share !== undefined) {
+        const spec = cleanShare(a.share);
+        if (spec) return { type: 'share', spec };
+      }
       if (a?.widget && typeof a.widget === 'object') return { type: 'widget', raw: a.widget };
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
-    if (/^\s*\{\s*"(run|write|read|publish|video|system|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
+    if (/^\s*\{\s*"(run|write|read|publish|video|system|share|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
 
   // If it still looks like a tool call or XML, force a retry.
@@ -330,8 +335,8 @@ export function cleanHistory(history) {
     });
 }
 
-// computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS }) {
+// computer: { start, run, write, read, share, stop } (fleet.js). track: optional { started(podId), kept(podId, url), stopped(podId) }. publish(html) -> url. emit(event) gets every step.
+export async function runTask({ task, history = [], model, computer, publish, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', emit = () => {}, maxSteps = MAX_STEPS }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -352,13 +357,17 @@ export async function runTask({ task, history = [], model, computer, publish, sa
   const links = [];
   const t0 = Date.now();
   const finish = async (answer, error = null) => {
-    if (podId) {
+    if (podId && kept) {
+      emit({ type: 'pod_kept', url: kept, days: KEEP_DAYS });
+    } else if (podId) {
       const s = await computer.stop(podId).catch(() => null);
       emit({ type: 'pod_stopped', ok: s?.status === 200 });
+      if (s?.status === 200) await Promise.resolve(track.stopped?.(podId)).catch(() => {});
     }
     return { answer, error, steps, links, provider, ms: Date.now() - t0 };
   };
   let emptyRetries = 0;
+  let kept = null; // the public URL of the running app: the computer is kept, not stopped
   let startedServer = false;
   let askedForLink = false;
   try {
@@ -392,7 +401,7 @@ export async function runTask({ task, history = [], model, computer, publish, sa
       if (action.type === 'say' && !last && podId && startedServer && !links.length && !askedForLink) {
         askedForLink = true;
         emit({ type: 'retry' });
-        messages.push({ role: 'user', content: 'No public link yet, and the computer stops when you answer, so the running app cannot be opened. "write" ONE self-contained index.html copy of the page (same screens, data kept in localStorage, no API calls), "publish" it, then "say" the link first and tell the user it is the one-file copy. Next action as JSON only.' });
+        messages.push({ role: 'user', content: 'No public link yet, and the computer stops when you answer unless the app is shared. Send {"share": <the website port>} so the running app gets a public link. If share already said this computer cannot have one: "write" ONE self-contained index.html copy of the page (same screens, data kept in localStorage, no API calls), "publish" it, then "say" the link first and tell the user it is the one-file copy. Next action as JSON only.' });
         continue;
       }
       if (action.type === 'say' || last) {
@@ -431,6 +440,7 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         }
         podId = made.data.id;
         provider = made.data.provider;
+        await Promise.resolve(track.started?.(podId)).catch(() => {});
         emit({ type: 'pod_started', provider });
         for (const f of files) {
           const r = f.b64 ? await computer.write(podId, `${f.path}.b64`, f.content) : await computer.write(podId, f.path, f.content);
@@ -469,6 +479,17 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         shown = made.error ? { error: made.error } : { exitCode: 0, stdout: made.summary, stderr: '' };
         // Services are running on a computer that stops with the answer: the user still needs a page to click (see the nudge below).
         if (!made.error) startedServer = true;
+      } else if (action.type === 'share') {
+        emit({ type: 'share', port: action.spec.port });
+        const r = await shareApp({ computer, podId, spec: action.spec, fetchImpl });
+        if (r.error) shown = { error: r.error };
+        else {
+          kept = r.url;
+          links.push(r.url);
+          await Promise.resolve(track.kept?.(podId, r.url)).catch(() => {});
+          emit({ type: 'live', url: r.url });
+          shown = { live: r.url, note: `This is the running app (website and API), kept running after you answer; it sleeps when idle and wakes on a visit, deleted after ${KEEP_DAYS} days. Say this link first.` };
+        }
       } else if (action.type === 'publish') {
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);

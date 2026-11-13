@@ -820,8 +820,10 @@ describe('a build ends with a public link', () => {
     return { seen, model: async (m) => (seen.push(m[m.length - 1].content), { text: replies.shift() }) };
   };
 
-  test('the recipe asks for a published copy and says so', () => {
-    expect(SYSTEM).toContain('"publish" it, then "say" the link FIRST');
+  test('the recipe shares the running app, with the one-file copy only as the fallback', () => {
+    expect(SYSTEM).toContain('{"share": <the website\'s port from that log>}');
+    expect(SYSTEM).toContain("fetch('/api/...')");
+    expect(SYSTEM).toContain('Only if share answers an error');
     expect(SYSTEM).toContain('Each task starts on a fresh computer');
   });
 
