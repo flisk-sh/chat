@@ -49,7 +49,7 @@ const CSS = `
 .setmain h1{font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:0 0 18px}
 .setcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
 .setcard h2{font:600 18px/1.3 var(--sans);margin:0 0 8px}.setcard p{margin:8px 0}
-.steps{list-style:decimal;padding-left:20px;margin:8px 0;color:var(--dim)}
+.howto{list-style:decimal;padding-left:22px;margin:8px 0;color:var(--dim)}
 .row{display:flex;flex-wrap:wrap;gap:8px}
 .setform{display:grid;gap:12px;max-width:440px}.setform label{display:grid;gap:4px;font-size:14px}
 .setform select,.setform input{width:100%;padding:8px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);font:inherit}
@@ -251,13 +251,13 @@ export const reviewsPage = ({ login, saved, stored, limit, flash }) =>
 ${flash ? `<p class="flash" role="status">${flash === 'saved' ? 'Saved. Your next review uses this AI.' : 'Deleted. Reviews use the free Flisk Wolf model again.'}</p>` : ''}
 <section id="github" class="setcard"><h2>Pull request reviews</h2>
 <p>Comment <code>@flisk-chat review</code> on a pull request and get one review: a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
-<ol class="steps"><li>Install the app on the repos you want reviewed.</li><li>Open a pull request and comment <code>@flisk-chat review</code>.</li><li>Optional: save your own AI below for no daily limit.</li></ol>
+<ol class="howto"><li>Install the app on the repos you want reviewed.</li><li>Open a pull request and comment <code>@flisk-chat review</code>.</li><li>Optional: save your own AI below for no daily limit.</li></ol>
 <p class="row"><a class="btn go" href="${GITHUB_APP_URL}/installations/new" target="_blank" rel="noopener">Install the GitHub App</a><a class="btn" href="${GITHUB_APP_URL}" target="_blank" rel="noopener">View on GitHub</a><a class="btn" href="https://github.com/settings/installations" target="_blank" rel="noopener">Manage installed repos</a></p></section>
 <section id="ai" class="setcard"><h2>AI for reviews</h2>
 <p class="cur-ai">${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
 ${stored ? `<form method="post" action="/reviews/save" class="setform">
 <label>AI<select name="ai" id="aisel">${Object.entries(KEY_PAGES).map(([v, [n]]) => `<option value="${v}"${saved?.ai === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-<p class="keylinks">Get a key: ${Object.entries(KEY_PAGES).map(([v, [n, u]]) => `<a href="${u}" target="_blank" rel="noopener" data-for="${v}">${n} keys</a>`).join(' · ')}</p>
+<p class="keylinks">${Object.entries(KEY_PAGES).map(([v, [n, u]]) => `<a class="keylink" href="${u}" target="_blank" rel="noopener" data-for="${v}"${(saved?.ai || 'openrouter') === v ? '' : ' hidden'}>Get your ${n} key</a>`).join('')}</p>
 <label>Model name<input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" value="${esc(saved?.model || '')}"></label>
 <label>API key<input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off"></label>
 <p class="hint">The key is encrypted before it is stored and never shown again.</p>
@@ -265,6 +265,7 @@ ${stored ? `<form method="post" action="/reviews/save" class="setform">
 ${saved ? '<form method="post" action="/reviews/delete"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
 </section>
 </main></div>`,
+    `const sel=document.getElementById('aisel');if(sel){const show=()=>document.querySelectorAll('.keylink').forEach((a)=>{a.hidden=a.dataset.for!==sel.value});sel.addEventListener('change',show);show();}`,
   );
 
 // Starter ideas per kind, for people who never write code.
