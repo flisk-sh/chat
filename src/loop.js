@@ -3,6 +3,8 @@ import { cleanVideo, makeVideo } from './video.js';
 // One task: a model plans, a computer from fleet does the work, the answer comes back. One task = one computer,
 // started on the first action and always stopped at the end.
 export const MAX_STEPS = 8;
+// The visitor's own key pays for its own steps, so a bigger app (install, write several files, start, check) fits.
+export const BYO_STEPS = 16;
 export const MAX_TASK = 2000;
 const OUT_CHARS = 1500;
 
@@ -214,7 +216,8 @@ export async function runTask({ task, history = [], model, computer, publish, sa
   const past = Array.isArray(history) ? history.slice() : [];
   const lastPast = past[past.length - 1];
   if (lastPast?.role === 'user' && String(lastPast.content || '').trim() === String(task).trim()) past.pop();
-  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(past), { role: 'user', content: first }];
+  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`);
+  const messages = [{ role: 'system', content: system }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
   const steps = [];
@@ -255,7 +258,8 @@ export async function runTask({ task, history = [], model, computer, publish, sa
         continue;
       }
       if (action.type === 'say' || last) {
-        const text = action.type === 'say' ? action.text : reply.text;
+        // Out of steps with an action still planned: never show that raw JSON as the answer.
+        const text = action.type === 'say' ? action.text : `I ran out of steps (${maxSteps}) before finishing. What I did is in the steps above; the computer is stopped now, so its files are gone. Ask again with a smaller first part${maxSteps < BYO_STEPS ? `, or pick a model with your own key for ${BYO_STEPS} steps` : ''}.`;
         emit({ type: 'answer', text });
         return await finish(text);
       }

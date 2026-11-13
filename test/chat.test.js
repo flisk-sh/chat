@@ -607,3 +607,17 @@ describe('empty model replies', () => {
     expect(r.error).toContain('while thinking');
   });
 });
+
+describe('step budget', () => {
+  const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), run: async () => ({ data: { exitCode: 0, stdout: 'ok', stderr: '' } }), stop: async () => ({ status: 200 }) };
+  test('running out of steps never shows the raw action JSON as the answer', async () => {
+    const r = await runTask2({ task: 'x', model: async () => ({ text: '{"run":"echo hi"}' }), computer, maxSteps: 3 });
+    expect(r.answer).toContain('ran out of steps (3)');
+    expect(r.answer).not.toContain('"run"');
+  });
+  test('the system prompt states the real step budget', async () => {
+    let sys;
+    await runTask2({ task: 'x', model: async (m) => ((sys ??= m[0].content), { text: '{"say":"ok"}' }), computer, maxSteps: 16 });
+    expect(sys).toContain('After at most 15 actions');
+  });
+});
