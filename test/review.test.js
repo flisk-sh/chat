@@ -144,6 +144,14 @@ describe('saved key', () => {
     const html = await (await handle(new Request('https://chat.test/', { headers: { cookie } }), env)).text();
     expect(html).toContain('Connect one of your sandbox accounts below, once.\');saveChat();');
   });
+  test('HEAD gets the same status as GET, without a body', async () => {
+    const { env } = await setup();
+    const get = await handle(new Request('https://chat.test/'), env);
+    const head = await handle(new Request('https://chat.test/', { method: 'HEAD' }), env);
+    expect(head.status).toBe(get.status);
+    expect(await head.text()).toBe('');
+    expect((await handle(new Request('https://chat.test/nope', { method: 'HEAD' }), env)).status).toBe(404);
+  });
   test('saving from another site is refused, and signing in is required', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
