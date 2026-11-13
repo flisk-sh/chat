@@ -125,6 +125,8 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .trow.new{animation:rise .22s ease-out}
 .trow .q{font-size:13px;color:var(--dim);padding-top:8px}
 .sqs{display:flex;gap:8px;flex-wrap:wrap}
+.trow.done .sq{height:40px;padding:0 10px;flex-direction:row;align-items:center;justify-content:flex-start;font-size:12px}.trow.done .sq svg{display:none}.trow.done .sq>span:last-child{margin:0}
+.trow.done .q{padding-top:11px}
 .sq{flex:0 0 100px;width:100px;height:84px;border:0;border-radius:var(--radius);padding:9px 10px;font:500 13px/1.25 var(--sans);cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;transition:transform .16s ease-out,box-shadow .16s,opacity .16s}
 .sq svg{border-radius:var(--radius);flex:none}.sq>span:last-child{margin-top:auto}
 .sq:hover,.sq:focus-visible{transform:translateY(-3px);box-shadow:0 6px 14px -6px rgba(27,27,24,.35);outline:0}
@@ -197,7 +199,7 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 .vres video{display:block;width:100%;max-height:440px;background:#0f1426}
 .vres .vb{display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap}.vres .vb b{flex:1;font-weight:500;min-width:140px}
 @media (max-width:860px){
-.trow{grid-template-columns:1fr}.trow .q{padding:0}.sq{flex:1 1 calc(33% - 8px);width:auto;height:76px}
+.trow{grid-template-columns:1fr}.trow .q,.trow.done .q{padding:0}.sqs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.sq{width:auto;height:76px}
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
 .side.open{transform:none}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
 .u{max-width:90%}.composer .chip.plain{display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
@@ -443,12 +445,14 @@ function ask6(task){
   const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
   if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
-  const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();
+  const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();chips.querySelectorAll('.zchip:not(.ok)').forEach(c=>c.remove());
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+ans(i)).join('; ')+'.':task;history.push({role:'user',content:full});run(full);};
   treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);sub=sub.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
-  const hover=(el,fn)=>{let tm=0;el.onmouseenter=()=>{clearTimeout(tm);tm=setTimeout(fn,220);};el.onmouseleave=()=>clearTimeout(tm);return ()=>clearTimeout(tm);};
+  // Hover chooses only when a mouse really moves over a square: a new row that appears under a still pointer (the
+  // chat scrolls as rows are added) must not choose itself, and a tap on a phone is a click, not a hover.
+  const hover=(el,fn)=>{let tm=0;el.onpointermove=(e)=>{if(e.pointerType!=='mouse'||tm)return;tm=setTimeout(()=>{tm=0;fn();},220);};el.onpointerleave=()=>{clearTimeout(tm);tm=0;};return ()=>{clearTimeout(tm);tm=0;};};
   const draw=()=>{if(!wrap.isConnected)return;const grew=pick.length>prevLen;prevLen=pick.length;rows.textContent='';
-    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=node('div','trow'+(grew&&i===pick.length?' new':''));row.appendChild(node('div','q',ZQ[i][1]));
+    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=node('div','trow'+(grew&&i===pick.length?' new':'')+(i<pick.length-1?' done':''));row.appendChild(node('div','q',ZQ[i][1]));
       const right=node('div'),sqs=node('div','sqs');right.appendChild(sqs);row.appendChild(right);
       const opts=ZQ[i][2];
       opts.forEach(([t,ic],k)=>{const on=pick[i]===t,s=node('button','sq p'+((i+k)%4)+(on?' on':''));s.type='button';s.setAttribute('aria-pressed',String(on));

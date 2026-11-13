@@ -415,3 +415,12 @@ test('each kind of step gets its own icon, like tool calls in T3 Code', () => {
   expect(['curl -s https://x', 'pip install -q requests', 'python3 app.py', 'ls -la', 'flisk up', 'echo hi'].map(cmdIcon)).toEqual(['globe', 'download', 'code', 'folder', 'layers', 'terminal']);
   for (const name of ['server', 'pen', 'upload', 'film', 'mic', 'power', 'alert']) expect(js).toContain(`${name}:'<`);
 });
+
+test('a square is chosen by a real mouse move, never by a row that appears under a still pointer or by a tap', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain("el.onpointermove=(e)=>{if(e.pointerType!=='mouse'||tm)return;");
+  expect(page).not.toContain('el.onmouseenter=');
+  // Answered rows fold to a thin line; the folded card keeps only answered chips.
+  expect(page).toContain("(i<pick.length-1?' done':'')");
+  expect(page).toContain(".zchip:not(.ok)");
+});
