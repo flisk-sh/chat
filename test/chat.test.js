@@ -56,6 +56,15 @@ describe('parseAction', () => {
     expect(parseAction(`{"run": "echo "hi""}`).type).toBe('bad');
     expect(parseAction('The answer is 42.')).toEqual({ type: 'say', text: 'The answer is 42.' });
   });
+
+  test('DSML / tool-call style output is bad so the loop retries', () => {
+    const dsml = `<｜ DSML ｜ invoke name="write">
+<｜ DSML ｜ parameter name="path" string="true">/tmp/index.html</｜ DSML ｜ parameter>
+<｜ DSML ｜ parameter name="content" string="true"><html>hi</html></｜ DSML ｜ parameter>
+</｜ DSML ｜ invoke>`;
+    expect(parseAction(dsml).type).toBe('bad');
+    expect(parseAction('<invoke name="write"><parameter name="path">x</parameter></invoke>').type).toBe('bad');
+  });
 });
 
 describe('website task end to end', () => {
