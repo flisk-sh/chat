@@ -2,6 +2,11 @@
   "name": "flisk-chat",
   "private": true,
   "type": "module",
-  "scripts": { "test": "bun test test && node --test scripts/*.test.mjs",
-    "check:radius": "node scripts/check-radius.mjs" }
+  "scripts": {
+    "test": "bun test test && node --test scripts/*.test.mjs",
+    "check:radius": "node scripts/check-radius.mjs"
+  },
+  "dependencies": {
+    "msedge-tts": "2.1.1"
+  }
 }

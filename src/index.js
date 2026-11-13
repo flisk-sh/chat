@@ -6,6 +6,7 @@ import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
+import { speakStream, MAX_SPEAK } from './tts.js';
 
 export const TASKS_PER_DAY = 20;
 export const MAX_SITE_BYTES = 200 * 1024;
@@ -15,6 +16,7 @@ export const VOICE_PER_DAY = 60;
 export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
 export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
 export const TALK_PER_DAY = 100;
+export const SPEAK_PER_DAY = 600; // answers read aloud by the Ava voice, per login
 export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
 - Answer in one to three short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
 - Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
@@ -85,7 +87,7 @@ const SECURITY = {
   'x-frame-options': 'DENY',
   'referrer-policy': 'same-origin',
   'strict-transport-security': 'max-age=31536000',
-  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self' https://openrouter.ai/api/v1/models; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://openrouter.ai/api/v1/models; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
 };
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -276,6 +278,25 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     if (chosen.error || chosen.free) return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: true, limit: REVIEWS_PER_DAY, error: chosen.error || 'pick an AI', form: { ai: String(f?.get('ai') || ''), model: String(f?.get('model') || '') } }), 400);
     const r = await saveSettings(env, session.login, { ai: chosen.ai, model: chosen.model, key: chosen.key });
     return r.error ? html(messagePage('Not saved', r.error), 503) : redirect('/reviews?ok=saved');
+  }
+
+  // The video repo's voice (Ava Multilingual) reading text aloud, streamed as mp3 so the page's audio player starts on
+  // the first chunk. A GET so <audio src> can stream it; only for a signed-in visitor on chat itself (the cookie is
+  // SameSite=Lax, and the browser marks the request same-origin).
+  if (request.method === 'GET' && path === '/voice') {
+    if (!session) return json(401, { error: 'sign in first' });
+    const site = request.headers.get('sec-fetch-site');
+    if (site && site !== 'same-origin') return json(403, { error: 'this only works from chat itself' });
+    const text = String(url.searchParams.get('t') || '').trim();
+    if (!text) return json(400, { error: 'nothing to say' });
+    if (text.length > MAX_SPEAK) return json(413, { error: `keep it under ${MAX_SPEAK} characters` });
+    if (await overDailyLimit(session.login, { cache: env.LIMIT_CACHE, limit: SPEAK_PER_DAY, scope: 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
+    try {
+      const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8));
+      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+    } catch (e) {
+      return json(502, { error: String(e?.message || e).slice(0, 160) });
+    }
   }
 
   if (path.startsWith('/api/')) {
