@@ -1,7 +1,7 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
 import { BYO_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, modelLabel, resolveModel, runTask, WORKERS_AI_PER_DAY } from './loop.js';
-import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
+import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
@@ -96,6 +96,17 @@ const SECURITY = {
   'strict-transport-security': 'max-age=31536000',
   'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://flisk.si; img-src 'self' data: https://flisk.si; media-src 'self' data: blob:; connect-src 'self' https://openrouter.ai/api/v1/models https://openrouter.ai/api/v1/auth/keys; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
 };
+// The page has five looks. A visitor who has none yet gets the next one in turn and keeps it in a cookie; the
+// switch under the box changes it. The turn counter lives in the isolate, so it is round robin per isolate.
+let themeTurn = Math.floor(Math.random() * THEME_IDS.length);
+export const pickTheme = (request) => {
+  const saved = /(?:^|;\s*)chat_theme=([a-z]+)/.exec(request.headers.get('cookie') || '')?.[1];
+  if (THEME_IDS.includes(saved)) return { theme: saved, cookie: '' };
+  themeTurn = (themeTurn + 1) % THEME_IDS.length;
+  const theme = THEME_IDS[themeTurn];
+  return { theme, cookie: `chat_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax; Secure` };
+};
+
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
 const redirect = (location, extra = {}) => new Response(null, { status: 303, headers: { location, ...extra } });
@@ -304,15 +315,22 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   const who = async (login) => (isAnon(login) ? `ip-${[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(request.headers.get('cf-connecting-ip') || 'unknown')))].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('')}` : login);
   if (request.method === 'GET' && path === '/') {
     const models = await loadCatalog(env);
-    if (!session) {
-      if (!env.SESSION_SECRET) return html(appPage({ login: null, connected: [], models }));
-      const login = newAnonLogin();
-      const res = html(appPage({ login, anon: true, connected: [], models }));
-      res.headers.append('set-cookie', await makeSession(env, login, Date.now(), ANON_DAYS));
+    const { theme, cookie } = pickTheme(request);
+    // The session cookie goes first and the look cookie last.
+    const withLook = (res) => {
+      if (cookie) res.headers.append('set-cookie', cookie);
       return res;
+    };
+    const page = (opts) => html(appPage({ ...opts, models, theme }));
+    if (!session) {
+      if (!env.SESSION_SECRET) return withLook(page({ login: null, connected: [] }));
+      const login = newAnonLogin();
+      const res = page({ login, anon: true, connected: [] });
+      res.headers.append('set-cookie', await makeSession(env, login, Date.now(), ANON_DAYS));
+      return withLook(res);
     }
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
-    return html(appPage({ login: session.login, anon, connected: Object.keys(connections), models }));
+    return withLook(page({ login: session.login, anon, connected: Object.keys(connections) }));
   }
 
   if (request.method === 'GET' && path === '/reviews') {

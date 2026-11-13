@@ -263,17 +263,72 @@ details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),
 .sq:hover,.sq:focus-visible,.composer,.pop,details.pick .menu{box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
 .zchip.ok,.talkb{color:#161614!important}
 }
+/* Looks. The page has five: classic (above), and four lighter ones set on <html data-theme>. html.nt marks any of the four. */
+.thx,.h-voice,.h-focus{display:none}
+html.nt{color-scheme:light}
+html.nt body{background:var(--bg)}
+html.nt .dock{background:linear-gradient(to bottom,rgba(255,255,255,0),var(--bg) 18px)}
+html.nt .talkb{color:#fff!important;background:var(--ink)!important;border-color:var(--ink)!important}
+html.nt #hist li:hover,html.nt #hist li.cur{background:rgba(0,0,0,.05)}
+html.nt .err{background:#FEF3F2;border-color:#FECDCA}
+html.nt .comps .on::before,html.nt .wdot.ok{background:#2F9E5B}
+html.nt .logo span{color:var(--ink)}
+html.nt .composer{box-shadow:0 14px 40px -22px rgba(20,20,40,.35)}
+html.nt .welcome{text-align:center}html.nt .welcome .sub{margin-left:auto;margin-right:auto}
+html.nt .sugg{text-align:left;margin-top:8px}
+html.nt .slot{margin:0 0 22px;text-align:left}html.nt .slot .fine{margin-top:10px}
+html.nt .slot .pop,html.nt .slot details.pick .menu{bottom:auto;top:calc(100% + 10px)}
+html.nt .cats{justify-content:center}
+.tpill{display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);border:1px solid var(--line2);background:var(--panel);border-radius:var(--radius);padding:4px 6px 4px 12px;margin:0 0 18px}.tpill em{font-style:normal;font-size:11.5px;background:var(--tint);color:var(--ink);border-radius:var(--radius);padding:2px 8px}
+.look{display:inline-flex;align-items:center;gap:4px;margin-left:6px;white-space:nowrap}.look select{font:12px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:1px 4px}
+/* Ivory and Soft glow: a big centred title, the box under it, round icon tiles. */
+html[data-theme=ivory]{--bg:#FAF9F6;--panel:#fff;--side:#F3F2EE;--line:#E8E6E1;--line2:#DCD9D2;--ink:#1F1E1B;--dim:#6B6A65;--soft:#9A9890;--green:#1F1E1B;--green-d:#000;--tint:#E7F3EA;--radius:10px}
+html[data-theme=glow]{--bg:#fff;--panel:#fff;--side:#F7F7FB;--line:#ECEBF3;--line2:#DDDCEA;--ink:#16163A;--dim:#5E5D78;--soft:#9897AE;--green:#1E1B4B;--green-d:#100E33;--tint:#EEEBFF;--radius:14px}
+html[data-theme=ivory] .tpill,html[data-theme=glow] .tpill{display:inline-flex}
+html[data-theme=ivory] .welcome h1,html[data-theme=glow] .welcome h1{font-size:clamp(34px,5vw,52px);letter-spacing:-.035em;font-weight:700}
+html[data-theme=ivory] .cat,html[data-theme=glow] .cat{flex-direction:column;border:0;background:none;padding:0;width:84px;gap:8px;font-size:12px;color:var(--dim)}
+html[data-theme=ivory] .cat svg,html[data-theme=glow] .cat svg{width:46px;height:46px;padding:9px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-sizing:border-box}
+html[data-theme=ivory] .cat:hover,html[data-theme=glow] .cat:hover{transform:translateY(-2px)}
+html[data-theme=ivory] .cat[aria-pressed=true],html[data-theme=glow] .cat[aria-pressed=true]{box-shadow:none;color:var(--ink)}
+html[data-theme=ivory] .cat[aria-pressed=true] svg,html[data-theme=glow] .cat[aria-pressed=true] svg{border-color:var(--ink)}
+html[data-theme=glow] .welcome{background:radial-gradient(38% 30% at 30% 55%,#FFE6D8 0,rgba(255,255,255,0) 70%),radial-gradient(38% 30% at 70% 50%,#E8E2FF 0,rgba(255,255,255,0) 70%),radial-gradient(30% 22% at 50% 80%,#DDF0FF 0,rgba(255,255,255,0) 70%)}
+/* Focus: an icon rail, a greeting, the box, then cards for examples, recent chats and computers. */
+html[data-theme=focus]{--bg:#F6F4EE;--panel:#fff;--side:#F0EDE5;--line:#E6E2D8;--line2:#D9D4C8;--ink:#1F1E1B;--dim:#6B6960;--soft:#9A978C;--green:#1F1E1B;--green-d:#000;--tint:#E7F3EA;--radius:10px}
+html[data-theme=focus] .h-def{display:none}html[data-theme=focus] .h-focus{display:inline-flex;align-items:center;gap:14px}
+html[data-theme=focus] .welcome h1{font:400 clamp(36px,5vw,50px)/1.1 'Instrument Serif',Georgia,serif;letter-spacing:-.01em}
+html[data-theme=focus] .welcome .sub{display:none}
+html[data-theme=focus] .cat{padding:5px 12px 5px 6px;font-size:13px}
+html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;text-align:left;margin-top:8px}
+.fc{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:8px}.fc h5{margin:4px 0 0;font:600 11px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.fc .sidesec{border-top:0;padding:0}.fc .histwrap{max-height:220px;margin:0}.fc .sugg{margin:0}.fc .sugg button{font-size:14px;padding:9px 2px}
+.frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
+.frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
+/* Voice first: a big talk circle in the middle, computers and things to say on the right. */
+html[data-theme=voice]{--bg:#F3F6FB;--panel:#fff;--side:#F3F6FB;--line:#E3E8F2;--line2:#DCE3F0;--ink:#1E2A4A;--dim:#5A6785;--soft:#8A95AE;--green:#1E2A4A;--green-d:#111A33;--tint:#E4ECFF;--radius:14px}
+html[data-theme=voice] .h-def{display:none}html[data-theme=voice] .h-voice{display:inline}
+html[data-theme=voice] .welcome h1{font-size:clamp(30px,4vw,40px);letter-spacing:-.03em;font-weight:700}
+html[data-theme=voice] .welcome{padding-top:6vh}
+.vorb{display:none;width:210px;height:210px;border-radius:50%;border:0;margin:0 auto 22px;cursor:pointer;color:#fff;place-items:center;background:radial-gradient(circle at 35% 30%,#fff 0,#cfe0ff 25%,#8fb0ff 55%,#7a7cf7 80%,#5b5bd6);box-shadow:0 30px 80px -20px rgba(91,91,214,.55),inset 0 -20px 40px rgba(60,40,160,.25);transition:transform .2s}.vorb:hover{transform:scale(1.03)}
+html[data-theme=voice] .vorb{display:grid}
+.rcol{flex-direction:column;gap:8px;padding:18px 16px;border-left:1px solid var(--line);overflow:auto;min-height:0}.rcol h5{margin:8px 4px 2px;font:600 11px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--soft);display:flex;justify-content:space-between}.rcol h5 a{text-transform:none;letter-spacing:0;color:var(--ink)}
+.rcol .rc{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);background:var(--panel);font-size:13.5px}.rcol .rc small{margin-left:auto;color:#2F9E5B}.rcol .rc.off small{color:var(--soft)}
+.rcol button{text-align:left;border:0;background:var(--panel);border-radius:var(--radius);padding:10px 12px;font-size:13.5px;cursor:pointer}.rcol button:hover{box-shadow:inset 0 0 0 1px var(--line2)}
+@media (min-width:861px){
+html[data-theme=focus] .app{grid-template-columns:72px minmax(0,1fr)}html[data-theme=focus] .side{display:none}html[data-theme=focus] .frail{display:flex}
+html[data-theme=voice] .app{grid-template-columns:264px minmax(0,1fr) 280px}html[data-theme=voice] .rcol{display:flex}
+}
+@media (max-width:860px){html[data-theme=focus] .fcards{display:none}html[data-theme=focus] .h-focus{flex-wrap:wrap;justify-content:center;gap:10px}html[data-theme=focus] .welcome h1{font-size:34px}html.nt .welcome h1{overflow-wrap:anywhere}html[data-theme=voice] .vorb{width:150px;height:150px}html.nt .cat{min-width:0}}
 @media (min-width:861px){.only-m{display:none}}
 /* Phones: the composer buttons fit on one row with the send button (Fleet shows its icon only, no arrows). */
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
 `;
 
-const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">';
+const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
 const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, no sign-in needed.';
-const shell = (title, body, script = '', index = false) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style><script src="https://flisk.si/assets/bar.js" defer></script></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
+const shell = (title, body, script = '', index = false, theme = '') =>
+  `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"${theme === 'classic' ? '' : ' class="nt"'}` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style><script src="https://flisk.si/assets/bar.js" defer></script></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:inherit">chat<span>.</span>flisk</b></a>`;
 
@@ -287,6 +342,10 @@ export const messagePage = (title, text) =>
   shell(`${title} · chat`, `<main class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">${esc(title)}</h1><p style="color:var(--dim)">${esc(text)}</p><a class="btn" href="/">Back to chat</a></main>`);
 
 // Where a person manages the AI behind their pull request reviews (@flisk-chat review). The key is never shown again.
+// The looks a person can pick under the box. A new visitor gets the next one in turn (see index.js), kept in the chat_theme cookie.
+export const THEMES = [['classic', 'Classic'], ['ivory', 'Ivory'], ['glow', 'Soft glow'], ['focus', 'Focus'], ['voice', 'Voice first']];
+export const THEME_IDS = THEMES.map(([id]) => id);
+
 export const GITHUB_APP_URL = 'https://github.com/apps/flisk-chat';
 export const KEY_PAGES = { openrouter: ['OpenRouter', 'https://openrouter.ai/keys'], anthropic: ['Claude', 'https://console.anthropic.com/settings/keys'], openai: ['OpenAI', 'https://platform.openai.com/api-keys'] };
 
@@ -427,7 +486,23 @@ const add=(n)=>{talk.appendChild(n);down();return n;};
 const userMsg=(t)=>add(node('div','u',t));
 const asstMsg=(t)=>{const d=node('div','a');md(d,t);return add(d);};
 const errMsg=(t)=>add(node('div','err',t));
-const chatting=(on)=>{welcome.classList.toggle('gone',on);};
+const chatting=(on)=>{welcome.classList.toggle('gone',on);layout();};
+const ROOT=document.documentElement,TH=['classic','ivory','glow','focus','voice'],marks=new Map();
+const MV={fine:document.querySelector('.fine'),search:document.querySelector('.side .search'),hw:document.querySelector('.side .histwrap'),secs:[...document.querySelectorAll('.side .sidesec')]};
+const park=(el,to)=>{if(!el||!to)return;if(!marks.has(el)){const m=document.createComment('');el.parentNode.insertBefore(m,el);marks.set(el,m);}if(el.parentNode!==to)to.appendChild(el);};
+const unpark=(el)=>{const m=marks.get(el);if(m&&el.previousSibling!==m)m.parentNode.insertBefore(el,m.nextSibling);};
+function layout(){const t=ROOT.dataset.theme||'classic',home=!welcome.classList.contains('gone');
+  if(t!=='classic'&&home){park(form,$('slot'));park(MV.fine,$('slot'));}else{unpark(form);unpark(MV.fine);}
+  if(t==='focus'&&matchMedia('(min-width:861px)').matches){park($('sugg'),$('ftry'));park(MV.search,$('frecent'));park(MV.hw,$('frecent'));MV.secs.forEach(s=>park(s,$('fright')));}
+  else{[$('sugg'),MV.search,MV.hw].concat(MV.secs).forEach(unpark);}}
+const setTheme=(t)=>{if(TH.indexOf(t)<0)t='classic';ROOT.dataset.theme=t;ROOT.classList.toggle('nt',t!=='classic');try{document.cookie='chat_theme='+t+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure';}catch(e){}layout();};
+$('look').onchange=(e)=>setTheme(e.target.value);
+addEventListener('resize',()=>layout());
+(()=>{const h=new Date().getHours(),el=$('hello'),who=el.dataset.who;el.textContent=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+(who?', '+who:'');})();
+$('vorb').onclick=()=>$('orbbtn').click();
+layout();
+document.querySelectorAll('.frail [data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;if(a==='voice')return $('orbbtn').click();$('newchat').click();if(a==='hist')setTimeout(()=>{const q=$('q');if(q){q.scrollIntoView({block:'center'});q.focus();}},0);});
+document.querySelectorAll('[data-idea]').forEach(b=>b.onclick=()=>{box.value=b.dataset.idea;box.dispatchEvent(new Event('input'));box.focus();});
 // Past chats live in this browser only (localStorage), never on our server.
 const KEY='chat_history_v1';let chatId=null;
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
@@ -917,7 +992,8 @@ const bare = (name) => icon(name, 10).replace(/ width="10" height="10" aria-hidd
 const logo = (id, size = 16) =>
   LOGOS[id] ? `<span class="lg" style="width:${size}px;height:${size}px" aria-hidden="true"><img src="${LOGOS[id]}" alt=""></span>` : `<span class="lt" style="width:${size}px;height:${size}px" aria-hidden="true">${esc(String(PROVIDER_NAMES[id] || id).slice(0, 2))}</span>`;
 
-export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS }) {
+export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'classic' }) {
+  if (!THEME_IDS.includes(theme)) theme = 'classic';
   const list = cleanModels(models);
   const cards = PROVIDER_CARDS.map(
     (p) => `<div class="card"><b>${esc(p.label)}</b><small>${esc(p.note)} <a href="${esc(p.url)}" target="_blank" rel="noopener">Get a key</a></small><form data-p="${esc(p.id)}"><input type="password" autocomplete="off" placeholder="Paste the API key" aria-label="${esc(p.label)} API key"><button class="btn go" type="submit">Connect</button></form></div>`,
@@ -929,6 +1005,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
       ? `Runs on your own computers (${connected.length} connected). Fleet picks the cheapest one, or choose them below.`
       : 'No computer connected yet: the first task asks you for one key.';
   const on = Object.keys(PROVIDER_NAMES).filter((id) => connected.includes(id));
+  const pill = on.length ? `${on.length} computer${on.length === 1 ? '' : 's'} connected · Fleet picks the cheapest` : 'Runs on a real computer · Fleet picks the cheapest';
   const off = Object.keys(PROVIDER_NAMES).filter((id) => !connected.includes(id));
   const connectLink = (id) =>
     !login
@@ -942,6 +1019,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
   return shell(
     'Flisk Chat',
     `<div class="app">
+<nav class="thx frail" aria-label="Menu"><a class="fl" href="/" aria-label="Chat home">${icon('chat', 30)}</a><button type="button" data-act="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New</button><button type="button" data-act="hist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Computers</a><button type="button" data-act="voice"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>Voice</button>${login && !anon ? `<a href="/reviews"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</a><a class="end" href="/auth/signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>` : `<a class="end" href="/auth/start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>Sign in</a>`}</nav>
 <aside id="side" class="side" aria-label="Chats">
 <div class="brand">${LOGO}<button type="button" id="sideclose" class="iconbtn only-m" aria-label="Close the menu">×</button></div>
 <button type="button" id="newchat" class="newchat">${icon('thunder', 18)}New chat</button>
@@ -955,9 +1033,11 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div class="main">
 <div class="top"><button type="button" id="sideopen" class="iconbtn" aria-label="Open the menu"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>${LOGO}</div>
 <div id="scroll" class="scroll"><div class="col">
-<section id="ideas" class="welcome"><h1>What should we build?</h1><p class="sub">${esc(sub)}</p>
+<section id="ideas" class="welcome"><div class="tpill">${esc(pill)}<em>New: voice talk</em></div><button type="button" id="vorb" class="vorb" aria-label="Start voice talk"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button><h1><span class="h-def">What should we build?</span><span class="h-voice">Just talk. Flisk builds it.</span><span class="h-focus">${icon('chat', 34)}<span id="hello" data-who="${login && !anon ? esc(login) : ''}">Good evening</span></span></h1><p class="sub">${esc(sub)}</p>
+<div id="slot" class="slot"></div>
 <div class="cats">${CATS.map((c) => `<button type="button" class="cat" data-cat="${c.id}" aria-pressed="false">${icon(c.id, 26)}${esc(c.label)}</button>`).join('')}</div>
-<ul class="sugg" id="sugg"></ul></section>
+<ul class="sugg" id="sugg"></ul>
+<div class="thx fcards"><div class="fc"><h5>Try one</h5><div id="ftry"></div><h5>Recent</h5><div id="frecent"></div></div><div class="fc" id="fright"></div></div></section>
 <div id="talk" aria-live="polite"></div>
 <div id="setup" hidden><div class="cards">${cards}</div><p class="note">Your key is stored encrypted in fleet and only starts your computers. Free credit comes from the provider, not from us.</p></div>
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Your task is kept and runs right after.</small><div style="margin-top:10px"><a class="btn go" href="/auth/start">Sign in with GitHub</a></div></div>
@@ -976,8 +1056,9 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <button type="button" id="orbbtn" class="chip ico talkb" title="Voice talk: just talk, it answers out loud" aria-label="Start voice talk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
-<p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line.</p>
-</div></div></div></div>
+<p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line. <label class="look">Look <select id="look" aria-label="Look of the page">${THEMES.map(([id, label]) => `<option value="${id}"${id === theme ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label></p>
+</div></div></div>
+<aside class="thx rcol" aria-label="Computers and ideas"><h5>Computers · ${on.length} <a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h5>${on.length ? on.map((id) => `<div class="rc"><span class="wdot ok"></span>${esc(PROVIDER_NAMES[id])}<small>ready</small></div>`).join('') : `<div class="rc off"><span class="wdot"></span>${login && !anon ? 'None connected yet' : 'Sign in to see yours'}<small>—</small></div>`}<h5>Try saying</h5>${CATS[0].ideas.map((i) => `<button type="button" data-idea="${esc(i)}">“${esc(i)}”</button>`).join('')}</aside></div>
 <div id="oracle" class="oracle" hidden role="dialog" aria-modal="true" aria-label="Voice talk">
 <div class="otop"><span class="otitle">Flisk Oracle</span><span class="ohint">Talk. Pause when you are done. Tap the circle to interrupt.</span></div>
 <button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"></span></button>
@@ -989,5 +1070,6 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
     `window.__SIGNED__=${login ? 'true' : 'false'};window.__ANON__=${anon ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS,
     true,
+    theme,
   );
 }
