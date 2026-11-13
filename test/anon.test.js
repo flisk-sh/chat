@@ -32,7 +32,8 @@ test('the home page gives a visitor a private session that lasts, and says GitHu
   expect(page).toMatch(/Optional\./);
   // The same cookie again: no new id, and fleet's connections are read for that anonymous id.
   const again = await home(e, cookie.split(';')[0]);
-  expect(again.headers.get('set-cookie')).toBeNull();
+  // No new session (the look cookie may still be set, since this request does not send one back).
+  expect(again.headers.get('set-cookie') || '').not.toContain('chat_sess');
   expect(await again.text()).toContain('window.__ANON__=true');
 });
 

@@ -857,3 +857,40 @@ describe('a build ends with a public link', () => {
     expect(calc.seen.some((m) => m.startsWith('No public link yet'))).toBe(false);
   });
 });
+
+// The page has five looks. A new visitor gets the next one in turn, kept in a cookie; a saved look is kept; the switch lists all five.
+describe('looks', () => {
+  const look = (html) => /<html lang="en" data-theme="([a-z]+)"/.exec(html)?.[1];
+  test('new visitors get the looks in turn and keep theirs in a cookie', async () => {
+    const seen = [];
+    for (let i = 0; i < 5; i++) {
+      const res = await handle(new Request(`${ORIGIN}/`), env());
+      const html = await res.text();
+      const t = look(html);
+      expect(res.headers.get('set-cookie')).toContain(`chat_theme=${t}; Path=/; Max-Age=31536000`);
+      seen.push(t);
+    }
+    expect(new Set(seen)).toEqual(new Set(['classic', 'ivory', 'glow', 'focus', 'voice']));
+  });
+  test('a saved look is used and not set again', async () => {
+    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=focus' } }), env());
+    const html = await res.text();
+    expect(look(html)).toBe('focus');
+    expect(html).toContain('<html lang="en" data-theme="focus" class="nt">');
+    expect(res.headers.get('set-cookie') || '').not.toContain('chat_theme');
+    expect(html).toContain('<option value="focus" selected>Focus</option>');
+    for (const label of ['Classic', 'Ivory', 'Soft glow', 'Focus', 'Voice first']) expect(html).toContain(`>${label}</option>`);
+  });
+  test('the classic look has no extra class, and an unknown look gets a new one', async () => {
+    const classic = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=classic' } }), env())).text();
+    expect(classic).toContain('<html lang="en" data-theme="classic">');
+    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=evil"x' } }), env());
+    expect(res.headers.get('set-cookie')).toMatch(/chat_theme=(classic|ivory|glow|focus|voice);/);
+  });
+  test('every look keeps every feature on the page', async () => {
+    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=voice' } }), env())).text();
+    for (const id of ['newchat', 'q', 'hist', 'attach', 'mpbtn', 'mic', 'voice', 'orbbtn', 'go', 'vorb', 'slot', 'look']) expect(html).toContain(`id="${id}"`);
+    expect(html).toContain('Try saying');
+    expect(html).toContain('data-act="voice"');
+  });
+});
