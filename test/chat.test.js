@@ -294,11 +294,13 @@ describe('service binding to inference', () => {
 });
 
 import { appPage as appPageUi } from '../src/page.js';
-test('app page shows history, key management, coming-soon voice and the video category', () => {
+test('app page shows history, key management, voice and the video category', () => {
   const page = appPageUi({ login: 'ann', connected: ['upstash'] });
   expect(page).toContain('id="hist"');
   expect(page).toContain('fleet.flisk.si/console?section=providers');
   expect(page).toContain('Voice talk');
+  expect(page).toContain('id="voice"');
+  expect(page).toContain('id="mic"');
   expect(page).not.toContain('Video generation');
   expect(page).toContain('data-cat="video"');
   expect(page).toContain('Upstash Box');
