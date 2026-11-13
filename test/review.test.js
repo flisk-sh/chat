@@ -167,6 +167,16 @@ describe('saved key', () => {
     expect(spoof).not.toContain('Deleted.');
     expect(spoof).not.toContain('<b>x</b>');
   });
+  test('the chat key box can save the AI for PR reviews: JSON, same origin only, validated', async () => {
+    const { env } = await setup();
+    const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
+    const post = (body, origin = 'https://chat.test') => handle(new Request('https://chat.test/api/review-ai', { method: 'POST', body: JSON.stringify(body), headers: { cookie, origin } }), env);
+    expect((await post({ ai: 'openrouter', model: 'x/y', key: 'sk-or-12345678' }, 'https://evil.test')).status).toBe(403);
+    expect((await post({ ai: 'wolf', model: 'x', key: 'sk-12345678' })).status).toBe(400);
+    expect((await post({ ai: 'openrouter', model: 'bad model', key: 'sk-12345678' })).status).toBe(400);
+    expect((await post({ ai: 'openrouter', model: 'x/y', key: 'sk-or-12345678' })).status).toBe(200);
+    expect((await loadSettings(env, 'odykyi', { withKey: true })).key).toBe('sk-or-12345678');
+  });
   test('saving from another site is refused, and signing in is required', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];

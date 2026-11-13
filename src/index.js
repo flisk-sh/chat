@@ -281,6 +281,14 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const { login } = session;
     const fleet = fleetClient(env, login, fetchImpl);
 
+    if (path === '/api/review-ai') {
+      const body = await readJson(request);
+      const chosen = resolveModel({ ai: String(body?.ai || ''), key: String(body?.key || ''), model: String(body?.model || '') });
+      if (chosen.error || chosen.free) return json(400, { error: chosen.error || 'pick an AI with your own key' });
+      const r = await saveSettings(env, login, { ai: chosen.ai, model: chosen.model, key: chosen.key });
+      return r.error ? json(503, { error: r.error }) : json(200, { ok: true });
+    }
+
     if (path === '/api/connect') {
       const body = await readJson(request);
       const card = PROVIDER_CARDS.find((c) => c.id === body?.provider);
