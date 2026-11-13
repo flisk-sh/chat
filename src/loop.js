@@ -127,9 +127,9 @@ export function explainModelError(body, status, chosen = {}) {
   else if (code === 404 || code === 400 && /model/.test(hay) || /no endpoints|not a valid model|model.*not (found|exist)|does not exist|unknown model/.test(hay)) kind = 'model';
   else if (code >= 500 || /provider returned error|overloaded|timeout/.test(hay)) kind = 'provider';
   const head = {
-    key: `Your ${chosen.ai || 'provider'} API key was refused`,
+    key: `Your ${chosen.free ? 'Flisk Wolf' : chosen.ai || 'provider'} API key was refused`,
     limit: 'Out of credit or rate limited',
-    model: `The model "${chosen.model || ''}" is not available`,
+    model: `The model "${chosen.free ? 'Flisk Wolf' : chosen.model || 'you chose'}" is not available`,
     provider: `The model provider${who} had a problem (HTTP ${code || 'unknown'})`,
     other: `The model answered with an error (HTTP ${code || 'unknown'})`,
   }[kind];

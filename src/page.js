@@ -579,9 +579,11 @@ function errCard(turn,msg,kind,task){
   // Deferred: this click also reaches the document handler that closes the picker on any outside click, so opening at once would close it again.
   const openAi=(focusKey)=>setTimeout(()=>{openPop();const p=MODELS.find(x=>!x.free&&x.key===aiSel.value)||MODELS.find(x=>!x.free);if(p&&aiSel.value==='wolf')pick(p);if(!byo.hidden)(focusKey?byoKey:byoModel).focus();},0);
   const retry=()=>{turn.remove();if(history.length&&history[history.length-1].role==='assistant')history.pop();run(task);};
-  if(kind==='key'){btn('Set up the key again',()=>{lsSet('chat_key_'+cur.key,'');byoKey.value='';stat();openAi(true);},true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
-  else if(kind==='model'){btn('Choose another model',()=>openAi(false),true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
-  else if(kind==='limit'){btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();},true);btn('Change provider',()=>openAi(true));}
+  const wolf=(f)=>{if(!cur.free)btn('Use free Flisk Wolf',f);};
+  if(cur.free&&(kind==='key'||kind==='model'||kind==='limit'))kind='other';
+  if(kind==='key'){btn('Set up the key again',()=>{lsSet('chat_key_'+cur.key,'');byoKey.value='';stat();openAi(true);},true);wolf(()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
+  else if(kind==='model'){btn('Choose another model',()=>openAi(false),true);wolf(()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
+  else if(kind==='limit'){wolf(()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});btn('Change provider',()=>openAi(true),true);}
   else if(kind==='computer'){btn('Connect a computer',()=>{pending=task;setup.hidden=false;setup.scrollIntoView({block:'start'});},true);btn('Try again',retry);}
   else{btn('Try again',retry,true);btn('Change model or provider',()=>setTimeout(openPop,0));}
   c.appendChild(n);turn.appendChild(c);down();
