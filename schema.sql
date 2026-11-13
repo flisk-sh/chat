@@ -27,3 +27,10 @@ CREATE TABLE IF NOT EXISTS ai_settings (
   key_enc TEXT NOT NULL,
   updated TEXT NOT NULL
 );
+
+-- Repos where every new pull request is reviewed automatically (switched on with "@flisk-chat auto on"); login = whose AI and limit pay.
+CREATE TABLE IF NOT EXISTS auto_repos (
+  repo TEXT PRIMARY KEY,
+  login TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
