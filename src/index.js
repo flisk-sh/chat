@@ -1,13 +1,30 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
 import { MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
-import { appPage, messagePage, PROVIDER_CARDS } from './page.js';
+import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS } from './page.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 
 export const TASKS_PER_DAY = 20;
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
 const SITE_DAYS = 7;
+
+// The model picker's list comes from inference (/v1/catalog), so a model added there shows up here with no chat change.
+// Read through the service binding (a Worker cannot fetch another Worker on the same domain), kept 5 minutes per isolate.
+let catalog = { at: 0, models: null };
+export async function loadCatalog(env, now = Date.now()) {
+  if (catalog.models && now - catalog.at < 300_000) return catalog.models;
+  if (!env.INFERENCE) return DEFAULT_MODELS;
+  try {
+    const origin = new URL(env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions').origin;
+    const res = await env.INFERENCE.fetch(`${origin}/v1/catalog`, { signal: AbortSignal.timeout(1500) });
+    const models = res.ok ? cleanModels((await res.json())?.data) : DEFAULT_MODELS;
+    catalog = { at: now, models };
+    return models;
+  } catch {
+    return catalog.models || DEFAULT_MODELS;
+  }
+}
 
 const SECURITY = {
   'x-content-type-options': 'nosniff',
@@ -127,9 +144,10 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   const session = await readSession(env, request);
   if (request.method === 'GET' && path === '/') {
-    if (!session) return html(appPage({ login: null, connected: [] }));
+    const models = await loadCatalog(env);
+    if (!session) return html(appPage({ login: null, connected: [], models }));
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
-    return html(appPage({ login: session.login, connected: Object.keys(connections) }));
+    return html(appPage({ login: session.login, connected: Object.keys(connections), models }));
   }
 
   if (path.startsWith('/api/')) {

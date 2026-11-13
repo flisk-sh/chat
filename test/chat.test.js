@@ -297,3 +297,36 @@ test('signed-out visitors are sent to sign-in from the computers menu', () => {
   expect(appPageUi({ login: null, connected: [] })).toContain('href="/auth/start">sign in to connect</a>');
   expect(appPageUi({ login: 'ann', connected: [] })).toContain('href="#setup">connect</a>');
 });
+
+import { cleanModels, DEFAULT_MODELS } from '../src/page.js';
+import { loadCatalog } from '../src/index.js';
+
+test('model picker keeps only catalogue entries chat can call, and falls back without a free model', () => {
+  const got = cleanModels([
+    { id: 'flisk-wolf-chat', name: 'Flisk Wolf', provider: 'flisk', providerName: 'Flisk', key: '', model: 'flisk-wolf-chat' },
+    { id: 'x', name: 'Evil', key: 'evilcorp', model: 'x' },
+    { id: 'c', name: 'Claude', key: 'anthropic', model: 'a b;rm' },
+  ]);
+  expect(got.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'c']);
+  expect(got[1].model).toBe('');
+  expect(cleanModels([{ id: 'c', name: 'C', key: 'anthropic' }])).toBe(DEFAULT_MODELS);
+  expect(cleanModels('nope')).toBe(DEFAULT_MODELS);
+});
+
+test('the page reads its models from inference /v1/catalog through the binding', async () => {
+  const calls = [];
+  const env = { INFERENCE_URL: 'https://inf.test/v1/chat/completions', INFERENCE: { fetch: async (u) => { calls.push(u); return Response.json({ data: [{ id: 'flisk-wolf-chat', name: 'Flisk Wolf', provider: 'flisk', providerName: 'Flisk', key: '', model: 'flisk-wolf-chat' }, { id: 'new-one', name: 'New One', provider: 'openrouter', providerName: 'OpenRouter', key: 'openrouter', model: 'some/model' }] }); } } };
+  const models = await loadCatalog(env, 1e13);
+  expect(calls).toEqual(['https://inf.test/v1/catalog']);
+  expect(models.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'new-one']);
+  const page = appPageUi({ login: 'ann', connected: [], models });
+  expect(page).toContain('"id":"new-one"');
+  expect(page.split('</script>').length).toBe(2);
+  expect(await loadCatalog({}, 2e13)).toBe(DEFAULT_MODELS);
+});
+
+test('the page uses the Flisk icons and shows the four kinds of task', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  for (const k of ['data-cat="website"', 'data-cat="app"', 'data-cat="answer"', 'data-cat="check"', 'id="mppop"', 'id="newchat"']) expect(page).toContain(k);
+  expect(page).toContain('aria-label="Run"');
+});
