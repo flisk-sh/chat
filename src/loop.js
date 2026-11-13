@@ -22,7 +22,7 @@ Rules:
 - One action per reply. Keep commands short. Never wait for input; add -y to installs.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
 - Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
-- To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs). Keep it compact (under ~80 lines, under 12 KB) so it fits in one reply. Use a simple hero, calm colours, system fonts, a few cards, and rounded corners. Mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders. Then "publish" it, then "say" the link in one sentence.
 - For multi-service apps: Fleet pods have no Docker or Tilt. Use Flisk in local-process mode only (services that declare a \"command\" field). First install the CLI with:
   curl -fsSL https://flisk.sh/install.sh | sh
   Then:
@@ -34,7 +34,7 @@ Rules:
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - In "say", give the result itself (numbers, the content, the link), not a description of the steps.
 
-Remember: reply is only the JSON object. Nothing else.`;
+Remember: reply is only the JSON object. Nothing else. Keep HTML short.`;
 
 export function parseAction(text) {
   let s = String(text ?? '').trim();
@@ -162,7 +162,7 @@ export async function runTask({ task, history = [], model, computer, publish, or
       const action = parseAction(reply.text);
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });
-        messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
+        messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings. Keep HTML short.' });
         continue;
       }
       if (action.type === 'say' || last) {
