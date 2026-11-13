@@ -70,9 +70,20 @@ function chartClean(i) {
   return { type, title: str(i.title, 80), unit: str(i.unit, 12), labels, series };
 }
 
+// flisk status only sees a project from inside its folder, and the computer starts in the home folder: go to the
+// project first (the Flisk recipe's ~/app, the system action's /tmp/flisk-system, or any folder under home that has
+// a .flisk folder or service.json files), then ask.
+export const SERVICES_CMD = [
+  'export PATH=$HOME/.local/bin:$PATH',
+  'for d in "$HOME/app" /tmp/flisk-system "$HOME"/*/; do',
+  '  if [ -d "$d/.flisk" ] || [ -f "$d/service.json" ] || ls "$d"/*/service.json >/dev/null 2>&1; then cd "$d" && break; fi',
+  'done',
+  'flisk status --json 2>/dev/null || true',
+].join('\n');
+
 // The services of a Flisk project running on the computer. flisk status --json lists them; the widget keeps the useful fields.
 async function services(_input, { computer, podId }) {
-  const r = await computer.run(podId, 'flisk status --json 2>/dev/null || true');
+  const r = await computer.run(podId, SERVICES_CMD);
   if (r.error) return { error: r.error };
   let j;
   try { j = JSON.parse(r.data.stdout); } catch { return { error: 'there is no running Flisk project on this computer yet (run flisk up first)' }; }
