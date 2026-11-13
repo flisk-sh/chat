@@ -15,8 +15,16 @@ Rules:
 - Use the computer for anything you can check: maths, code, data, files, web pages (curl).
 - One action per reply. Keep commands short. Never wait for input; add -y to installs.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
-- The reply must be valid JSON: escape every " inside a string as \\" and every newline as \\n.
+- The reply must be valid JSON: escape every \" inside a string as \\\" and every newline as \\\\n.
 - To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- For multi-service apps: Fleet pods have no Docker or Tilt. Use Flisk in local-process mode only (services that declare a \"command\" field). First install the CLI with:
+  curl -fsSL https://flisk.sh/install.sh | sh
+  Then:
+  flisk project --yes
+  Write service.json files that include a \"command\" (e.g. \"command\": \"node server.js\" or \"python app.py\"). Do NOT rely on generated Dockerfiles or Tilt.
+  flisk up
+  This starts the services as plain processes with health checks and no containers. Prefer this over hand-written scripts when the task needs more than one process.
+  If the curl install fails, fall back to installing Node first then npm install -g @flisk-sh/flisk.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - In "say", give the result itself (numbers, the content, the link), not a description of the steps.`;
 
