@@ -59,7 +59,10 @@ details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-t
 #comp h3{margin:0;padding:8px 12px;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);border-bottom:1px solid var(--ink);background:var(--card);font-weight:400}
 #screen{font:13px/1.55 var(--mono);background:var(--night);color:#e8e8e8;padding:12px;min-height:120px;max-height:36vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
 #screen .c{color:var(--glow)}#screen .d{color:#8b8f98}#screen .x{color:#ff7b72}
-form.ask{display:flex;gap:0;margin-top:auto;position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--ink)}
+#talk>*{scroll-margin-bottom:140px}
+.dock{position:sticky;bottom:0;margin-top:auto;z-index:4}
+.chatting .hero h1,.chatting .hero .sub{display:none}.chatting .hero{padding-top:16px;padding-bottom:16px}
+form.ask{display:flex;gap:0;background:var(--card);border-top:1px solid var(--ink)}
 form.ask textarea{flex:1;min-height:64px;max-height:160px;font:15px var(--sans);padding:18px 40px;border:0;outline:0;background:transparent;color:inherit;resize:none}
 @media (max-width:640px){form.ask textarea{padding:16px 20px}}
 form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form.ask .btn::after{content:' >>>'}
@@ -68,9 +71,80 @@ form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form
 .card form{display:flex;gap:8px;margin-top:10px}.card input{flex:1;font:13px var(--mono);padding:9px;border:1px solid var(--ink);background:transparent;color:inherit;min-width:0;border-radius:0}
 .note{font:11px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--dim);padding:0 40px 16px;margin:0}
 #signin{margin:0 40px 20px}
+.frame.app{max-width:1240px}
+.shell{display:grid;grid-template-columns:260px minmax(0,1fr);flex:1;min-height:0}
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail{order:2}.rail{border-right:0!important;border-bottom:1px solid var(--ink)}}
+.rail{border-right:1px solid var(--ink);display:flex;flex-direction:column}
+.rail section{border-bottom:1px solid var(--ink);padding:14px 16px}
+.rail h4{margin:0 0 10px;font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:400;display:flex;justify-content:space-between}
+.rail h4 a{color:var(--green);text-decoration:none}
+.newchat{display:block;width:100%;text-align:center}
+#hist{list-style:none;margin:0;padding:0;max-height:34vh;overflow:auto}
+#hist li{display:flex;align-items:center;border-bottom:1px dashed rgba(23,23,21,.2)}
+#hist li button{flex:1;text-align:left;font:13px/1.35 var(--sans);background:none;border:0;padding:7px 0;cursor:pointer;color:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hist li button:hover{color:var(--green)}#hist li .x{flex:0;color:var(--dim);padding:7px 4px}
+#hist .none{font-size:13px;color:var(--dim);border:0;padding:4px 0}
+.comps{list-style:none;margin:0;padding:0;font-size:13px}
+.comps li{padding:4px 0}.comps .on::before{content:'● ';color:var(--glow)}
+.comps .off{color:var(--dim)}
+.soon{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0}
+.tag{font:10px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--ink);padding:3px 6px;color:var(--dim);white-space:nowrap}
+.main{display:flex;flex-direction:column;min-width:0}
+.tools{display:flex;gap:8px;align-items:center;padding:8px 40px 0;background:var(--card);border-top:1px solid var(--ink)}
+@media (max-width:640px){.tools{padding:8px 20px 0}}
+.tools button{font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;border:1px dashed var(--dim);background:none;color:var(--dim);padding:6px 9px;cursor:not-allowed}
+form.ask{border-top:0}
+.tree{display:flex;flex-direction:column;gap:8px;max-width:100%}
+.trow{display:flex;gap:8px;align-items:stretch}
+.trow.new{animation:rowin .22s ease-out}
+@keyframes rowin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.trow,.sq{animation:none;transition:none}}
+.trow .q{width:120px;flex:none;font:12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);padding-top:12px}
+.sq{flex:0 0 112px;width:112px;height:84px;border:0;border-radius:0;padding:10px;font:500 13px/1.25 var(--sans);cursor:pointer;text-align:left;display:flex;align-items:flex-end;transition:transform .18s ease-out,box-shadow .18s}
+.sq:hover,.sq:focus-visible{transform:translateY(-3px);box-shadow:4px 4px 0 var(--ink);outline:0}
+.sq.on{box-shadow:inset 0 0 0 3px var(--ink)}
+.trow .sq:not(.on){opacity:.95}.trow:has(.sq.on) .sq:not(.on){opacity:.55}.trow:has(.sq.on) .sq:not(.on):hover{opacity:1}
+.p0{background:#D9622B;color:#171715}.p1{background:#E8C21A;color:#171715}.p2{background:#3FD3D6;color:#171715}.p3{background:#DB7BB2;color:#171715}
+.zchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.zchip{font:12px var(--mono);text-transform:uppercase;border-radius:0;padding:5px 10px;background:var(--card);border:1px solid rgba(23,23,21,.35);color:var(--ink)}
+.zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
+.zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
+@media (max-width:640px){.trow{flex-wrap:wrap}.trow{margin-left:0!important}.trow .q{width:100%;padding:0}.sq{flex:1 1 0;width:auto;height:72px}}
+/* particle.ai look */
+:root{--paper:#EFEBDD;--card:#F8F5EA;--green:#C4501C;--yellow:#E8C21A;--orange:#D9622B;--cyan:#3FD3D6;--pink:#DB7BB2}
+h1 em{color:var(--orange)}
+.btn{background:var(--yellow);border-color:var(--ink);color:var(--ink)}.btn:hover{background:var(--ink);color:var(--yellow);border-color:var(--ink)}
+header a.cta:hover{background:var(--yellow);color:var(--ink)}
+.rail{background:#E8E3D2}
+.cols{display:flex;flex-direction:column}
+body:not(.chatting) .dock{order:-1;position:static;margin:0 40px 28px;border:1px solid var(--ink);background:var(--card)}
+.dock{display:flex;flex-direction:column}
+body:not(.chatting) .dock .tools{order:2;padding:0 18px 12px;background:transparent}
+body:not(.chatting) form.ask textarea{padding:18px}
+.pickers{align-items:flex-end}details.pick{align-self:flex-end}
+body:not(.chatting) .dock .tools{border-top:0}
+body:not(.chatting) .hero{border-bottom:0;padding-bottom:18px}
+body:not(.chatting) .ideas{border-top:1px solid var(--ink)}
+.chatting .dock{border-top:1px solid var(--ink)}
+form.ask textarea{font-size:17px;min-height:76px;max-height:200px;overflow-y:auto}
+form.ask .btn{border-width:0 0 0 1px;font-size:13px}
+.ideas{counter-reset:i}
+.ideas button{display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:center;padding:18px 22px}
+.ideas button::before{content:counter(i,decimal-leading-zero);counter-increment:i;display:grid;place-items:center;width:44px;height:44px;margin:0;font:500 13px/1 var(--mono);color:var(--ink);background:var(--orange)}
+.ideas button:nth-child(2)::before{background:var(--yellow)}.ideas button:nth-child(3)::before{background:var(--cyan)}.ideas button:nth-child(4)::before{background:var(--pink)}
+.ideas button:hover{background:var(--card)}.ideas button:hover::before{color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.pick select{appearance:none;-webkit-appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23171715'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:32px}
+.mark{background:var(--orange);color:var(--ink)}
+.comps .on::before{color:var(--orange)}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+input[type=checkbox]{accent-color:var(--ink)}
+.u,.a,.err,.zchip,#hist li button{overflow-wrap:anywhere;word-break:break-word}.zchip{max-width:100%}#talk,.main{min-width:0}
+details.pick .menu{max-height:260px;box-shadow:6px 6px 0 var(--ink)}
+form.ask textarea:focus-visible{outline:0}.dock:focus-within{box-shadow:0 0 0 3px var(--orange)}
+@media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
 `;
 
-const shell = (title, body, script = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
+const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23D9622B'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='700' text-anchor='middle' fill='%23171715'%3Ec%3C/text%3E%3C/svg%3E"><meta name="theme-color" content="#EFEBDD"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
 
 export const homePage = () =>
   shell(
@@ -82,7 +156,7 @@ export const homePage = () =>
 <p class="note">Beta. Computers come from your own provider account (several have free credit), so chat costs you nothing and us nothing.</p>`,
   );
 
-export const messagePage = (title, text) => shell(`${title} · chat`, `<header><a class="logo" href="/"><span class="mark">C</span>chat</a></header><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back</a>`);
+export const messagePage = (title, text) => shell(`${title} · chat`, `<header><a class="logo" href="/"><span class="mark">C</span>chat</a></header><div class="hero" style="border-bottom:0"><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back to chat</a></div>`);
 
 const IDEAS = [
   'Make me a one-page website for a coffee shop called Moon Roast.',
@@ -93,8 +167,18 @@ const IDEAS = [
 
 const APP_JS = `
 const talk=document.getElementById('talk'),screen=document.getElementById('screen'),form=document.getElementById('ask'),box=document.getElementById('task'),go=document.getElementById('go'),setup=document.getElementById('setup'),signin=document.getElementById('signin');
-const history=[],comp=document.getElementById('comp');
-const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
+let history=[];const comp=document.getElementById('comp'),hist=document.getElementById('hist');
+const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;if(cls==='a')linkify(d,text);else d.textContent=text;talk.appendChild(d);d.scrollIntoView({block:"nearest"});return d;};
+// Past chats live in this browser only (localStorage), never on our server.
+const KEY='chat_history_v1';let chatId=null;
+const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
+const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
+const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.slice(0,80),msgs:history});saveAll(all);drawHist();};
+function drawHist(){const all=loadAll();hist.textContent='';if(!all.length){const li=document.createElement('li');li.className='none';li.textContent='No chats yet. They stay in this browser.';hist.appendChild(li);return;}
+  all.forEach(c=>{const li=document.createElement('li'),b=document.createElement('button'),x=document.createElement('button');b.textContent=c.title;b.title=c.title;b.onclick=()=>openChat(c);x.className='x';x.textContent='×';x.title='Delete this chat';x.setAttribute('aria-label','Delete chat');x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
+function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder="What should it do?";chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');document.body.classList.remove('chatting');box.focus();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');history.forEach(m=>el(m.role==='user'?'u':'a',m.content));}
+document.getElementById('newchat').onclick=newChat;
 const say=(cls,text)=>{comp.hidden=false;const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
 const linkify=(node,text)=>{node.textContent='';text.split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;node.appendChild(a);}else node.appendChild(document.createTextNode(p));});};
 document.querySelectorAll('.ideas button').forEach(b=>b.onclick=()=>{box.value=b.childNodes[0].textContent;box.focus();});
@@ -118,10 +202,10 @@ document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
   if(pending){const t=pending;pending=null;run(t);}
 });
 async function run(task){
-  go.disabled=true;document.getElementById('ideas').classList.add('gone');const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
+  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');const wait=el('a','Working…');screen.textContent='';comp.hidden=true;let answer=null;
   try{
     const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
-    if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');go.disabled=false;return;}
+    if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){wait.remove();pending=task;setup.hidden=false;el('a','I need a computer for that. Connect one of your sandbox accounts below (once).');go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));throw new Error(b.error||('error '+res.status));}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
@@ -141,10 +225,41 @@ async function run(task){
         else if(ev.type==='done'&&ev.ms)say('d','# '+(ev.ms/1000).toFixed(1)+' s');
       }}
   }catch(err){wait.className='err';wait.textContent=String(err.message||err);}
-  if(answer!==null){linkify(wait,answer);history.push({role:'assistant',content:answer});}
+  if(answer!==null){linkify(wait,answer);history.push({role:'assistant',content:answer});saveChat();}
   go.disabled=false;box.focus();
 }
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);history.push({role:'user',content:task});run(task);};
+// Zachman questions as a tree of squares: hover (or tap) one, the next row opens, until all six are answered.
+const ZQ=[['What','What is it?',['A website','A small app','An answer or check']],['Who','Who is it for?',['Customers','My team','Just me']],['Why','Why do you need it?',['Sell more','Look professional','Try an idea']],['Where','Where should it live?',['A live link','Code I can keep','Only this chat']],['When','When do you need it?',['Right now','Polished, no rush','A quick draft']],['How','How should it feel?',['Bold','Calm','Playful']]];
+let treeAnswer=null;
+function ask6(task){
+  document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');
+  const wrap=document.createElement('div');wrap.className='tree';talk.appendChild(wrap);
+  const rows=document.createElement('div');rows.className='tree';const chips=document.createElement('div');chips.className='zchips';wrap.append(rows,chips);
+  let pick=[],sent=false;
+  const finish=()=>{if(sent)return;sent=true;treeAnswer=null;box.placeholder="What should it do?";wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+p).join('; ')+'.':task;
+    history.push({role:'user',content:full});run(full);};
+  treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
+  let prevLen=0;
+  const draw=()=>{const grew=pick.length>prevLen;prevLen=pick.length;rows.textContent='';
+    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className="trow"+(grew&&i===pick.length?" new":"");row.style.marginLeft=(i*14)+'px';
+      const q=document.createElement('div');q.className='q';q.textContent=ZQ[i][1];row.appendChild(q);
+      ZQ[i][2].forEach((t,k)=>{const s=document.createElement('button');s.type='button';s.className='sq p'+((i+k)%4)+(pick[i]===t?' on':'');s.textContent=t;
+        const choose=()=>{if(sent||pick[i]===t)return;pick=pick.slice(0,i);pick[i]=t;draw();};
+        let tm=0;s.onmouseenter=()=>{clearTimeout(tm);tm=setTimeout(choose,220);};s.onmouseleave=()=>clearTimeout(tm);s.onfocus=choose;s.onclick=()=>{choose();if(pick.length===ZQ.length)finish();};row.appendChild(s);});
+      rows.appendChild(row);}
+    chips.textContent='';ZQ.forEach((z,i)=>{const c=document.createElement('span');c.className='zchip'+(pick[i]?' ok':'');c.textContent=z[0]+(pick[i]?': '+pick[i]:'');chips.appendChild(c);});
+    const sk=document.createElement('button');sk.type='button';sk.className='zskip';sk.textContent=pick.length===ZQ.length?'Build it >>>':'Skip, just run it';sk.onclick=finish;chips.appendChild(sk);
+    if(!sent)box.placeholder=pick.length<ZQ.length?"Or type your own answer: "+ZQ[pick.length][1]:"Add anything else, or press Build it";
+    wrap.scrollIntoView({block:"nearest"});};
+  draw();
+}
+let lastSend=0;
+form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length&&/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|build|make|create|design)\\b/i.test(task)&&!/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell)\\b/i.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+drawHist();
+const fit=()=>{box.style.height="auto";box.style.height=Math.min(box.scrollHeight,200)+"px";};box.addEventListener("input",fit);form.addEventListener("submit",()=>setTimeout(fit,0));
+const pk=document.querySelector("details.pick");document.addEventListener("click",e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;});document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pk&&pk.open){pk.open=false;pk.querySelector("summary").focus();}});
+try{if(matchMedia("(pointer:fine)").matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
 
@@ -155,12 +270,22 @@ export function appPage({ login, connected = [] }) {
   return shell(
     'Flisk Chat',
     `<header><a class="logo" href="/"><span class="mark">C</span>chat</a>${login ? `<span class="r m">@${esc(login)} · <a href="/auth/signout">sign out</a></span>` : '<span class="r m"><a class="cta m" href="/auth/start">Sign in with GitHub</a></span>'}</header>
+<div class="shell"><aside class="rail">
+<section><button type="button" id="newchat" class="btn newchat">+ New chat</button></section>
+<section><h4>History</h4><ul id="hist"></ul></section>
+<section><h4>Computers &amp; keys <a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${
+      login && connected.length
+        ? connected.map((id) => `<li class="on">${esc(PROVIDER_NAMES[id] || id)}</li>`).join('')
+        : `<li class="off">${login ? 'None connected yet' : 'Sign in to see yours'}</li>`
+    }</ul>${login ? '<p style="margin:8px 0 0;font-size:12px;color:var(--dim)">A task asks for a key when it needs one. Remove keys in fleet (manage). Keys are stored encrypted in fleet; your own AI key is never saved.</p>' : ''}</section>
+<section><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div><div class="soon">Video generation <span class="tag">soon</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--dim)">Talk to chat and hear it answer in Ava, the warm voice from Flisk videos.</p></section>
+</aside><div class="main">
 <div class="hero"><h1>What should we <em>get done?</em></h1>
 <p class="sub">${!login ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.' : connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
 <div class="pickers">
 <div class="pick"><label for="ai">AI</label><select id="ai">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>
 <div id="byo" hidden><input id="byomodel" type="text" placeholder="Model name (blank: Claude default)" aria-label="Model name" autocomplete="off"><input id="byokey" type="password" placeholder="Your API key (used for this task only, never saved)" aria-label="API key" autocomplete="off"></div></div>
-<details class="pick"><summary id="sbsum">Fleet (auto: cheapest first)</summary><div class="menu"><label><input type="checkbox" id="auto" checked> <b>Fleet</b> (auto: cheapest first, falls back)</label><hr>${Object.entries(PROVIDER_NAMES).map(([id, name]) => (connected.includes(id) ? `<label><input type="checkbox" name="sb" value="${esc(id)}" data-label="${esc(name)}"> ${esc(name)}</label>` : `<label class="off">${esc(name)} · ${PROVIDER_CARDS.some((c) => c.id === id) ? '<a href="#setup">connect</a>' : '<a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">connect</a>'}</label>`)).join('')}</div></details>
+<details class="pick"><summary id="sbsum">Fleet (auto: cheapest first)</summary><div class="menu"><label><input type="checkbox" id="auto" checked> <b>Fleet</b> (auto: cheapest first, falls back)</label><hr>${Object.entries(PROVIDER_NAMES).map(([id, name]) => (connected.includes(id) ? `<label><input type="checkbox" name="sb" value="${esc(id)}" data-label="${esc(name)}"> ${esc(name)}</label>` : `<label class="off">${esc(name)} · ${PROVIDER_CARDS.some((c) => c.id === id) ? (login ? '<a href="#setup">connect</a>' : '<a href="/auth/start">sign in to connect</a>') : '<a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">connect</a>'}</label>`)).join('')}</div></details>
 </div></div>
 <div class="cols">
 <div class="panel"><h2>Chat</h2><div class="ideas" id="ideas">${IDEAS.map((i, n) => `<button type="button" data-n="0${n + 1} / TRY">${esc(i)}</button>`).join('')}</div><div id="talk" aria-live="polite"></div>
@@ -168,8 +293,10 @@ export function appPage({ login, connected = [] }) {
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 </div>
 <div id="comp" hidden><h3>Computer</h3><div id="screen" aria-label="What the computer did"></div></div>
-<form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form>
-</div>`,
+<div class="dock"><div class="tools"><button type="button" disabled title="Coming soon">Voice · soon</button><button type="button" disabled title="Coming soon">Video · soon</button></div>
+<form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form></div>
+</div></div></div>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};` + APP_JS,
+    'app',
   );
 }

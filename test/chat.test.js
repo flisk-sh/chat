@@ -276,3 +276,24 @@ describe('service binding to inference', () => {
     expect(r).toEqual({ fleet: { status: 200 }, inference: { status: 401 } });
   });
 });
+
+import { appPage as appPageUi } from '../src/page.js';
+test('app page shows history, key management and coming-soon voice and video', () => {
+  const page = appPageUi({ login: 'ann', connected: ['upstash'] });
+  expect(page).toContain('id="hist"');
+  expect(page).toContain('fleet.flisk.si/console?section=providers');
+  expect(page).toContain('Voice talk');
+  expect(page).toContain('Video generation');
+  expect(page).toContain('Upstash Box');
+});
+
+test('app page asks the six Zachman questions as squares before the first task', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  for (const q of ['What is it?', 'Who is it for?', 'Why do you need it?', 'Where should it live?', 'When do you need it?', 'How should it feel?']) expect(page).toContain(q);
+  expect(page).toContain('Skip, just run it');
+});
+
+test('signed-out visitors are sent to sign-in from the computers menu', () => {
+  expect(appPageUi({ login: null, connected: [] })).toContain('href="/auth/start">sign in to connect</a>');
+  expect(appPageUi({ login: 'ann', connected: [] })).toContain('href="#setup">connect</a>');
+});
