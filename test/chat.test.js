@@ -646,3 +646,14 @@ describe('step budget', () => {
     expect(sys).toContain('After at most 15 actions');
   });
 });
+
+test('localhost links in an answer get a note that the computer has stopped', async () => {
+  const { noteDeadLinks } = await import('../src/loop.js');
+  expect(noteDeadLinks('Open http://localhost:4000', true)).toContain('has stopped now');
+  expect(noteDeadLinks('Open http://localhost:4000', false)).toBe('Open http://localhost:4000');
+  expect(noteDeadLinks('Your page: https://chat.flisk.si/s/abc', true)).toBe('Your page: https://chat.flisk.si/s/abc');
+  const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
+  const replies = ['{"run":"echo"}', '{"say":"Storefront: http://localhost:5173"}'];
+  const r = await runTask2({ task: 'x', model: async () => ({ text: replies.shift() }), computer });
+  expect(r.answer).toContain('will not open for you');
+});
