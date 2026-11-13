@@ -87,7 +87,7 @@ const SECURITY = {
   'x-frame-options': 'DENY',
   'referrer-policy': 'same-origin',
   'strict-transport-security': 'max-age=31536000',
-  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://openrouter.ai/api/v1/models; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
+  'content-security-policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://openrouter.ai/api/v1/models https://openrouter.ai/api/v1/auth/keys; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'",
 };
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -115,8 +115,10 @@ export async function overDailyLimit(login, { cache = globalThis.caches?.default
 }
 
 // The free model's last fallback (Workers AI on our account) has one daily cap for everyone, so chat keeps to its share.
-export const freeModelOpts = (env) => ({
-  overLimit: () => overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
+// Each person may use only a share of it, so one busy visitor cannot use up the day for everybody.
+export const WORKERS_AI_PER_PERSON = 15;
+export const freeModelOpts = (env, login = '') => ({
+  overLimit: async () => (login && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_PERSON, scope: 'workers-ai-person' }))) || overDailyLimit('everyone', { cache: env.LIMIT_CACHE, limit: WORKERS_AI_PER_DAY, scope: 'workers-ai-fallback' }),
   log: (tried) => console.log('free model fallbacks all failed', JSON.stringify(tried).slice(0, 600)),
 });
 
@@ -352,8 +354,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
-      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: TALK_PER_DAY, scope: 'talk-limit' }))) return json(429, { error: `That's today's ${TALK_PER_DAY} free voice replies. Come back tomorrow, or pick your own AI key.` });
-      const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env))(messages);
+      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: TALK_PER_DAY, scope: 'talk-limit' }))) return json(429, { error: `That's your ${TALK_PER_DAY} free voice replies for today. Keep going free with your own OpenRouter account in the model menu, or come back tomorrow.` });
+      const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env, login))(messages);
       if (r.error) return json(502, { error: r.error, kind: r.kind });
       const text = spokenReply(r.text);
       return text ? json(200, { heard, lang, text }) : json(502, { error: 'the model sent an empty answer' });
@@ -377,13 +379,13 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE }))) {
         const now = new Date();
         const resetsIn = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
-        return json(429, { error: `You've used today's ${TASKS_PER_DAY} free tasks`, limit: TASKS_PER_DAY, resetsIn });
+        return json(429, { error: `That's your ${TASKS_PER_DAY} free tasks for today`, limit: TASKS_PER_DAY, resetsIn });
       }
       const { readable, writable } = new TransformStream();
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, login)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

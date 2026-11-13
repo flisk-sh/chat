@@ -128,6 +128,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .sep{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--soft);letter-spacing:.02em}.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--line)}
 .result{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);padding:12px 14px}
 .result .rt{flex:1;min-width:0}.result b{display:block;font-weight:500}.result .url{font-size:13px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.byor{display:block;margin:6px 0 2px;padding:0;border:0;background:none;color:var(--ink);text-decoration:underline;font-size:13px;cursor:pointer}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--radius);padding:7px 14px;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--ink)}.btn.go{background:var(--green);border-color:var(--green);color:#fff}.btn.go:hover{background:var(--green-d)}
 .btn[disabled]{opacity:.55;cursor:wait}
@@ -214,6 +215,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .bysug li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;cursor:pointer;font-size:13px}.bysug li:hover{background:var(--bg)}.bysug li b{font:13px var(--mono);font-weight:500;color:var(--ink)}.bysug li span{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bysug li.none{cursor:default;color:var(--dim)}.bysug .fr{font-style:normal;font-size:11px;color:var(--green);border:1px solid currentColor;border-radius:var(--radius);padding:0 5px;margin-left:auto}
 .bywarn{font-size:12px;color:var(--red);margin-top:4px}.bywarn[hidden]{display:none}
 #byo .byacts{display:flex;gap:8px;flex:none}#byo .byacts button{height:30px;padding:0 12px;line-height:1;display:inline-flex;align-items:center}#byo #bysave{font:12px var(--mono);text-transform:uppercase;background:var(--ink);color:var(--panel);border:1px solid var(--ink);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+.errbox.calm,.errbox.calm .err{border-color:var(--line2);background:var(--panel);color:var(--ink)}.errbox.calm .err{border:0}
 .errbox{border:1px solid #FECDCA;background:#FEF3F2;border-radius:var(--radius);padding:12px 14px}.errbox .err{border:0;padding:0;background:transparent}.errbox .next{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.errbox .next small{color:var(--dim);font-size:12px;width:100%}
 .files{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}.files:empty{display:none}.ufiles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ufiles .fchip{padding:2px 8px}.ufiles img{width:40px;height:40px;object-fit:cover;border-radius:var(--radius)}.blind{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;color:var(--dim);border:1px dashed var(--line2);border-radius:var(--radius);padding:8px 12px;margin:6px 0}.fnote{font-size:12px;color:var(--red);align-self:center}.fchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line2);background:var(--bg);border-radius:var(--radius);padding:2px 4px 2px 8px;font:12px var(--mono)}.fchip button{border:0;background:transparent;cursor:pointer;color:var(--dim);font-size:15px;line-height:1}
 .attach{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);cursor:pointer;color:var(--ink)}.attach:hover{border-color:var(--ink)}
@@ -532,7 +534,7 @@ byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');
 function shownName(){const t=byoModel.value.trim();mpBtn.querySelector('.mpname').textContent=!cur.free&&!cur.model&&t?cur.providerName+' · '+t.split('/').pop():cur.name;}
 function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model||(m.free?'':lsGet('chat_model_'+m.key));byoModel.parentElement.hidden=!!m.model;
   byoKey.value=m.free?'':lsGet('chat_key_'+m.key);byWarn.hidden=true;fillSugg(m.key==='openrouter'&&orIds.length?orIds:SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
-  $('byokeylabel').textContent='Your '+m.providerName+' API key';
+  $('byokeylabel').textContent='Your '+m.providerName+' API key';$('byor').hidden=m.key!=='openrouter';
   mpBtn.querySelector('.mpname').textContent=m.name;shownName();mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
@@ -792,7 +794,7 @@ async function run(task){
 }
 // An error you can act on: the real reason, then the buttons for what usually fixes it.
 function errCard(turn,msg,kind,task){
-  const c=node('div','errbox');c.appendChild(node('div','err',msg));const n=node('div','next');n.appendChild(node('small','','What to do next'));
+  const c=node('div',kind==='busy'?'errbox calm':'errbox');c.appendChild(node('div','err',msg));const n=node('div','next');n.appendChild(node('small','','What to do next'));
   const btn=(t,f,primary)=>{const b=node('button','btn'+(primary?' go':''),t);b.type='button';b.onclick=f;n.appendChild(b);};
   // Deferred: this click also reaches the document handler that closes the picker on any outside click, so opening at once would close it again.
   const openAi=(focusKey)=>setTimeout(()=>{openPop();const p=MODELS.find(x=>!x.free&&x.key===aiSel.value)||MODELS.find(x=>!x.free);if(p&&aiSel.value==='wolf')pick(p);if(!byo.hidden)(focusKey?byoKey:byoModel).focus();},0);
@@ -803,9 +805,33 @@ function errCard(turn,msg,kind,task){
   else if(kind==='model'){btn('Choose another model',()=>openAi(false),true);wolf(()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
   else if(kind==='limit'){wolf(()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});btn('Change provider',()=>openAi(true),true);}
   else if(kind==='computer'){btn('Connect a computer',()=>{pending=task;setup.hidden=false;setup.scrollIntoView({block:'start'});},true);btn('Try again',retry);}
+  else if(kind==='busy'){btn('Try again',retry,true);btn(orLabel(),()=>orGo(task));n.appendChild(discord());}
   else{btn('Try again',retry,true);btn('Change model or provider',()=>setTimeout(openPop,0));}
   c.appendChild(n);turn.appendChild(c);down();
 }
+// "Log in with OpenRouter": the visitor signs in to their own free OpenRouter account (PKCE, no secret of ours) and the key
+// comes back to this browser only, encrypted in the vault like a pasted key. Their free models then run on their own free
+// daily allowance, not on the shared one. https://openrouter.ai/docs/use-cases/oauth-pkce
+const OR_FREE=['google/gemma-4-31b-it:free','google/gemma-4-26b-a4b-it:free','nvidia/nemotron-3.5-lightning:free','nvidia/nemotron-3-ultra-550b-a55b:free'];
+const b64u=(u)=>btoa(String.fromCharCode(...new Uint8Array(u))).replace(/[+]/g,'-').replace(/[/]/g,'_').replace(/=+$/,'');
+const orLabel=()=>lsGet('chat_key_openrouter')?'Keep going free on my OpenRouter':'Keep going free with OpenRouter';
+const discord=()=>{const a=node('a','btn','Join our Discord');a.href='https://discord.gg/qMu5Xn8Kaq';a.target='_blank';a.rel='noopener';return a;};
+async function orFreeModel(){await loadOr();const id=OR_FREE.find(x=>orIds.indexOf(x)>=0)||orIds.find(x=>/:free$/.test(x)&&!/vl|omni|code/i.test(x))||OR_FREE[0];
+  const m=OR.find(x=>x.id==='or:'+id)||orModel(id,'',0,0);pick(m);return m;}
+async function orGo(task){
+  if(lsGet('chat_key_openrouter')){await orFreeModel();if(task){box.value=task;fit();dropLimit();run(task);}return;}
+  const v=b64u(crypto.getRandomValues(new Uint8Array(32)));const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+  try{sessionStorage.setItem('chat_or_v',v);sessionStorage.setItem('chat_or_task',task||box.value||'');}catch(e){}
+  location.href='https://openrouter.ai/auth?callback_url='+encodeURIComponent(location.origin+'/')+'&code_challenge='+ch+'&code_challenge_method=S256';}
+$('byor').onclick=()=>orGo('');
+// Back from OpenRouter with ?code=: swap it for this person's key, keep it in this browser only, pick a free model.
+(async()=>{const q=new URLSearchParams(location.search),code=q.get('code');let v='',t='';try{v=sessionStorage.getItem('chat_or_v')||'';t=sessionStorage.getItem('chat_or_task')||'';}catch(e){}
+  if(!code||!v)return;window.history.replaceState(null,'',location.pathname);try{sessionStorage.removeItem('chat_or_v');sessionStorage.removeItem('chat_or_task');}catch(e){}
+  try{const r=await fetch('https://openrouter.ai/api/v1/auth/keys',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,code_verifier:v,code_challenge_method:'S256'})});const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.key)throw new Error((j.error&&j.error.message)||'OpenRouter did not send a key');
+    await vaultReady;lsSet('chat_key_openrouter',j.key);const m=await orFreeModel();
+    if(t){box.value=t;fit();}const ok=node('div','limit');ok.innerHTML='<div style="flex:1"><b></b><p></p></div>';ok.querySelector('b').textContent='Connected to your OpenRouter';ok.querySelector('p').textContent='Free tasks now run on '+m.name+' with your own free OpenRouter allowance. The key stays encrypted in this browser only.'+(t?' Your task is back in the box: press Run.':'');chatting(true);add(ok);
+  }catch(e){const er=node('div','errbox');er.appendChild(node('div','err','Could not connect OpenRouter: '+String(e.message||e).slice(0,160)+'. Try again, or paste a key from openrouter.ai/keys.'));chatting(true);add(er);}})();
 // The free model's daily cap: say when it comes back and offer the way round it, and keep the task.
 // The limit card said the task was back in the box; once it is sent again, drop the card and the old copy of the task above it.
 function dropLimit(){const t=document.querySelector('.turn[data-limit]');if(!t)return;const u=t.previousElementSibling;if(u&&u.classList.contains('u'))u.remove();t.remove();}
@@ -814,11 +840,12 @@ function limitCard(turn,task,b){
   const ms=Number(b.resetsIn)||0,h=Math.floor(ms/3600000),m=Math.round((ms%3600000)/60000),n=b.limit||20;
   const c=node('div','limit');c.innerHTML='<div class="ic"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 2h8M5 16h8M6 2c0 4 6 4 6 7s-6 3-6 7M12 2c0 4-6 4-6 7s6 3 6 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><div style="flex:1;min-width:0"><b></b><p></p><div class="acts"></div></div><div class="ring"></div>';
   c.querySelector('b').textContent=b.error||"You've used today's free tasks";
-  c.querySelector('p').textContent='They come back in '+(h?h+' h ':'')+m+' min. Your task is back in the box: pick a model with your own key and it runs right away.';
+  c.querySelector('p').textContent='Keep going free: log in with OpenRouter (a free account, one click) and your task runs right away on your own free share. Or they come back in '+(h?h+' h ':'')+m+' min. Your task is back in the box.';
   c.querySelector('.ring').textContent=n+'/'+n;
-  const k=node('button','btn go','Use my API key');k.type='button';k.onclick=(e)=>{e.stopPropagation();openPop();const p=MODELS.find(x=>!x.free);if(p){railOn=p.provider;drawRail();drawList();}};
+  const fr=node('button','btn go',orLabel());fr.type='button';fr.onclick=()=>orGo(task);
+  const k=node('button','btn','Use my API key');k.type='button';k.onclick=(e)=>{e.stopPropagation();openPop();const p=MODELS.find(x=>!x.free);if(p){railOn=p.provider;drawRail();drawList();}};
   const cp=node('button','btn','Copy my task');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(task).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy my task',1500);});};
-  c.querySelector('.acts').append(k,cp);turn.setAttribute('data-limit','1');turn.appendChild(c);box.value=task;fit();down();
+  c.querySelector('.acts').append(fr,k,cp,discord());turn.setAttribute('data-limit','1');turn.appendChild(c);box.value=task;fit();down();
 }
 // Zachman questions as a tree of squares: hover (or tap) one to choose it and see its smaller squares; the next
 // question opens below, until all six are answered. "Other…" takes a typed answer.
@@ -929,7 +956,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
-<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div><label class="byrev"><input type="checkbox" id="byrev"> Also use this AI for PR reviews (the key is then stored encrypted on our server; change it in Settings)</label></div></div></div></div>
+<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><button type="button" id="byor" class="byor" hidden>No key? Log in with OpenRouter, free</button><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div><label class="byrev"><input type="checkbox" id="byrev"> Also use this AI for PR reviews (the key is then stored encrypted on our server; change it in Settings)</label></div></div></div></div>
 <details class="pick"><summary class="chip" title="Computers" aria-label="Computers">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
 <button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
 <button type="button" id="voice" class="chip ico" aria-pressed="false" title="Read answers aloud" aria-label="Read answers aloud"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg></button>

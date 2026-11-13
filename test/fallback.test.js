@@ -88,3 +88,48 @@ test('the OpenRouter list keeps only live free chat models, ours first', async (
   const ids = await freeOpenRouterModels(async () => catalog());
   expect(ids).toEqual(['google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-lightning:free']);
 });
+
+// "Log in with OpenRouter": the person's own key on a free model.
+const own = (model = 'google/gemma-4-31b-it:free') => ({ ai: 'openrouter', free: false, url: OPENROUTER_URL, key: 'their-key', model });
+
+test('own OpenRouter free model answers with the person\'s key, not ours', async () => {
+  const w = world({ or: { 'google/gemma-4-31b-it:free': () => answer('mine') } });
+  expect((await modelFrom(w.env, w.fetchImpl, own())(msgs)).text).toBe('mine');
+  expect(w.calls.map((c) => c.auth)).toEqual(['Bearer their-key']);
+});
+
+test('own free model busy: another free model is tried with the same key', async () => {
+  const w = world({ or: { 'nvidia/nemotron-3.5-lightning:free': () => answer('other') } });
+  const r = await modelFrom(w.env, w.fetchImpl, own())(msgs);
+  expect(r.by).toBe('nvidia/nemotron-3.5-lightning:free');
+  expect(w.calls.every((c) => c.auth === 'Bearer their-key')).toBe(true);
+});
+
+test('own free allowance used up: stop at once, no more tries', async () => {
+  const w = world({ or: { 'google/gemma-4-31b-it:free': () => Response.json({ error: { message: 'Rate limit exceeded: free-models-per-day', code: 429 } }, { status: 429 }) } });
+  const r = await modelFrom(w.env, w.fetchImpl, own())(msgs);
+  expect(r.kind).toBe('limit');
+  expect(w.calls.length).toBe(1);
+});
+
+test('a paid own model never falls back', async () => {
+  const w = world();
+  const r = await modelFrom(w.env, w.fetchImpl, own('paid/model'))(msgs);
+  expect(r.error).toBeTruthy();
+  expect(w.calls.length).toBe(1);
+});
+
+test('the busy message offers the free OpenRouter way, never budget words', () => {
+  expect(FREE_BUSY).toMatch(/OpenRouter/);
+  expect(FREE_BUSY).not.toMatch(/credit|budget|UTC|rate/i);
+});
+
+test('each person gets only a share of the Workers AI fallback', async () => {
+  const { freeModelOpts, WORKERS_AI_PER_PERSON } = await import('../src/index.js');
+  const store = new Map();
+  const cache = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => { store.set(u, await r.text()); } };
+  const a = freeModelOpts({ LIMIT_CACHE: cache }, 'alice');
+  for (let i = 0; i < WORKERS_AI_PER_PERSON; i++) expect(await a.overLimit()).toBe(false);
+  expect(await a.overLimit()).toBe(true);
+  expect(await freeModelOpts({ LIMIT_CACHE: cache }, 'bob').overLimit()).toBe(false);
+});
