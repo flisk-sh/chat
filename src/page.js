@@ -75,7 +75,7 @@ const IDEAS = [
 ];
 
 const APP_JS = `
-const talk=document.getElementById('talk'),screen=document.getElementById('screen'),form=document.getElementById('ask'),box=document.getElementById('task'),go=document.getElementById('go'),setup=document.getElementById('setup');
+const talk=document.getElementById('talk'),screen=document.getElementById('screen'),form=document.getElementById('ask'),box=document.getElementById('task'),go=document.getElementById('go'),setup=document.getElementById('setup'),signin=document.getElementById('signin');
 const history=[];
 const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
 const say=(cls,text)=>{const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
@@ -104,6 +104,7 @@ async function run(task){
   go.disabled=true;const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
   try{
     const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
+    if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');go.disabled=false;return;}
     if(res.status===409){wait.remove();pending=task;setup.hidden=false;el('a','I need a computer for that. Connect one of your sandbox accounts below (once).');go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));throw new Error(b.error||('error '+res.status));}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
@@ -127,6 +128,7 @@ async function run(task){
   go.disabled=false;box.focus();
 }
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);history.push({role:'user',content:task});run(task);};
+if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
 
 export function appPage({ login, connected = [] }) {
@@ -135,9 +137,9 @@ export function appPage({ login, connected = [] }) {
   ).join('');
   return shell(
     'Flisk Chat',
-    `<header><b>chat<i>.</i>flisk</b><span class="m">@${esc(login)} · <a href="/auth/signout">sign out</a></span></header>
+    `<header><b>chat<i>.</i>flisk</b>${login ? `<span class="m">@${esc(login)} · <a href="/auth/signout">sign out</a></span>` : '<a class="m" href="/auth/start">Sign in with GitHub</a>'}</header>
 <h1>Ask. It gets a computer.</h1>
-<p class="sub">${connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
+<p class="sub">${!login ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.' : connected.length ? `Connected computers: ${connected.map((id) => esc(PROVIDER_NAMES[id] || id)).join(', ')}. Fleet picks the cheapest one, or tick the ones you want.` : 'No computer connected yet: the first task will ask you for one key.'}</p>
 <div class="pickers">
 <div class="pick"><label for="ai">AI</label><select id="ai">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>
 <div id="byo" hidden><input id="byomodel" type="text" placeholder="Model name (blank: Claude default)" aria-label="Model name" autocomplete="off"><input id="byokey" type="password" placeholder="Your API key (used for this task only, never saved)" aria-label="API key" autocomplete="off"></div></div>
@@ -146,9 +148,10 @@ export function appPage({ login, connected = [] }) {
 <div class="cols">
 <div class="panel"><h2>Chat</h2><div class="ideas">${IDEAS.map((i) => `<button type="button">${esc(i)}</button>`).join('')}</div><div id="talk" aria-live="polite"></div>
 <div id="setup" ${connected.length ? 'hidden' : 'hidden'}><div class="cards">${cards}</div><p class="note">Your key is stored encrypted and is only used to start your computers. Free credit comes from the provider, not from us.</p></div>
+<div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 <form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form></div>
 <div class="panel"><h2>Computer</h2><div id="screen" aria-label="What the computer did"></div></div>
 </div>`,
-    APP_JS,
+    `window.__SIGNED__=${login ? 'true' : 'false'};` + APP_JS,
   );
 }
