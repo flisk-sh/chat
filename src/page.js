@@ -100,14 +100,16 @@ form.ask{border-top:0}
 @keyframes rowin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.trow,.sq{animation:none;transition:none}}
 .trow .q{width:120px;flex:none;font:12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);padding-top:12px}
-.sq{flex:1;border:0;border-radius:0;padding:12px;font:14px/1.3 var(--sans);cursor:pointer;min-height:50px;text-align:left;transition:flex .25s,transform .25s,box-shadow .2s}
-.sq:hover,.sq:focus-visible,.sq.on{flex:1.8;box-shadow:inset 0 0 0 3px var(--ink);outline:0}
+.sq{flex:0 0 112px;width:112px;height:84px;border:0;border-radius:0;padding:10px;font:500 13px/1.25 var(--sans);cursor:pointer;text-align:left;display:flex;align-items:flex-end;transition:transform .18s ease-out,box-shadow .18s}
+.sq:hover,.sq:focus-visible{transform:translateY(-3px);box-shadow:4px 4px 0 var(--ink);outline:0}
+.sq.on{box-shadow:inset 0 0 0 3px var(--ink)}
+.trow .sq:not(.on){opacity:.95}.trow:has(.sq.on) .sq:not(.on){opacity:.55}.trow:has(.sq.on) .sq:not(.on):hover{opacity:1}
 .p0{background:#D9622B;color:#171715}.p1{background:#E8C21A;color:#171715}.p2{background:#3FD3D6;color:#171715}.p3{background:#DB7BB2;color:#171715}
 .zchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .zchip{font:12px var(--mono);text-transform:uppercase;border-radius:0;padding:5px 10px;background:var(--card);border:1px solid rgba(23,23,21,.35);color:var(--ink)}
 .zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
 .zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
-@media (max-width:640px){.trow{flex-wrap:wrap}.trow{margin-left:0!important}.trow .q{width:100%;padding:0}}
+@media (max-width:640px){.trow{flex-wrap:wrap}.trow{margin-left:0!important}.trow .q{width:100%;padding:0}.sq{flex:1 1 0;width:auto;height:72px}}
 /* particle.ai look */
 :root{--paper:#EFEBDD;--card:#F8F5EA;--green:#C4501C;--yellow:#E8C21A;--orange:#D9622B;--cyan:#3FD3D6;--pink:#DB7BB2}
 h1 em{color:var(--orange)}
@@ -136,6 +138,7 @@ form.ask .btn{border-width:0 0 0 1px;font-size:13px}
 .comps .on::before{color:var(--orange)}
 :focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 input[type=checkbox]{accent-color:var(--ink)}
+.u,.a,.err,.zchip,#hist li button{overflow-wrap:anywhere;word-break:break-word}.zchip{max-width:100%}#talk,.main{min-width:0}
 details.pick .menu{max-height:260px;box-shadow:6px 6px 0 var(--ink)}
 form.ask textarea:focus-visible{outline:0}.dock:focus-within{box-shadow:0 0 0 3px var(--orange)}
 @media (max-width:640px){body:not(.chatting) .dock{margin:0 20px 20px}}
@@ -199,7 +202,7 @@ document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
   if(pending){const t=pending;pending=null;run(t);}
 });
 async function run(task){
-  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
+  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');const wait=el('a','Working…');screen.textContent='';comp.hidden=true;let answer=null;
   try{
     const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
     if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');signin.scrollIntoView({block:'center'});go.disabled=false;return;}
@@ -252,7 +255,7 @@ function ask6(task){
   draw();
 }
 let lastSend=0;
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';if(treeAnswer){treeAnswer(task);return;}el('u',task);if(!history.length&&/\\b(website|web page|webpage|landing|site|page|app|shop|store|dashboard|tool|build|make|create|design)\\b/i.test(task)&&!/^\\s*(what|who|why|when|where|how|is|are|can|does|fetch|check|tell)\\b/i.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 const pk=document.querySelector("details.pick");document.addEventListener("click",e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;});document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pk&&pk.open){pk.open=false;pk.querySelector("summary").focus();}});
 try{if(matchMedia("(pointer:fine)").matches)box.focus();}catch(e){}
