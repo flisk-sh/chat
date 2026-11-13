@@ -185,7 +185,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 @keyframes oring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}@keyframes othink{50%{transform:scale(.88)}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.12)}}
 .ostate{margin:0;font-size:15px;color:#cfe0d3;min-height:22px}.ocap{max-width:600px;width:100%;text-align:center;min-height:90px}
 .oyou{margin:0 0 10px;color:#9fb0a3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
-.ohear{margin-top:14px;padding:10px 18px;border-radius:999px;border:1px solid #9fb0a3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
+.ohear{margin-top:14px;padding:10px 18px;border-radius:var(--radius);border:1px solid #9fb0a3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
 .oend{width:58px;height:58px;border-radius:50%;border:0;background:#c0392b;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.oend:hover{background:#a93226}
 @media (prefers-reduced-motion:reduce){.oracle .ocore,.oracle .oring{animation:none!important}}
 .chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b;animation:micp 1.2s ease-in-out infinite}#mic.busy{opacity:.6;cursor:progress}@keyframes micp{50%{box-shadow:0 0 0 5px rgba(192,57,43,.25)}}
