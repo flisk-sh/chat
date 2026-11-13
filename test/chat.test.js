@@ -286,3 +286,9 @@ test('app page shows history, key management and coming-soon voice and video', (
   expect(page).toContain('Video generation');
   expect(page).toContain('Upstash Box');
 });
+
+test('app page asks the six Zachman questions as squares before the first task', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  for (const q of ['What is it?', 'Who is it for?', 'Why do you need it?', 'Where should it live?', 'When do you need it?', 'How should it feel?']) expect(page).toContain(q);
+  expect(page).toContain('Skip, just run it');
+});

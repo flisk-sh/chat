@@ -91,6 +91,17 @@ form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form
 @media (max-width:640px){.tools{padding:8px 20px 0}}
 .tools button{font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;border:1px dashed var(--dim);background:none;color:var(--dim);padding:6px 9px;cursor:not-allowed}
 form.ask{border-top:0}
+.tree{display:flex;flex-direction:column;gap:8px;max-width:100%}
+.trow{display:flex;gap:8px;align-items:stretch}
+.trow .q{width:120px;flex:none;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--dim);padding-top:12px}
+.sq{flex:1;border:0;border-radius:0;padding:12px;font:14px/1.3 var(--sans);cursor:pointer;min-height:50px;text-align:left;transition:flex .25s,transform .25s,box-shadow .2s}
+.sq:hover,.sq:focus-visible,.sq.on{flex:1.8;box-shadow:inset 0 0 0 3px var(--ink);outline:0}
+.p0{background:#D9622B;color:#171715}.p1{background:#E8C21A;color:#171715}.p2{background:#3FD3D6;color:#171715}.p3{background:#DB7BB2;color:#171715}
+.zchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.zchip{font:11px var(--mono);text-transform:uppercase;border-radius:0;padding:4px 10px;background:var(--card);border:1px solid rgba(23,23,21,.15);color:var(--dim)}
+.zchip.ok{background:var(--ink);border-color:var(--ink);color:#E8C21A}
+.zskip{font:11px var(--mono);text-transform:uppercase;background:#E8C21A;border:0;padding:6px 12px;color:var(--ink);cursor:pointer}
+@media (max-width:640px){.trow{flex-wrap:wrap}.trow .q{width:100%;padding:0}}
 `;
 
 const shell = (title, body, script = '', cls = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"><style>${CSS}</style></head><body><div class="frame ${cls}">${body}</div>${script ? `<script>${script}</script>` : ''}</body></html>`;
@@ -177,7 +188,29 @@ async function run(task){
   if(answer!==null){linkify(wait,answer);history.push({role:'assistant',content:answer});saveChat();}
   go.disabled=false;box.focus();
 }
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);history.push({role:'user',content:task});run(task);};
+// Zachman questions as a tree of squares: hover (or tap) one, the next row opens, until all six are answered.
+const ZQ=[['What','What is it?',['A website','A small app','An answer or check']],['Who','Who is it for?',['Customers','My team','Just me']],['Why','Why do you need it?',['Sell more','Look professional','Try an idea']],['Where','Where should it live?',['A live link','Code I can keep','Only this chat']],['When','When do you need it?',['Right now','Polished, no rush','A quick draft']],['How','How should it feel?',['Bold','Calm','Playful']]];
+function ask6(task){
+  go.disabled=true;document.getElementById('ideas').classList.add('gone');
+  const wrap=document.createElement('div');wrap.className='tree';talk.appendChild(wrap);
+  const rows=document.createElement('div');rows.className='tree';const chips=document.createElement('div');chips.className='zchips';wrap.append(rows,chips);
+  let pick=[],sent=false;
+  const finish=()=>{if(sent)return;sent=true;wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
+    const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+p).join('; ')+'.':task;
+    history.push({role:'user',content:full});run(full);};
+  const draw=()=>{rows.textContent='';
+    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className='trow';row.style.marginLeft=(i*14)+'px';
+      const q=document.createElement('div');q.className='q';q.textContent=ZQ[i][1];row.appendChild(q);
+      ZQ[i][2].forEach((t,k)=>{const s=document.createElement('button');s.type='button';s.className='sq p'+((i+k)%4)+(pick[i]===t?' on':'');s.textContent=t;
+        const choose=()=>{if(sent||pick[i]===t)return;pick=pick.slice(0,i);pick[i]=t;draw();};
+        s.onmouseenter=choose;s.onfocus=choose;s.onclick=()=>{choose();if(pick.length===ZQ.length)finish();};row.appendChild(s);});
+      rows.appendChild(row);}
+    chips.textContent='';ZQ.forEach((z,i)=>{const c=document.createElement('span');c.className='zchip'+(pick[i]?' ok':'');c.textContent=z[0]+(pick[i]?': '+pick[i]:'');chips.appendChild(c);});
+    const sk=document.createElement('button');sk.type='button';sk.className='zskip';sk.textContent=pick.length===ZQ.length?'Build it >>>':'Skip, just run it';sk.onclick=finish;chips.appendChild(sk);
+    talk.scrollTop=talk.scrollHeight;};
+  draw();
+}
+form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
