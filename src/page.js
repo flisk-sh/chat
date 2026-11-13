@@ -59,7 +59,10 @@ details.pick .menu .off{color:var(--dim)}details.pick .menu hr{border:0;border-t
 #comp h3{margin:0;padding:8px 12px;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);border-bottom:1px solid var(--ink);background:var(--card);font-weight:400}
 #screen{font:13px/1.55 var(--mono);background:var(--night);color:#e8e8e8;padding:12px;min-height:120px;max-height:36vh;overflow:auto;white-space:pre-wrap;word-break:break-word}
 #screen .c{color:var(--glow)}#screen .d{color:#8b8f98}#screen .x{color:#ff7b72}
-form.ask{display:flex;gap:0;margin-top:auto;position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--ink)}
+#talk>*{scroll-margin-bottom:140px}
+.dock{position:sticky;bottom:0;margin-top:auto;z-index:4}
+.chatting .hero h1,.chatting .hero .sub{display:none}.chatting .hero{padding-top:16px;padding-bottom:16px}
+form.ask{display:flex;gap:0;background:var(--card);border-top:1px solid var(--ink)}
 form.ask textarea{flex:1;min-height:64px;max-height:160px;font:15px var(--sans);padding:18px 40px;border:0;outline:0;background:transparent;color:inherit;resize:none}
 @media (max-width:640px){form.ask textarea{padding:16px 20px}}
 form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form.ask .btn::after{content:' >>>'}
@@ -70,7 +73,7 @@ form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form
 #signin{margin:0 40px 20px}
 .frame.app{max-width:1240px}
 .shell{display:grid;grid-template-columns:260px minmax(0,1fr);flex:1;min-height:0}
-@media (max-width:860px){.shell{grid-template-columns:1fr}.rail{border-right:0!important;border-bottom:1px solid var(--ink)}}
+@media (max-width:860px){.shell{grid-template-columns:1fr}.rail{order:2}.rail{border-right:0!important;border-bottom:1px solid var(--ink)}}
 .rail{border-right:1px solid var(--ink);display:flex;flex-direction:column}
 .rail section{border-bottom:1px solid var(--ink);padding:14px 16px}
 .rail h4{margin:0 0 10px;font:11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:400;display:flex;justify-content:space-between}
@@ -128,7 +131,7 @@ const IDEAS = [
 const APP_JS = `
 const talk=document.getElementById('talk'),screen=document.getElementById('screen'),form=document.getElementById('ask'),box=document.getElementById('task'),go=document.getElementById('go'),setup=document.getElementById('setup'),signin=document.getElementById('signin');
 let history=[];const comp=document.getElementById('comp'),hist=document.getElementById('hist');
-const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;if(cls==='a')linkify(d,text);else d.textContent=text;talk.appendChild(d);talk.scrollTop=talk.scrollHeight;return d;};
+const el=(cls,text)=>{const d=document.createElement('div');d.className=cls;if(cls==='a')linkify(d,text);else d.textContent=text;talk.appendChild(d);d.scrollIntoView({block:"nearest"});return d;};
 // Past chats live in this browser only (localStorage), never on our server.
 const KEY='chat_history_v1';let chatId=null;
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
@@ -136,8 +139,8 @@ const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30
 const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.slice(0,80),msgs:history});saveAll(all);drawHist();};
 function drawHist(){const all=loadAll();hist.textContent='';if(!all.length){const li=document.createElement('li');li.className='none';li.textContent='No chats yet. They stay in this browser.';hist.appendChild(li);return;}
   all.forEach(c=>{const li=document.createElement('li'),b=document.createElement('button'),x=document.createElement('button');b.textContent=c.title;b.title=c.title;b.onclick=()=>openChat(c);x.className='x';x.textContent='×';x.title='Delete this chat';x.setAttribute('aria-label','Delete chat');x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
-function newChat(){history=[];chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');box.focus();}
-function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();document.getElementById('ideas').classList.add('gone');history.forEach(m=>el(m.role==='user'?'u':'a',m.content));}
+function newChat(){history=[];chatId=null;talk.textContent='';screen.textContent='';comp.hidden=true;document.getElementById('ideas').classList.remove('gone');document.body.classList.remove('chatting');box.focus();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');history.forEach(m=>el(m.role==='user'?'u':'a',m.content));}
 document.getElementById('newchat').onclick=newChat;
 const say=(cls,text)=>{comp.hidden=false;const s=document.createElement('span');if(cls)s.className=cls;s.textContent=text+'\\n';screen.appendChild(s);screen.scrollTop=screen.scrollHeight;};
 const linkify=(node,text)=>{node.textContent='';text.split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;node.appendChild(a);}else node.appendChild(document.createTextNode(p));});};
@@ -162,10 +165,10 @@ document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
   if(pending){const t=pending;pending=null;run(t);}
 });
 async function run(task){
-  go.disabled=true;document.getElementById('ideas').classList.add('gone');const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
+  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');const wait=el('a','Working…');screen.textContent='';say('d','# new task');let answer=null;
   try{
     const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
-    if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');go.disabled=false;return;}
+    if(res.status===401){wait.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;el('a','To run this I need you signed in with GitHub (one click). Your task is saved.');signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){wait.remove();pending=task;setup.hidden=false;el('a','I need a computer for that. Connect one of your sandbox accounts below (once).');go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));throw new Error(b.error||('error '+res.status));}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
@@ -191,7 +194,7 @@ async function run(task){
 // Zachman questions as a tree of squares: hover (or tap) one, the next row opens, until all six are answered.
 const ZQ=[['What','What is it?',['A website','A small app','An answer or check']],['Who','Who is it for?',['Customers','My team','Just me']],['Why','Why do you need it?',['Sell more','Look professional','Try an idea']],['Where','Where should it live?',['A live link','Code I can keep','Only this chat']],['When','When do you need it?',['Right now','Polished, no rush','A quick draft']],['How','How should it feel?',['Bold','Calm','Playful']]];
 function ask6(task){
-  go.disabled=true;document.getElementById('ideas').classList.add('gone');
+  go.disabled=true;document.getElementById('ideas').classList.add('gone');document.body.classList.add('chatting');
   const wrap=document.createElement('div');wrap.className='tree';talk.appendChild(wrap);
   const rows=document.createElement('div');rows.className='tree';const chips=document.createElement('div');chips.className='zchips';wrap.append(rows,chips);
   let pick=[],sent=false;
@@ -207,7 +210,7 @@ function ask6(task){
       rows.appendChild(row);}
     chips.textContent='';ZQ.forEach((z,i)=>{const c=document.createElement('span');c.className='zchip'+(pick[i]?' ok':'');c.textContent=z[0]+(pick[i]?': '+pick[i]:'');chips.appendChild(c);});
     const sk=document.createElement('button');sk.type='button';sk.className='zskip';sk.textContent=pick.length===ZQ.length?'Build it >>>':'Skip, just run it';sk.onclick=finish;chips.appendChild(sk);
-    talk.scrollTop=talk.scrollHeight;};
+    wrap.scrollIntoView({block:"nearest"});};
   draw();
 }
 form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
@@ -245,8 +248,8 @@ export function appPage({ login, connected = [] }) {
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Nothing else to create: your task is kept and runs right after.</small><div style="margin-top:8px"><a class="btn" href="/auth/start">Sign in with GitHub</a></div></div>
 </div>
 <div id="comp" hidden><h3>Computer</h3><div id="screen" aria-label="What the computer did"></div></div>
-<div class="tools"><button type="button" disabled title="Coming soon">🎙 Voice · soon</button><button type="button" disabled title="Coming soon">🎬 Video · soon</button></div>
-<form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form>
+<div class="dock"><div class="tools"><button type="button" disabled title="Coming soon">🎙 Voice · soon</button><button type="button" disabled title="Coming soon">🎬 Video · soon</button></div>
+<form id="ask" class="ask"><textarea id="task" maxlength="2000" placeholder="What should it do?" aria-label="Task"></textarea><button id="go" class="btn" type="submit">Run</button></form></div>
 </div></div></div>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};` + APP_JS,
     'app',
