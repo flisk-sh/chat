@@ -498,3 +498,7 @@ test('OpenRouter models are real rows in the model list: name, id, price, free b
   expect(page).not.toContain('e.g. particle');
   expect(page).toContain('.bysug{list-style:none;margin:2px 0 0;padding:0;position:static');
 });
+
+test('a free-model error never prints an empty model name', () => {
+  expect(explainModelError({ error: { code: 404, message: 'x' } }, 200, { free: true, model: '' }).error).toContain('Flisk Wolf');
+});
