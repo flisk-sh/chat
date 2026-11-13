@@ -513,7 +513,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
 <section class="sidesec"><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div></section>
-<div class="who">${login ? `<span>@${esc(login)}</span><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
+<div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">PR reviews</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
 <div class="main">
 <div class="top"><button type="button" id="sideopen" class="iconbtn" aria-label="Open the menu"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>${LOGO}</div>
