@@ -402,12 +402,12 @@ const KEY='chat_history_v1';let chatId=null;
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
 const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
 const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.split('\\n')[0].slice(0,80),msgs:history});saveAll(all);drawHist();};
-function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q));hist.textContent='';
+function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q)||(c.msgs||[]).some(m=>String(m.content||'').toLowerCase().includes(q)||(m.files||[]).some(n=>String(n).toLowerCase().includes(q))));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
   all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
 $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
-function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>m.role==='user'?userMsg(m.content):asstMsg(m.content));drawHist();}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
 const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
@@ -668,6 +668,7 @@ const noteIcon=(t)=>/scene|draw/i.test(t)?'image':/voice|record/i.test(t)?'mic':
 async function run(task){
   go.disabled=true;chatting(true);closePop();
   const sendFiles=attached;attached=[];drawFiles();
+  {const lu=history[history.length-1];if(sendFiles.length&&lu&&lu.role==='user')lu.files=sendFiles.map(f=>f.name);}
   if(sendFiles.length){const us=talk.querySelectorAll('.u'),u=us[us.length-1];if(u){const fl=node('div','ufiles');sendFiles.forEach(f=>{const c=node('span','fchip');if(f.b64&&/^image[/]/.test(f.type)){const im=document.createElement('img');im.src='data:'+f.type+';base64,'+f.content;im.alt='';c.appendChild(im);}c.appendChild(node('span','',f.name));fl.appendChild(c);});u.appendChild(fl);}}
   const blind=sendFiles.some(f=>f.b64&&/^image[/]/.test(f.type))&&!canSee();
   const turn=add(node('div','turn')),work=node('div','work'),l=node('span','l'),wt=node('span','',''),ws=node('span','','Thinking');
