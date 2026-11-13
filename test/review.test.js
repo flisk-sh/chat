@@ -152,6 +152,21 @@ describe('saved key', () => {
     expect(await head.text()).toBe('');
     expect((await handle(new Request('https://chat.test/nope', { method: 'HEAD' }), env)).status).toBe(404);
   });
+  test('a bad model name shows the error on the settings page and keeps what was typed; unknown flash text is ignored', async () => {
+    const { env } = await setup();
+    const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
+    const f = new FormData();
+    f.set('ai', 'anthropic'); f.set('model', 'bad model!'); f.set('key', 'sk-12345678');
+    const res = await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: f, headers: { cookie, origin: 'https://chat.test' } }), env);
+    const text = await res.text();
+    expect(res.status).toBe(400);
+    expect(text).toContain('Not saved: the model name may only use');
+    expect(text).toContain('value="bad model!"');
+    expect(text).toContain('<option value="anthropic" selected>');
+    const spoof = await (await handle(new Request('https://chat.test/reviews?ok=%3Cb%3Ex%3C%2Fb%3E', { headers: { cookie } }), env)).text();
+    expect(spoof).not.toContain('Deleted.');
+    expect(spoof).not.toContain('<b>x</b>');
+  });
   test('saving from another site is refused, and signing in is required', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];

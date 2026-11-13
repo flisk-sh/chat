@@ -270,14 +270,14 @@ export const messagePage = (title, text) =>
 export const GITHUB_APP_URL = 'https://github.com/apps/flisk-chat';
 export const KEY_PAGES = { openrouter: ['OpenRouter', 'https://openrouter.ai/keys'], anthropic: ['Claude', 'https://console.anthropic.com/settings/keys'], openai: ['OpenAI', 'https://platform.openai.com/api-keys'] };
 
-export const reviewsPage = ({ login, saved, stored, limit, flash }) =>
+export const reviewsPage = ({ login, saved, stored, limit, flash, error = '', form = {} }) =>
   shell(
     'Settings · chat',
     `<div class="set">
 <nav class="setnav" aria-label="Settings"><div class="brand">${LOGO}</div><a href="/">${icon('chat', 16)}Back to chat</a><a href="#github" class="cur">GitHub reviews</a><a href="#ai">AI for reviews</a><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Computers</a><a href="https://flisk.si" target="_blank" rel="noopener">Flisk</a><div class="who"><span>@${esc(login)}</span><a href="/auth/signout">Sign out</a></div></nav>
 <main class="setmain">
 <h1>Settings</h1>
-${flash ? `<p class="flash" role="status">${flash === 'saved' ? 'Saved. Your next review uses this AI.' : 'Deleted. Reviews use the free Flisk Wolf model again.'}</p>` : ''}
+${error ? `<p class="flash" role="alert" style="background:#FCE8E6;color:var(--red)">Not saved: ${esc(error)}</p>` : flash === 'saved' ? '<p class="flash" role="status">Saved. Your next review uses this AI.</p>' : flash === 'deleted' ? '<p class="flash" role="status">Deleted. Reviews use the free Flisk Wolf model again.</p>' : ''}
 <section id="github" class="setcard"><h2>Pull request reviews</h2>
 <p>Comment <code>@flisk-chat review</code> on a pull request and get one review: a summary, line comments, suggested fixes and a verdict. Only people who can push to the repo can ask.</p>
 <ol class="howto"><li>Install the app on the repos you want reviewed.</li><li>Open a pull request and comment <code>@flisk-chat review</code>.</li><li>Optional: save your own AI below for no daily limit.</li></ol>
@@ -285,9 +285,9 @@ ${flash ? `<p class="flash" role="status">${flash === 'saved' ? 'Saved. Your nex
 <section id="ai" class="setcard"><h2>AI for reviews</h2>
 <p class="cur-ai">${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
 ${stored ? `<form method="post" action="/reviews/save" class="setform">
-<label>AI<select name="ai" id="aisel">${Object.entries(KEY_PAGES).map(([v, [n]]) => `<option value="${v}"${saved?.ai === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+<label>AI<select name="ai" id="aisel">${Object.entries(KEY_PAGES).map(([v, [n]]) => `<option value="${v}"${(form.ai || saved?.ai) === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
 <p class="keylinks">${Object.entries(KEY_PAGES).map(([v, [n, u]]) => `<a class="keylink" href="${u}" target="_blank" rel="noopener" data-for="${v}"${(saved?.ai || 'openrouter') === v ? '' : ' hidden'}>Get your ${n} key</a>`).join('')}</p>
-<label>Model name<input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" value="${esc(saved?.model || '')}"></label>
+<label>Model name<input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" value="${esc(form.model ?? saved?.model ?? '')}"></label>
 <label>API key<input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off"></label>
 <p class="hint">The key is encrypted before it is stored and never shown again.</p>
 <p class="row"><button class="btn go" type="submit">Save for reviews</button></p></form>` : '<p class="hint">Saving a key is not switched on yet.</p>'}
