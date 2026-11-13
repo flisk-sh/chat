@@ -35,7 +35,7 @@ Rules:
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
   2. "write" your code: the API into ~/app/api/src/index.js (keep its port and /health), the page into the website's index.html. For data use SQLite inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'), not a database server.
   3. {"run": "export PATH=$HOME/.local/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
-  4. Check it with curl on the ports from that log (place an order, read it back), then "say" what works, with the commands and their output.
+  4. Check it with curl on the ports from that log (place an order, read it back), then "say" what works, with the commands and their output. The computer stops as soon as you answer, so never tell the user to open a localhost address.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
 ${widgetPrompt()}
@@ -189,6 +189,12 @@ export function cleanFiles(list) {
   });
 }
 
+// Addresses on the task's own computer stop working when it stops at the end of the task: say so under the answer.
+export function noteDeadLinks(text, hadComputer) {
+  if (!hadComputer || !/\b(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?\b/.test(String(text))) return text;
+  return `${text}\n\n(The localhost addresses above were on this task's computer, which has stopped now, so they will not open for you. Ask me to publish the page if you want a link.)`;
+}
+
 export function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
   return history
@@ -257,7 +263,7 @@ export async function runTask({ task, history = [], model, computer, publish, sa
       }
       if (action.type === 'say' || last) {
         // Out of steps with an action still planned: never show that raw JSON as the answer.
-        const text = action.type === 'say' ? action.text : `I ran out of steps (${maxSteps}) before finishing. What I did is in the steps above; the computer is stopped now, so its files are gone. Ask again with a smaller first part${maxSteps < BYO_STEPS ? `, or pick a model with your own key for ${BYO_STEPS} steps` : ''}.`;
+        const text = action.type === 'say' ? noteDeadLinks(action.text, !!podId) : `I ran out of steps (${maxSteps}) before finishing. What I did is in the steps above; the computer is stopped now, so its files are gone. Ask again with a smaller first part${maxSteps < BYO_STEPS ? `, or pick a model with your own key for ${BYO_STEPS} steps` : ''}.`;
         emit({ type: 'answer', text });
         return await finish(text);
       }
