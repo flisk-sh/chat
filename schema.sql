@@ -40,3 +40,15 @@ CREATE TABLE IF NOT EXISTS run_done (
   pod TEXT PRIMARY KEY,
   created TEXT NOT NULL
 );
+
+-- Computers chat started on fleet, so none is left running: deleted when the task ends, a shared app's computer after
+-- 7 days (url is its public link), the oldest shared one over 3 per login, and anything a crashed task left after 2 hours.
+CREATE TABLE IF NOT EXISTS pods (
+  id TEXT PRIMARY KEY,          -- fleet pod id
+  login TEXT NOT NULL,
+  url TEXT,                     -- public link of the running app, when the task shared it
+  created TEXT NOT NULL,
+  until TEXT NOT NULL           -- the hourly cron deletes the computer after this
+);
+CREATE INDEX IF NOT EXISTS pods_until ON pods (until);
+CREATE INDEX IF NOT EXISTS pods_login ON pods (login, created);

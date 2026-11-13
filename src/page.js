@@ -859,12 +859,14 @@ async function run(task){
         else if(ev.type==='write'){step('Wrote '+code(ev.path)+' '+txt('('+Number(ev.bytes||0).toLocaleString()+' characters)'),'','pen');ws.textContent='Writing files';}
         else if(ev.type==='read')step('Read '+code(ev.path),'','file');
         else if(ev.type==='publish'){step('Publishing '+code(ev.path),'','upload');ws.textContent='Publishing';}
+        else if(ev.type==='share'){step('Giving the running app a public link (port '+Number(ev.port)+')','','upload');ws.textContent='Sharing the app';}
         else if(ev.type==='system_plan'){step('Building a system of '+ev.services.length+' services: '+txt(ev.services.join(', ')),'','app');ws.textContent='Building a system';}
         else if(ev.type==='system_start'){step('Starting all services with Flisk','','app');}
         else if(ev.type==='video_start'){step('Making a video: '+txt(ev.title)+' '+txt('('+ev.scenes+' scenes)'),'','film');ws.textContent='Making a video';}
         else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
-        else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
+        else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.live)link=ev.live;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
         else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
+        else if(ev.type==='pod_kept')step('Computer kept running for the live app: it sleeps when idle, wakes on a visit, deleted after '+Number(ev.days)+' days','ok','power');
         else if(ev.type==='widget'){const w=drawWidget(ev);if(w){turn.appendChild(w);down();}}
         else if(ev.type==='answer')answer=ev.text;
         else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
