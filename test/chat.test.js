@@ -468,4 +468,17 @@ describe('attached files', () => {
     expect(writes).toEqual([['data.csv', '1,2']]);
     expect(seen[0].find((m) => m.role === 'user').content).toContain('data.csv');
   });
+test('the model button names the chosen model even after a logo replaces the icon', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain('<span class="mpname">Flisk Wolf</span>');
+  expect(page).toContain("mpBtn.querySelector('.mpname').textContent=m.name");
+});
+
+test('signed out, every computer asks to sign in first; on a phone a backdrop closes the menu', () => {
+  const out = appPageUi({ login: null, connected: [] });
+  expect(out).not.toContain('>Connect</a>');
+  expect(out.match(/href="\/auth\/start">Sign in<\/a>/g).length).toBeGreaterThan(10);
+  expect(appPageUi({ login: 'ann', connected: [] })).toContain('>Connect</a>');
+  expect(out).toContain('<div id="scrim" class="scrim" aria-hidden="true"></div>');
+  expect(out).toContain("$('scrim').onclick=closeSide");
 });

@@ -171,6 +171,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .send:hover{background:var(--green-d)}.send[disabled]{background:var(--line2);cursor:wait}
 .fine{font-size:12px;color:var(--soft);text-align:center;margin:8px 0 0}
 .mp{position:relative}
+.scrim{display:none}
 .pop{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(520px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);overflow:hidden}
 .pop[hidden]{display:none}
 .pop .ps{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--soft)}
@@ -223,7 +224,8 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 @media (max-width:860px){
 .trow{grid-template-columns:1fr}.trow .q,.trow.done .q{padding:0}.sqs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.sq{width:auto;height:76px}
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
-.side.open{transform:none}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
+.side.open{transform:none}.scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(27,27,24,.35);opacity:0;pointer-events:none;transition:opacity .2s}.side.open~.scrim{opacity:1;pointer-events:auto}
+.composer{position:relative}.mp{position:static}.pop{left:0;right:0;width:auto}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
 .u{max-width:90%}.composer .chip.plain{display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
 @media (min-width:861px){.only-m{display:none}}
 `;
@@ -320,7 +322,7 @@ $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
 function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>m.role==='user'?userMsg(m.content):asstMsg(m.content));drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
-const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;
+const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
 const CATS=window.__CATS__||[],sugg=$('sugg');
 const showCat=(id)=>{document.querySelectorAll('.cat').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cat===id)));const c=CATS.find(x=>x.id===id)||CATS[0];sugg.textContent='';c.ideas.forEach(t=>{const li=node('li'),b=node('button','',t);b.type='button';b.onclick=()=>{box.value=t;fit();box.focus();};li.appendChild(b);sugg.appendChild(li);});};
@@ -372,7 +374,7 @@ byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');
 function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model||(m.free?'':lsGet('chat_model_'+m.key));byoModel.parentElement.hidden=!!m.model;
   byoKey.value=m.free?'':lsGet('chat_key_'+m.key);byWarn.hidden=true;fillSugg(SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
   $('byokeylabel').textContent='Your '+m.providerName+' API key';
-  mpBtn.querySelector('span').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
+  mpBtn.querySelector('.mpname').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
 mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',drawList);
@@ -578,7 +580,9 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
   const on = Object.keys(PROVIDER_NAMES).filter((id) => connected.includes(id));
   const off = Object.keys(PROVIDER_NAMES).filter((id) => !connected.includes(id));
   const connectLink = (id) =>
-    PROVIDER_CARDS.some((c) => c.id === id) ? (login ? '<a class="cbtn" href="#setup">Connect</a>' : '<a class="cbtn" href="/auth/start">Sign in</a>') : '<a class="cbtn" href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Connect</a>';
+    !login
+      ? '<a class="cbtn" href="/auth/start">Sign in</a>'
+      : PROVIDER_CARDS.some((c) => c.id === id) ? (login ? '<a class="cbtn" href="#setup">Connect</a>' : '<a class="cbtn" href="/auth/start">Sign in</a>') : '<a class="cbtn" href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Connect</a>';
   const menu = `<label class="crow auto">${icon('fleet', 26)}<span class="nm"><b style="font-weight:500">Fleet, automatic</b><small>Cheapest first, falls back to the next</small></span><input type="checkbox" class="sw" id="auto" checked aria-label="Fleet picks the computer"></label>${
     on.length ? `<div class="mhead">Connected · ${on.length}</div>` : ''
   }${on.map((id) => `<label class="crow">${logo(id, 26)}<span class="nm">${esc(PROVIDER_NAMES[id])}</span><span class="ready">ready</span><input type="checkbox" class="sw" name="sb" value="${esc(id)}" data-label="${esc(PROVIDER_NAMES[id])}" aria-label="Use ${esc(PROVIDER_NAMES[id])}"></label>`).join('')}<div class="mhead">Not connected · ${off.length}</div>${off
@@ -596,6 +600,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <section class="sidesec"><h4>Coming soon</h4><div class="soon">Voice talk <span class="tag">soon</span></div></section>
 <div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
+<div id="scrim" class="scrim" aria-hidden="true"></div>
 <div class="main">
 <div class="top"><button type="button" id="sideopen" class="iconbtn" aria-label="Open the menu"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>${LOGO}</div>
 <div id="scroll" class="scroll"><div class="col">
@@ -610,7 +615,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <form id="ask" class="composer"><div id="files" class="files"></div><textarea id="task" maxlength="2000" rows="2" placeholder="What should it do?" aria-label="Task"></textarea>
 <div class="bar">
 <button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
-<div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span>Flisk Wolf</span><i class="chev"></i></button>
+<div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
 <div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Search models, e.g. particle" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
