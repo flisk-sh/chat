@@ -166,6 +166,20 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);padding:4px 11px 4px 5px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;max-width:240px}
 .chip>span{overflow:hidden;text-overflow:ellipsis}.chip svg{border-radius:var(--radius);flex:none}.chip:hover{border-color:var(--ink)}
 .chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:pointer}.chip.plain:hover{border-color:var(--ink)}
+.chip.ico{padding:5px 8px;color:var(--dim)}.chip.ico.on{color:#fff;background:var(--green);border-color:var(--green)}
+.talkb{color:#fff!important;background:var(--ink)!important;border-color:var(--ink)!important}.talkb:hover{opacity:.85}
+.oracle{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 40%,#1d2b22 0,#0d110e 70%);color:#eef2ec;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:84px 16px 24px}
+.oracle[hidden]{display:none}.otop{position:absolute;top:18px;left:0;right:0;text-align:center;display:flex;flex-direction:column;gap:4px}.otitle{font-weight:600;letter-spacing:.04em}.ohint{font-size:12px;color:#9fb0a3}
+.orb{position:relative;width:190px;height:190px;border:0;background:none;cursor:pointer;padding:0;--lv:0}
+.orb .ocore{position:absolute;inset:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#b9f0c9,#3fa765 45%,#1e5c35 100%);box-shadow:0 0 60px rgba(80,200,120,.35);transform:scale(calc(1 + var(--lv)*.35));transition:transform .08s linear}
+.orb .oring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(140,230,170,.35)}
+.oracle.listening .oring{animation:oring 1.6s ease-out infinite}.oracle.thinking .ocore{animation:othink 1.1s ease-in-out infinite;filter:hue-rotate(40deg)}
+.oracle.speaking .ocore{animation:ospeak .7s ease-in-out infinite alternate}.oracle.idle .ocore{filter:grayscale(.6) brightness(.8)}
+@keyframes oring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}@keyframes othink{50%{transform:scale(.88)}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.12)}}
+.ostate{margin:0;font-size:15px;color:#cfe0d3;min-height:22px}.ocap{max-width:600px;width:100%;text-align:center;min-height:90px}
+.oyou{margin:0 0 10px;color:#9fb0a3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
+.oend{width:58px;height:58px;border-radius:50%;border:0;background:#c0392b;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.oend:hover{background:#a93226}
+@media (prefers-reduced-motion:reduce){.oracle .ocore,.oracle .oring{animation:none!important}}
 .chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b;animation:micp 1.2s ease-in-out infinite}#mic.busy{opacity:.6;cursor:progress}@keyframes micp{50%{box-shadow:0 0 0 5px rgba(192,57,43,.25)}}
 .chev{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);flex:none;opacity:.6}
 .send{margin-left:auto;width:38px;height:38px;border:0;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
@@ -531,19 +545,21 @@ const talkBack=(t)=>{if(!TTS||!t)return;stopTalk();const lang=navigator.language
   const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());
   parts.forEach(x=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:lang;if(v)u.voice=v;u.rate=1;TTS.speak(u);});};
 if(TTS&&TTS.onvoiceschanged!==undefined)TTS.onvoiceschanged=()=>{};
-const drawVoice=()=>{voiceBtn.textContent='Voice · '+(voiceOn?'on':'off');voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);voiceBtn.title=voiceOn?'Answers are read aloud, a spoken task sends itself':'Read answers aloud';};
+const SV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',SPK_ON=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>',SPK_OFF=SV+'<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>';
+const drawVoice=()=>{voiceBtn.innerHTML=voiceOn?SPK_ON:SPK_OFF;voiceBtn.classList.toggle('on',voiceOn);voiceBtn.setAttribute('aria-pressed',voiceOn);const t=voiceOn?'Reading answers aloud. Tap to stop':'Read answers aloud';voiceBtn.title=t;voiceBtn.setAttribute('aria-label',t);};
 if(!TTS){voiceBtn.title='This browser cannot speak';voiceBtn.disabled=true;}
-voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Voice is on. Tap the mic and talk.');};
+voiceBtn.onclick=()=>{voiceOn=!voiceOn;lsSet('chat_voice',voiceOn?'1':'');drawVoice();if(!voiceOn)stopTalk();else talkBack('Answers will be read aloud.');};
 drawVoice();
+
 const micIdle=(label)=>{micBtn.classList.remove('rec','busy');micBtn.disabled=false;micBtn.setAttribute('aria-label',label||'Speak your task');micBtn.title=label||'Speak your task';};
 const b64=(blob)=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result||'');ok(s.slice(s.indexOf(',')+1));};r.onerror=()=>no(new Error('could not read the recording'));r.readAsDataURL(blob);});
+// Audio to words on the server; null means "sign in first".
+async function toText(blob){const res=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type})});
+  if(res.status===401)return null;const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||('Voice answered '+res.status));return String(b.text||'').trim();}
 async function heard(blob){
   micBtn.classList.remove('rec');micBtn.classList.add('busy');micBtn.disabled=true;micBtn.title='Writing down what you said';const was=box.placeholder;box.placeholder='Writing down what you said…';
   try{if(blob.size<800)throw new Error('I did not hear anything. Hold the mic a bit longer and talk.');
-    const res=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type})});
-    if(res.status===401){try{sessionStorage.setItem('chat_pending',box.value);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
-    const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||('Voice answered '+res.status));
-    const t=String(b.text||'').trim();if(!t)throw new Error('I did not catch any words. Try again a little closer to the mic.');
+    const t=await toText(blob);if(t===null){try{sessionStorage.setItem('chat_pending',box.value);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});return;}if(!t)throw new Error('I did not catch any words. Try again a little closer to the mic.');
     box.value=((box.value.trim()?box.value.trim()+' ':'')+t).slice(0,2000);box.dispatchEvent(new Event('input'));
     if(voiceOn&&!go.disabled){byVoice=true;form.requestSubmit();byVoice=false;}else box.focus();
   }catch(e){errMsg(String(e.message||e));}
@@ -563,6 +579,63 @@ async function listen(){
   recTimer=setTimeout(()=>{if(rec)rec.stop();},55000);
 }
 if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.onclick=listen;}
+// Voice talk (Flisk Oracle): listen until you pause, write it down, the model answers in a few spoken sentences, read it
+// aloud, listen again. No computer, no typing. Tap the circle to interrupt, the red button to end; the talk is kept in the chat.
+const oracle=$('oracle'),orb=$('orb'),oState=$('ostate'),oYou=$('oyou'),oSay=$('osay');
+let oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
+const oSet=(st,msg)=>{oracle.className='oracle '+st;oState.textContent=msg;};
+const speakAll=(t)=>new Promise((done)=>{if(!TTS||!t){done();return;}stopTalk();const lang=navigator.language||'en-US',v=pickVoice(lang);
+  const parts=spoken(t).replace(/([.!?]) +/g,'$1|').split('|').filter(x=>x.trim());if(!parts.length){done();return;}
+  let left=parts.length,fin=false;const end=()=>{if(fin)return;fin=true;oSpeaking=false;done();};const guard=setTimeout(end,4000+t.length*90);
+  oSpeaking=true;parts.forEach(x=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:lang;if(v)u.voice=v;u.onend=u.onerror=()=>{if(--left<=0){clearTimeout(guard);end();}};TTS.speak(u);});
+  oracle._endSpeak=()=>{clearTimeout(guard);stopTalk();end();};});
+// Record one utterance: starts on speech, stops after about 1.3 s of quiet (or 30 s), gives up after 9 s of silence.
+const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  const chunks=[];const r=type?new MediaRecorder(oStream,{mimeType:type}):new MediaRecorder(oStream);oRec=r;
+  const an=oCtx.createAnalyser();an.fftSize=1024;const src=oCtx.createMediaStreamSource(oStream);src.connect(an);const buf=new Float32Array(an.fftSize);
+  let spoke=false,quiet=0,t0=Date.now(),last=Date.now(),raf=0;
+  const tick=()=>{an.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++)sum+=buf[i]*buf[i];const rms=Math.sqrt(sum/buf.length),now=Date.now(),dt=now-last;last=now;
+    orb.style.setProperty('--lv',Math.min(1,rms*12).toFixed(3));
+    if(rms>0.02){spoke=true;quiet=0;}else if(spoke)quiet+=dt;
+    if((spoke&&quiet>1300)||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
+  oStop=()=>{if(r.state!=='inactive')r.stop();};
+  r.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  r.onstop=()=>{clearInterval(raf);try{src.disconnect();}catch(e){}orb.style.setProperty('--lv',0);oRec=null;oStop=null;done(spoke?new Blob(chunks,{type:r.mimeType||type||'audio/webm'}):null);};
+  r.start();raf=setInterval(tick,60);});
+async function oLoop(){
+  while(oOn){
+    oSet('listening','Listening…');const blob=await hearOne();if(!oOn)return;
+    if(!blob){oSet('idle','Tap the circle when you want to talk.');return;}
+    oSet('thinking','Writing down what you said…');let said;
+    try{said=await toText(blob);}catch(e){oSet('idle',String(e.message||e));return;}
+    if(!oOn)return;if(said===null){oClose();signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+    if(!said){oSet('idle','I did not catch that. Tap the circle and try again.');return;}
+    oYou.textContent=said;oSay.textContent='';oTurns.push({role:'user',content:said});oSet('thinking','Thinking…');
+    let reply;try{const res=await fetch('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({history:oTurns,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})});
+      const b=await res.json().catch(()=>({}));if(res.status===401){oClose();signin.hidden=false;return;}if(!res.ok)throw new Error(b.error||('Voice talk answered '+res.status));reply=String(b.text||'');}
+    catch(e){oTurns.pop();oSet('idle',String(e.message||e));return;}
+    if(!oOn)return;oTurns.push({role:'assistant',content:reply});oSay.textContent=reply;oSet('speaking','Speaking… tap the circle to interrupt');
+    await speakAll(reply);
+  }
+}
+async function oOpen(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
+  if(!window.__SIGNED__){signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+  stopTalk();oracle.hidden=false;oYou.textContent='';oSay.textContent='';oTurns=[];oSet('thinking','Opening the microphone…');
+  try{oStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
+  catch(e){oClose();errMsg(e&&e.name==='NotAllowedError'?'Allow the microphone for chat.flisk.si (the icon in the address bar), then tap the wave again.':e&&e.name==='NotFoundError'?'No microphone found on this device.':'Could not open the microphone: '+(e&&e.message||e));return;}
+  const AC=window.AudioContext||window.webkitAudioContext;oCtx=new AC();try{await oCtx.resume();}catch(e){}
+  oOn=true;oLoop();
+}
+function oClose(){oOn=false;if(oStop)oStop();if(oracle._endSpeak)oracle._endSpeak();stopTalk();
+  if(oStream){oStream.getTracks().forEach(t=>t.stop());oStream=null;}if(oCtx){try{oCtx.close();}catch(e){}oCtx=null;}oracle.hidden=true;
+  // Keep the talk in the chat, so it is saved with the rest and can be read later.
+  if(oTurns.length){chatting(true);oTurns.forEach(m=>{if(m.role==='user')userMsg(m.content);else asstMsg(m.content);history.push(m);});saveChat();down();oTurns=[];}
+}
+orb.onclick=()=>{if(!oOn)return;if(oSpeaking&&oracle._endSpeak){oracle._endSpeak();return;}if(oStop){oStop();return;}if(/idle/.test(oracle.className))oLoop();};
+$('oend').onclick=oClose;
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&!oracle.hidden)oClose();});
+$('orbbtn').onclick=oOpen;
 const secs=(ms)=>Math.max(0,Math.round(ms/1000))+'s';
 // Step icons, from Lucide (lucide.dev, ISC license): each kind of step gets its own, the way T3 Code shows tool calls.
 const SI={terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
@@ -756,7 +829,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search your chats" aria-label="Search your chats" autocomplete="off"></label>
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
-<section class="sidesec"><h4>Voice</h4><div class="soon">Voice talk: tap Voice, then the mic <span class="tag">new</span></div></section>
+<section class="sidesec"><h4>Voice</h4><div class="soon">Voice talk: tap the wave and just talk, it answers out loud <span class="tag">new</span></div></section>
 <div class="who">${login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
 </aside>
 <div id="scrim" class="scrim" aria-hidden="true"></div>
@@ -780,11 +853,19 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
 <details class="pick"><summary class="chip">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
 <button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-<button type="button" id="voice" class="chip plain" aria-pressed="false" title="Read answers aloud">Voice · off</button>
+<button type="button" id="voice" class="chip ico" aria-pressed="false" title="Read answers aloud" aria-label="Read answers aloud"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg></button>
+<button type="button" id="orbbtn" class="chip ico talkb" title="Voice talk: just talk, it answers out loud" aria-label="Start voice talk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
 <p class="fine">Runs on a real computer from your own sandbox account. Enter sends, Shift+Enter adds a line.</p>
 </div></div></div></div>
+<div id="oracle" class="oracle" hidden role="dialog" aria-modal="true" aria-label="Voice talk">
+<div class="otop"><span class="otitle">Flisk Oracle</span><span class="ohint">Talk. Pause when you are done. Tap the circle to interrupt.</span></div>
+<button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"></span></button>
+<p id="ostate" class="ostate" aria-live="polite">Starting…</p>
+<div class="ocap"><p id="oyou" class="oyou"></p><p id="osay" class="osay"></p></div>
+<button type="button" id="oend" class="oend" aria-label="End voice talk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+</div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS,

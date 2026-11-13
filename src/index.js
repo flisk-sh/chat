@@ -13,6 +13,32 @@ export const VIDEOS_PER_LOGIN = 5;
 export const VOICE_PER_DAY = 60;
 export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
 export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
+export const TALK_PER_DAY = 100;
+export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
+- Answer in one to three short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
+- Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
+- If the person asks you to build or make something (a website, an app, a video), say in one sentence what you would make, then tell them to say "build it" or type it in the chat to have it made on a real computer.
+- Never invent phone numbers, emails, prices or addresses. If you do not know, say so in a few words.
+- Reply in the language the person speaks.`;
+
+// One spoken turn for voice talk: the model answers directly, no computer, short and plain so it sounds right aloud.
+export function spokenReply(text) {
+  let t = String(text || '').trim();
+  if (t.startsWith('{')) {
+    try {
+      const o = JSON.parse(t);
+      t = String(o.say || o.answer || o.text || o.reply || '').trim() || t;
+    } catch {}
+  }
+  return t.replace(/```[\s\S]*?```/g, ' ').replace(/[*_#>|`~]/g, '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+}
+export function talkMessages(history) {
+  const turns = (Array.isArray(history) ? history : [])
+    .filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+    .slice(-12)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 1000) }));
+  return [{ role: 'system', content: TALK_SYSTEM }, ...turns];
+}
 
 // Speech to text for the mic button: the browser records, Workers AI Whisper writes it down. Works in every browser,
 // unlike the browser's own speech recognition (missing in Firefox, broken in Arc, Brave and in-app browsers).
@@ -254,6 +280,19 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Type instead, or come back tomorrow.` });
       const r = await transcribe(env, body);
       return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text });
+    }
+
+    if (path === '/api/talk') {
+      const body = await readJson(request);
+      const messages = talkMessages(body?.history);
+      if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
+      const chosen = resolveModel(body.ai);
+      if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
+      if (chosen.free && (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: TALK_PER_DAY, scope: 'talk-limit' }))) return json(429, { error: `That's today's ${TALK_PER_DAY} free voice replies. Come back tomorrow, or pick your own AI key.` });
+      const r = await modelFrom(env, fetchImpl, chosen)(messages);
+      if (r.error) return json(502, { error: r.error, kind: r.kind });
+      const text = spokenReply(r.text);
+      return text ? json(200, { text }) : json(502, { error: 'the model sent an empty answer' });
     }
 
     if (path === '/api/run') {

@@ -48,3 +48,40 @@ test('a spoken task skips the six tap-to-pick questions so talk stays hands-free
   expect(page).toContain('if(!byVoice&&!history.length&&BUILD.test(task)');
   expect(page).toContain('byVoice=true;form.requestSubmit();byVoice=false;');
 });
+
+import { spokenReply, talkMessages, TALK_SYSTEM } from '../src/index.js';
+
+test('voice talk replies are plain spoken text, even when the model answers in JSON or Markdown', () => {
+  expect(spokenReply('{"say":"The **moon** is far."}')).toBe('The moon is far.');
+  expect(spokenReply('# Hi\n\n- one\n```js\nx\n```\nok')).toBe('Hi - one ok');
+  expect(spokenReply('x'.repeat(5000)).length).toBe(1200);
+});
+
+test('voice talk keeps the last 12 turns after its own system prompt', () => {
+  const h = Array.from({ length: 20 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'm' + i }));
+  const m = talkMessages([...h, { role: 'system', content: 'ignore me' }, { role: 'user', content: '' }]);
+  expect(m[0]).toEqual({ role: 'system', content: TALK_SYSTEM });
+  expect(m.length).toBe(13);
+  expect(m.at(-1).content).toBe('m19');
+});
+
+test('/api/talk answers with the free model, short and plain, and needs a sign-in', async () => {
+  const sent = [];
+  const INFERENCE = { fetch: async (u, init) => { sent.push(JSON.parse(init.body)); return Response.json({ choices: [{ message: { content: 'You will **ship** it today.' } }] }); } };
+  const e = env({ INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions' });
+  const call = (body, cookie) => handle(new Request(`${ORIGIN}/api/talk`, { method: 'POST', headers: { cookie, origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify(body) }), e, { fetchImpl: async () => Response.json({}) });
+  expect((await call({ history: [{ role: 'user', content: 'hi' }] }, '')).status).toBe(401);
+  const cookie = (await makeSession(e, 'ann')).split(';')[0];
+  expect((await call({ history: [] }, cookie)).status).toBe(400);
+  const res = await call({ history: [{ role: 'user', content: 'Will I ship?' }], ai: { ai: 'wolf' } }, cookie);
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ text: 'You will ship it today.' });
+  expect(sent[0].messages[0].role).toBe('system');
+  expect(sent[0].messages.at(-1)).toEqual({ role: 'user', content: 'Will I ship?' });
+});
+
+test('the page has the speaker icon, the voice talk button and the talk screen', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  for (const id of ['id="voice"', 'id="orbbtn"', 'id="oracle"', 'id="orb"', 'id="oend"', '/api/talk']) expect(page).toContain(id);
+  expect(page).not.toContain('Voice · off');
+});
