@@ -1,6 +1,6 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
-import { MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
+import { cleanFiles, MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
@@ -254,7 +254,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, order, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, order, files: cleanFiles(body.files), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

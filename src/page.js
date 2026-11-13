@@ -190,6 +190,14 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #byo{border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}#byo[hidden]{display:none}
 #byo .bystat{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}#byo #byrm{font:12px var(--mono);text-transform:uppercase;background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:4px 8px;color:var(--ink);cursor:pointer}#byo #byrm:hover{border-color:var(--red);color:var(--red)}
 #byo label{font-size:12px;color:var(--dim)}
+#byo>div{position:relative}.bysug{list-style:none;margin:2px 0 0;padding:0;position:absolute;left:0;right:0;z-index:5;max-height:220px;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 10px 30px -18px rgba(27,27,24,.35)}.bysug[hidden]{display:none}
+.bysug li{display:flex;gap:8px;align-items:baseline;padding:7px 10px;cursor:pointer;font-size:13px}.bysug li:hover{background:var(--bg)}.bysug li b{font:13px var(--mono);font-weight:500;color:var(--ink)}.bysug li span{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bysug li.none{cursor:default;color:var(--dim)}.bysug .fr{font-style:normal;font-size:11px;color:var(--green);border:1px solid currentColor;border-radius:var(--radius);padding:0 5px;margin-left:auto}
+.bywarn{font-size:12px;color:var(--red);margin-top:4px}.bywarn[hidden]{display:none}
+#byo .byacts{display:flex;gap:6px}#byo #bysave{font:12px var(--mono);text-transform:uppercase;background:var(--ink);color:var(--panel);border:1px solid var(--ink);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+.errbox{border:1px solid #FECDCA;background:#FEF3F2;border-radius:var(--radius);padding:12px 14px}.errbox .err{border:0;padding:0;background:transparent}.errbox .next{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.errbox .next small{color:var(--dim);font-size:12px;width:100%}
+.files{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}.files:empty{display:none}.fchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line2);background:var(--bg);border-radius:var(--radius);padding:2px 4px 2px 8px;font:12px var(--mono)}.fchip button{border:0;background:transparent;cursor:pointer;color:var(--dim);font-size:15px;line-height:1}
+.attach{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);cursor:pointer;color:var(--ink)}.attach:hover{border-color:var(--ink)}
+.asave{display:flex;gap:8px;margin-top:8px}
 #byo input{font:14px var(--mono);padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--panel);color:var(--ink);width:100%}
 details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
 details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(330px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);padding:6px;max-height:min(420px,60vh);overflow:auto;font-size:14px}
@@ -339,15 +347,30 @@ function drawList(){const q=mq.value.trim().toLowerCase();mlist.textContent='';l
 const SUGG={anthropic:['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5','claude-fable-5-2'],openai:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o4-mini'],openrouter:['google/gemini-2.5-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','qwen/qwen3-coder','meta-llama/llama-3.3-70b-instruct']};
 const lsGet=(k)=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
 const lsSet=(k,v)=>{try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
-const byDl=$('bymodels'),byStat=$('bystat'),byRm=$('byrm');let orLoaded=false;
-const fillSugg=(list)=>{byDl.textContent='';list.forEach(id=>{const o=document.createElement('option');o.value=id;byDl.appendChild(o);});};
+const byStat=$('bystat'),byRm=$('byrm'),bySave=$('bysave'),bySug=$('bysug'),byWarn=$('bywarn');let orLoaded=false,sugList=[],orNames={};
+// Search every word of what was typed against the id and the name; best matches first (starts with, then contains), free ones marked.
+const rank=(q)=>{const w=q.toLowerCase().split(' ').filter(Boolean);if(!w.length)return sugList.slice(0,40);
+  return sugList.map(id=>{const h=(id+' '+(orNames[id]||'')).toLowerCase();if(!w.every(x=>h.indexOf(x)>=0))return null;const tail=id.toLowerCase().split('/').pop();return [w.every(x=>tail.indexOf(x)===0||id.toLowerCase().indexOf(x)===0)?0:1,id.length,id];}).filter(Boolean).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).slice(0,40).map(x=>x[2]);};
+const drawSug=()=>{bySug.textContent='';if(cur.free||cur.model||!sugList.length){bySug.hidden=true;return;}const r=rank(byoModel.value.trim());
+  r.forEach(id=>{const li=node('li','');li.setAttribute('role','option');const a=node('b','',id);li.appendChild(a);if(orNames[id])li.appendChild(node('span','',orNames[id]));if(/:free$/.test(id))li.appendChild(node('i','fr','free'));
+    li.onmousedown=(e)=>{e.preventDefault();byoModel.value=id;lsSet('chat_model_'+cur.key,id);bySug.hidden=true;byWarn.hidden=true;byoKey.focus();};bySug.appendChild(li);});
+  if(!r.length)bySug.appendChild(node('li','none','No model matches. Check the spelling, or paste the exact id from openrouter.ai/models.'));bySug.hidden=false;byoModel.setAttribute('aria-expanded','true');};
+const fillSugg=(list)=>{sugList=list;if(document.activeElement===byoModel)drawSug();};
+// The id OpenRouter needs is vendor/name. If the typed one is not on the list, find the one that was meant (particle-1:free -> particle-ai/particle-1:free).
+const fixModel=(m)=>{if(cur.key!=='openrouter'||!sugList.length||!m||sugList.indexOf(m)>=0)return {ok:true,model:m};
+  const t=sugList.filter(id=>id.endsWith('/'+m));if(t.length===1)return {ok:true,model:t[0],fixed:true};
+  const near=rank(m).slice(0,4);return {ok:false,near};};
 const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Saved in this browser only, never on our servers.':'Saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
-async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const ids=(j.data||[]).map(x=>x.id).filter(Boolean).sort();if(ids.length&&cur.key==='openrouter')fillSugg(ids);else orLoaded=false;}catch(e){orLoaded=false;}}
+async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(ids.length&&cur.key==='openrouter')fillSugg(ids);else orLoaded=false;}catch(e){orLoaded=false;}}
 byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
-byoModel.addEventListener('input',()=>{if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());});
+byoModel.addEventListener('input',()=>{if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());byWarn.hidden=true;drawSug();});
+byoModel.addEventListener('focus',drawSug);byoModel.addEventListener('blur',()=>{bySug.hidden=true;byoModel.setAttribute('aria-expanded','false');const f=fixModel(byoModel.value.trim());
+  if(f.ok&&f.fixed){byoModel.value=f.model;lsSet('chat_model_'+cur.key,f.model);}else if(!f.ok&&byoModel.value.trim()){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;}});
+bySave.onclick=()=>{const m=byoModel.value.trim(),k=byoKey.value.trim();if(!k){byoKey.focus();byStat.textContent='Paste your API key first.';return;}const f=fixModel(m);if(!f.ok){byWarn.textContent='That model is not on OpenRouter. Did you mean: '+f.near.join(', ')+'?';byWarn.hidden=false;byoModel.focus();return;}
+  if(f.fixed)byoModel.value=f.model;lsSet('chat_key_'+cur.key,k);if(!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());stat();byStat.textContent='Saved ✓ in this browser only, never on our servers.';bySave.textContent='Saved ✓';setTimeout(()=>{bySave.textContent='Save';},1500);closePop();box.focus();};
 byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');byoKey.value='';if(!cur.model)byoModel.value='';stat();byoKey.focus();};
 function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model||(m.free?'':lsGet('chat_model_'+m.key));byoModel.parentElement.hidden=!!m.model;
-  byoKey.value=m.free?'':lsGet('chat_key_'+m.key);fillSugg(SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
+  byoKey.value=m.free?'':lsGet('chat_key_'+m.key);byWarn.hidden=true;fillSugg(SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
   $('byokeylabel').textContent='Your '+m.providerName+' API key';
   mpBtn.querySelector('span').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
@@ -356,7 +379,7 @@ mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',dr
 // The picker lives inside the composer form: Enter there must never send the task. Search: choose the first match.
 // Model name: on to the key. Key (or both filled): done, close the picker and go back to the task box.
 pop.addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const t=e.target;if(t.tagName!=='INPUT')return;e.preventDefault();e.stopPropagation();
-  if(t===mq){const first=mlist.querySelector('.mi');if(first)first.click();}else if(t===byoModel&&!byoKey.value.trim()&&!byoKey.parentElement.parentElement.hidden){byoKey.focus();}else{closePop();box.focus();}});
+  if(t===mq){const first=mlist.querySelector('.mi');if(first)first.click();}else if(t===byoModel&&!bySug.hidden&&bySug.firstChild&&bySug.firstChild.querySelector('b')){bySug.firstChild.onmousedown(e);}else if(t===byoModel&&!byoKey.value.trim()&&!byoKey.parentElement.parentElement.hidden){byoKey.focus();}else{closePop();box.focus();}});
 pick(cur);
 // Computers menu.
 const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$('sbsum');
@@ -375,6 +398,15 @@ document.querySelectorAll('.card form').forEach(f=>f.onsubmit=async(e)=>{
   if(!res||!res.ok){errMsg(b.error||'Could not save that key. Check it and try again.');return;}
   input.value='';setup.hidden=true;asstMsg('Connected. Running your task now.');if(pending){const t=pending;pending=null;run(t);}
 });
+ // Attached files: read in the browser, sent with the task, written to the computer before the first step.
+let attached=[];const fileBox=$('files'),fileIn=$('fileIn');
+const drawFiles=()=>{fileBox.textContent='';attached.forEach((f,i)=>{const c=node('span','fchip',f.name+' ');const x=node('button','','×');x.type='button';x.title='Remove '+f.name;x.onclick=()=>{attached.splice(i,1);drawFiles();};c.appendChild(x);fileBox.appendChild(c);});};
+const TEXTY=['txt','md','csv','json','js','ts','py','html','css','xml','yml','yaml','log','sh','sql','tsv','toml','ini','rb','go','rs','java','c','cpp','h'];
+$('attach').onclick=()=>fileIn.click();
+fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){errMsg('You can attach up to 3 files.');return;}if(f.size>150*1024){errMsg(f.name+' is over 150 KB.');return;}
+  const ext=(f.name.split('.').pop()||'').toLowerCase(),text=TEXTY.indexOf(ext)>=0||(f.type||'').indexOf('text/')===0,r=new FileReader();
+  r.onload=()=>{let c=String(r.result||'');if(!text)c=c.slice(c.indexOf(',')+1);attached.push({name:f.name,content:c,b64:!text});drawFiles();};r.onerror=()=>errMsg('Could not read '+f.name+'.');
+  if(text)r.readAsText(f);else r.readAsDataURL(f);});fileIn.value='';};
 const secs=(ms)=>Math.max(0,Math.round(ms/1000))+'s';
 // Step icons, from Lucide (lucide.dev, ISC license): each kind of step gets its own, the way T3 Code shows tool calls.
 const SI={terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
@@ -402,6 +434,7 @@ const noteIcon=(t)=>/scene|draw/i.test(t)?'image':/voice|record/i.test(t)?'mic':
 // One task: a "Working for Ns" header, each computer step as it happens, then the answer and a result card.
 async function run(task){
   go.disabled=true;chatting(true);closePop();
+  const sendFiles=attached;attached=[];drawFiles();
   const turn=add(node('div','turn')),work=node('div','work'),l=node('span','l'),wt=node('span','',''),ws=node('span','','Thinking');
   l.append(node('span','spin'),wt);work.append(l,ws);turn.appendChild(work);
   const box2=node('details','stepsbox'),sum2=node('summary','','Steps'),list=node('ol','steps');box2.open=true;box2.append(sum2,list);box2.hidden=true;turn.appendChild(box2);
@@ -413,7 +446,7 @@ async function run(task){
   const out=(s,bad)=>{if(!live||!s)return;const p=node('pre','',s.length>1500?s.slice(0,1500)+'\\n…':s);live.querySelector('.t').appendChild(p);if(bad){live.classList.remove('live','ok');live.classList.add('bad');live.querySelector('.si').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SI.alert+'</svg>';}down();};
   const end=(ok)=>{clearInterval(timer);if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
   try{
-    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),ai:{ai:aiSel.value,key:byoKey.value,model:byoModel.value}})});
+    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{ai:aiSel.value,key:byoKey.value,model:fixModel(byoModel.value.trim()).model}})});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
@@ -433,11 +466,15 @@ async function run(task){
         else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
         else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
         else if(ev.type==='answer')answer=ev.text;
-        else if(ev.type==='error'){failed=true;turn.appendChild(node('div','err',ev.error));}
+        else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
+        else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
       }}
-  }catch(err){failed=true;turn.appendChild(node('div','err',String(err.message||err)));}
+  }catch(err){failed=true;errCard(turn,String(err.message||err),'other',task);}
   end(!failed||answer!==null);
-  if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();}
+  if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();
+    const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
+    dl2.onclick=()=>{const u=URL.createObjectURL(new Blob([answer],{type:'text/markdown'})),x=document.createElement('a');x.href=u;x.download='flisk-chat-answer.md';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);dl2.textContent='Saved ✓';setTimeout(()=>dl2.textContent='Save as file',1500);};
+    cp2.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(answer).then(()=>{cp2.textContent='Copied';setTimeout(()=>cp2.textContent='Copy',1500);});};sv.append(dl2,cp2);turn.appendChild(sv);}
   if(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
     const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
     const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);turn.appendChild(r);}
@@ -447,6 +484,19 @@ async function run(task){
     const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(video).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
     vb.append(cp,dl);v.append(pl,vb);turn.appendChild(v);}
   down();go.disabled=false;box.focus();
+}
+// An error you can act on: the real reason, then the buttons for what usually fixes it.
+function errCard(turn,msg,kind,task){
+  const c=node('div','errbox');c.appendChild(node('div','err',msg));const n=node('div','next');n.appendChild(node('small','','What to do next'));
+  const btn=(t,f,primary)=>{const b=node('button','btn'+(primary?' go':''),t);b.type='button';b.onclick=f;n.appendChild(b);};
+  const openAi=(focusKey)=>{openPop();const p=MODELS.find(x=>!x.free&&x.key===aiSel.value)||MODELS.find(x=>!x.free);if(p&&aiSel.value==='wolf')pick(p);if(!byo.hidden)(focusKey?byoKey:byoModel).focus();};
+  const retry=()=>{c.remove();if(history.length&&history[history.length-1].role==='assistant')history.pop();run(task);};
+  if(kind==='key'){btn('Set up the key again',()=>{lsSet('chat_key_'+cur.key,'');byoKey.value='';stat();openAi(true);},true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
+  else if(kind==='model'){btn('Choose another model',()=>openAi(false),true);btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();});}
+  else if(kind==='limit'){btn('Use free Flisk Wolf',()=>{const w=MODELS.find(x=>x.free);if(w)pick(w);retry();},true);btn('Change provider',()=>openAi(true));}
+  else if(kind==='computer'){btn('Connect a computer',()=>{pending=task;setup.hidden=false;setup.scrollIntoView({block:'start'});},true);btn('Try again',retry);}
+  else{btn('Try again',retry,true);btn('Change model or provider',()=>openAi(false));}
+  c.appendChild(n);turn.appendChild(c);down();
 }
 // The free model's daily cap: say when it comes back and offer the way round it, and keep the task.
 function limitCard(turn,task,b){
@@ -557,12 +607,13 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div id="signin" class="card" hidden><b>Sign in to run this</b><small>One click with GitHub. Your task is kept and runs right after.</small><div style="margin-top:10px"><a class="btn go" href="/auth/start">Sign in with GitHub</a></div></div>
 </div></div>
 <div class="dock"><div class="col">
-<form id="ask" class="composer"><textarea id="task" maxlength="2000" rows="2" placeholder="What should it do?" aria-label="Task"></textarea>
+<form id="ask" class="composer"><div id="files" class="files"></div><textarea id="task" maxlength="2000" rows="2" placeholder="What should it do?" aria-label="Task"></textarea>
 <div class="bar">
+<button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span>Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
-<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" list="bymodels" placeholder="Start typing to search models" autocomplete="off"><datalist id="bymodels"></datalist></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><button type="button" id="byrm" hidden>Remove key</button></div></div></div></div></div>
+<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Search models, e.g. particle" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div></div></div></div></div>
 <details class="pick"><summary class="chip">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
 <button type="button" class="chip plain" disabled title="Coming soon">Voice · soon</button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>

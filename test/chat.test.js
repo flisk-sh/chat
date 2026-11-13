@@ -424,3 +424,48 @@ test('a square is chosen by a real mouse move, never by a row that appears under
   expect(page).toContain("(i<pick.length-1?' done':'')");
   expect(page).toContain(".zchip:not(.ok)");
 });
+
+import { cleanFiles, explainModelError, modelFrom as modelFrom2, runTask as runTask2 } from '../src/loop.js';
+
+describe('model errors a person can act on', () => {
+  test('OpenRouter "Provider returned error" shows the real reason and a kind', () => {
+    const r = explainModelError({ error: { message: 'Provider returned error', code: 404, metadata: { raw: 'No endpoints found for particle-1:free', provider_name: 'Particle' } } }, 200, { ai: 'openrouter', model: 'particle-1:free' });
+    expect(r.kind).toBe('model');
+    expect(r.error).toContain('No endpoints found');
+    expect(r.error).not.toBe('Provider returned error');
+  });
+  test('401 is a key problem, 402 a credit problem, 502 a provider problem', () => {
+    expect(explainModelError({ error: { message: 'No auth credentials found' } }, 401, { ai: 'openrouter' }).kind).toBe('key');
+    expect(explainModelError({ error: { message: 'Insufficient credits' } }, 402, {}).kind).toBe('limit');
+    expect(explainModelError({ error: { message: 'Provider returned error', code: 502, metadata: { provider_name: 'Chutes' } } }, 200, {}).error).toContain('Chutes');
+  });
+  test('an error body sent with HTTP 200 is still an error', async () => {
+    const f = async () => new Response(JSON.stringify({ error: { message: 'Provider returned error', code: 429, metadata: { raw: 'rate limited upstream' } } }), { status: 200 });
+    const r = await modelFrom2({}, f, { ai: 'openrouter', free: false, url: 'https://x.test', key: 'k'.repeat(10), model: 'a/b' })([{ role: 'user', content: 'hi' }]);
+    expect(r.kind).toBe('limit');
+    expect(r.error).toContain('rate limited upstream');
+  });
+  test('the task stream carries the kind so the page can offer next steps', async () => {
+    const events = [];
+    const r = await runTask2({ task: 'x', model: async () => ({ error: 'bad key', kind: 'key' }), computer: {}, emit: (e) => events.push(e) });
+    expect(r.error).toBe('bad key');
+    expect(events.find((e) => e.type === 'error').kind).toBe('key');
+  });
+});
+
+describe('attached files', () => {
+  test('cleanFiles flattens names, drops junk and caps the count', () => {
+    const f = cleanFiles([{ name: '../../etc/passwd', content: 'x' }, { name: 'a b.csv', content: '1,2' }, { name: 'bad.bin', content: '***', b64: true }, { name: '', content: 'y' }, { name: 'c', content: 'c' }, { name: 'd', content: 'd' }]);
+    expect(f.map((x) => x.path)).toEqual(['passwd', 'a_b.csv']);
+  });
+  test('files are written to the computer before the first step and the model is told', async () => {
+    const writes = [];
+    const computer = { start: async () => ({ data: { id: 'p', provider: 'daytona' } }), write: async (id, path, content) => (writes.push([path, content]), { status: 200, data: {} }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
+    const seen = [];
+    let n = 0;
+    const model = async (m) => (seen.push(m), n++ ? { text: '{"say":"done"}' } : { text: '{"run":"ls"}' });
+    await runTask2({ task: 'sum it', model, computer, files: [{ path: 'data.csv', content: '1,2', b64: false }] });
+    expect(writes).toEqual([['data.csv', '1,2']]);
+    expect(seen[0].find((m) => m.role === 'user').content).toContain('data.csv');
+  });
+});
