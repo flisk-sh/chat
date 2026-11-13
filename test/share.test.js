@@ -152,3 +152,13 @@ test('the result card says a shared app is the real app and a /s/ page is the on
   expect(page).toContain('Your app is live: the real website and API');
   expect(page).toContain('Your page is live (one-file copy)');
 });
+
+test('a reopened chat shows the card for a shared app link too', async () => {
+  const { appPage } = await import('../src/page.js');
+  const page = appPage({ login: 'x' });
+  const src = page.match(/function resultLinks\(text\)\{[^\n]*/)[0].replace('location.origin', "'https://chat.flisk.si'");
+  const resultLinks = new Function(`${src}; return resultLinks;`)();
+  expect(resultLinks('**Your app is live:** https://sacred-lemming-02354-3000.preview.box.upstash.com and more').site).toBe('https://sacred-lemming-02354-3000.preview.box.upstash.com');
+  expect(resultLinks('Copy: https://chat.flisk.si/s/0123456789abcdef').site).toBe('https://chat.flisk.si/s/0123456789abcdef');
+  expect(resultLinks('no link here').site).toBe('');
+});
