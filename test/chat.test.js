@@ -171,6 +171,7 @@ describe('safety', () => {
     expect(home).toContain('msgs:history,res:results');
     expect(home).toContain('add(linkCard(r.link))');
     expect(home).toContain('ctl.abort()');
+    expect(home).toContain('Try again');
     expect(home).toContain('@media (hover:none){#hist li .x{opacity:1}}');
     expect(home).toContain('Type this exact model name');
     for (const m of home.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();

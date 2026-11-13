@@ -408,6 +408,7 @@ async function run(task){
       }}
   }catch(err){failed=true;turn.appendChild(node('div',stopped?'a':'err',stopped?'Stopped. Nothing more will run.':String(err.message||err)));}
   stopB.remove();end(!failed||answer!==null);
+  if(failed&&answer===null&&!stopped){const rb=node('button','btn','Try again');rb.type='button';rb.onclick=()=>{turn.remove();run(task);};turn.appendChild(rb);}
   if(answer!==null){const a=node('div','a');linkify(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();}
   if(link){turn.appendChild(linkCard(link));noteRes({link});}
   if(video){turn.appendChild(videoCard(video));noteRes({video});}
