@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES } from '../src/index.js';
-import { modelLabel, parseAction, resolveModel, runTask } from '../src/loop.js';
+import { modelLabel, parseAction, resolveModel, runTask, SYSTEM } from '../src/loop.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -717,5 +717,49 @@ describe('the model knows its own name', () => {
     expect(await sysOf(modelLabel(resolveModel({ ai: 'anthropic', key: 'sk-ant-12345678', model: 'claude-sonnet-5-5' })))).toContain('The AI model behind you is claude-sonnet-5-5');
     expect(await sysOf(modelLabel(resolveModel(undefined)))).toContain('Flisk Wolf');
     expect(await sysOf('')).not.toContain('The AI model behind you');
+  });
+});
+
+describe('a build ends with a public link', () => {
+  const fakeComputer = () => ({
+    start: async () => ({ data: { id: 'p1', provider: 'upstash' } }),
+    stop: async () => ({ status: 200 }),
+    run: async () => ({ data: { exitCode: 0, stdout: 'ok', stderr: '' } }),
+    write: async () => ({ data: {} }),
+    read: async () => ({ data: { encoding: 'utf8', content: '<html>crm</html>' } }),
+  });
+  const script = (replies) => {
+    const seen = [];
+    return { seen, model: async (m) => (seen.push(m[m.length - 1].content), { text: replies.shift() }) };
+  };
+
+  test('the recipe asks for a published copy and says so', () => {
+    expect(SYSTEM).toContain('"publish" it, then "say" the link FIRST');
+    expect(SYSTEM).toContain('Each task starts on a fresh computer');
+  });
+
+  test('saying the app works without a link sends the model back to publish once', async () => {
+    const { seen, model } = script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &); sleep 5"}', '{"say":"It works on localhost:3000"}', '{"write":{"path":"/tmp/s/index.html","content":"<html></html>"}}', '{"publish":"/tmp/s/index.html"}', '{"say":"Here: https://chat.flisk.si/s/abc"}']);
+    const r = await runTask2({ task: 'build crm via flisk', model, computer: fakeComputer(), publish: async () => ({ url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
+    expect(seen.some((m) => m.startsWith('No public link yet'))).toBe(true);
+    expect(r.links).toEqual(['https://chat.flisk.si/s/abc']);
+    expect(r.answer).toContain('https://chat.flisk.si/s/abc');
+  });
+
+  test('it asks only once, and never when a link is already published', async () => {
+    const stubborn = script(['{"run":"nohup node s.js &"}', '{"say":"done"}', '{"say":"still done"}']);
+    const a = await runTask2({ task: 'x', model: stubborn.model, computer: fakeComputer(), publish: async () => ({}), maxSteps: 8 });
+    expect(a.answer).toContain('still done');
+    expect(stubborn.seen.filter((m) => m.startsWith('No public link yet'))).toHaveLength(1);
+    const ok = script(['{"run":"nohup node s.js &"}', '{"publish":"/tmp/s/index.html"}', '{"say":"https://chat.flisk.si/s/abc"}']);
+    await runTask2({ task: 'x', model: ok.model, computer: fakeComputer(), publish: async () => ({ url: 'https://chat.flisk.si/s/abc' }), maxSteps: 8 });
+    expect(ok.seen.some((m) => m.startsWith('No public link yet'))).toBe(false);
+  });
+
+  test('a task that never started a server is not asked for a link', async () => {
+    const calc = script(['{"run":"echo 4"}', '{"say":"4"}']);
+    const r = await runTask2({ task: '2+2', model: calc.model, computer: fakeComputer(), publish: async () => ({}), maxSteps: 8 });
+    expect(r.answer).toBe('4');
+    expect(calc.seen.some((m) => m.startsWith('No public link yet'))).toBe(false);
   });
 });
