@@ -160,6 +160,12 @@ describe('safety', () => {
     expect(home).toContain('Sign in with GitHub');
     expect(home).toContain('id="ask"');
     expect(home).toContain('window.__SIGNED__=false');
+    // Dogfood fixes: video keeps its box so the page can scroll to it, a closed drawer is not focusable, dated history, dark theme.
+    expect(home).toContain("addEventListener('loadedmetadata',down)");
+    expect(home).toContain('.side{visibility:hidden;');
+    expect(home).toContain('@media (hover:none){#hist li .x{opacity:1}}');
+    expect(home).toContain('@media (prefers-color-scheme:dark){');
+    expect(home).toContain('details.pick .menu::after');
     // Dogfood fixes: the model picker must survive its list re-rendering, the limit card button must not close it,
     // and a task that already says what it is must not be asked "What is it?".
     expect(home).toContain('e.target.isConnected');
@@ -171,6 +177,16 @@ describe('safety', () => {
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
+  });
+});
+
+describe('logos', () => {
+  test('no logo changes colour with the browser theme, the page is always light', async () => {
+    const { LOGOS } = await import('../src/logos.js');
+    for (const [name, uri] of Object.entries(LOGOS)) {
+      if (!uri.includes('svg+xml')) continue;
+      expect([name, atob(uri.split(',')[1]).includes('prefers-color-scheme')]).toEqual([name, false]);
+    }
   });
 });
 
