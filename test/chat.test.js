@@ -567,3 +567,15 @@ test('the new task is sent to the model once, not again from history', async () 
   await runTask2({ task: 'hi', history: [{ role: 'user', content: 'old' }, { role: 'assistant', content: 'ok' }, { role: 'user', content: 'hi', files: ['a.jpg'] }], model: async (m) => ((seen ??= m), { text: '{"say":"yo"}' }), computer: {} });
   expect(seen.filter((m) => m.role === 'user').map((m) => m.content)).toEqual(['old', 'hi']);
 });
+
+test('on phones the composer row fits: Fleet shows its icon only and keeps a name for screen readers', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain('@media (max-width:520px){.composer{padding:10px 8px 8px 10px}');
+  expect(page).toContain('<summary class="chip" title="Computers" aria-label="Computers">');
+});
+
+test('files attached before sign-in are kept and sent with the task after it', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain("sessionStorage.setItem('chat_pending_files',JSON.stringify(sendFiles))");
+  expect(page).toContain("attached=pf.slice(0,3)");
+});
