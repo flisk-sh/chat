@@ -318,6 +318,41 @@ html[data-theme=focus] .app{grid-template-columns:72px minmax(0,1fr)}html[data-t
 html[data-theme=voice] .app{grid-template-columns:264px minmax(0,1fr) 280px}html[data-theme=voice] .rcol{display:flex}
 }
 @media (max-width:860px){html[data-theme=focus] .fcards{display:none}html[data-theme=focus] .h-focus{flex-wrap:wrap;justify-content:center;gap:10px}html[data-theme=focus] .welcome h1{font-size:34px}html.nt .welcome h1{overflow-wrap:anywhere}html[data-theme=voice] .vorb{width:150px;height:150px}html.nt .cat{min-width:0}}
+/* Chat screen per look: each look also redesigns the conversation, not only the start page. */
+html.nt #talk{gap:24px;padding-top:34px}
+html.nt #talk>.a,html.nt .turn{position:relative}
+html.nt .turn>.a{padding:0}
+/* Ivory: quiet, Claude-like. Warm paper bubble for you, a round F mark beside each answer. */
+html[data-theme=ivory] .u{background:#EFEDE6;border:0;max-width:75%}
+html[data-theme=ivory] #talk>.a,html[data-theme=ivory] .turn{padding-left:42px}
+html[data-theme=ivory] #talk>.a::before,html[data-theme=ivory] .turn::before{content:'F';position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:#1F1E1B;color:#FAF9F6;font:600 13px/28px var(--sans);text-align:center}
+html[data-theme=ivory] .work{border-bottom:0;padding:4px 0 0}
+html[data-theme=ivory] .stepsbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+/* Soft glow: indigo bubble for you, answers on a white card with a soft glow behind the talk. */
+html[data-theme=glow] .scroll{background:radial-gradient(60% 40% at 15% 0,#FFF1EA 0,rgba(255,255,255,0) 70%),radial-gradient(50% 40% at 90% 10%,#EEEBFF 0,rgba(255,255,255,0) 70%)}
+html[data-theme=glow] .u{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:0;box-shadow:0 10px 24px -14px rgba(79,70,229,.7)}
+html[data-theme=glow] .u .fchip{background:rgba(255,255,255,.18);color:#fff;border-color:transparent}
+html[data-theme=glow] #talk>.a,html[data-theme=glow] .turn{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:0 18px 40px -30px rgba(30,27,75,.45)}
+html[data-theme=glow] .turn .stepsbox{background:#F7F6FD;border-radius:var(--radius);padding:8px 12px}
+html[data-theme=glow] .composer{border-color:transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,linear-gradient(120deg,#FDBA9A,#A5B4FC,#C4B5FD) border-box;border:1.5px solid transparent}
+/* Focus: reads like a document. Your task is a serif heading, the answer is the page under it. */
+html[data-theme=focus] #talk{gap:14px}
+html[data-theme=focus] .u{align-self:stretch;max-width:none;background:none;border:0;border-top:1px solid var(--line);padding:22px 0 4px;font:400 28px/1.2 'Instrument Serif',Georgia,serif;color:var(--ink)}
+html[data-theme=focus] #talk>.u:first-child{border-top:0;padding-top:4px}
+html[data-theme=focus] .a{font-size:16px;line-height:1.75}
+html[data-theme=focus] .work{border-bottom:0;font-size:13px;font-style:italic}
+html[data-theme=focus] .steps{border-left:1px solid var(--line2);padding-left:14px;margin-left:11px}
+html[data-theme=focus] .st .si{background:var(--bg);box-shadow:0 0 0 4px var(--bg);margin-left:-26px}
+html[data-theme=focus] .st{grid-template-columns:0 minmax(0,1fr);gap:16px}
+/* Voice first: a transcript. Each line is labelled with who said it, your lines in navy. */
+html[data-theme=voice] .u{background:#1E2A4A;color:#fff;border:0;max-width:78%}
+html[data-theme=voice] .u .fchip{background:rgba(255,255,255,.14);color:#fff;border-color:transparent}
+html[data-theme=voice] .u::before,html[data-theme=voice] #talk>.a::before,html[data-theme=voice] .turn::before{display:block;font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+html[data-theme=voice] .u::before{content:'You';color:#B9C4E0}
+html[data-theme=voice] #talk>.a::before,html[data-theme=voice] .turn::before{content:'Flisk';color:#3B5BDB}
+html[data-theme=voice] #talk>.a,html[data-theme=voice] .turn{max-width:86%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px}
+html[data-theme=voice] .composer .bar #orbbtn{background:#1E2A4A;color:#fff;border-color:#1E2A4A}
+@media (max-width:860px){html[data-theme=voice] #talk>.a,html[data-theme=voice] .turn{max-width:none}html[data-theme=focus] .u{font-size:24px}}
 @media (min-width:861px){.only-m{display:none}}
 /* Phones: the composer buttons fit on one row with the send button (Fleet shows its icon only, no arrows). */
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}

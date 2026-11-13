@@ -887,6 +887,14 @@ describe('a build ends with a public link', () => {
 // The page has five looks. A new visitor gets the next one in turn, kept in a cookie; a saved look is kept; the switch lists all five.
 describe('looks', () => {
   const look = (html) => /<html lang="en" data-theme="([a-z]+)"/.exec(html)?.[1];
+  test('each new look also styles the chat screen: your messages, answers and steps', async () => {
+    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
+    for (const t of ['ivory', 'glow', 'focus', 'voice']) {
+      expect(html).toContain(`html[data-theme=${t}] .u{`);
+      expect(html).toMatch(new RegExp(`html\\[data-theme=${t}\\] (#talk>\\.a|\\.a|\\.steps)`));
+    }
+    expect(html).toContain("html[data-theme=voice] .u::before{content:'You'");
+  });
   test('new visitors get the looks in turn and keep theirs in a cookie', async () => {
     const seen = [];
     for (let i = 0; i < 5; i++) {
