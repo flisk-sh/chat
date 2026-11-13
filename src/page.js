@@ -71,7 +71,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #hist{list-style:none;margin:0;padding:0}
 #hist li{display:flex;align-items:center;border-radius:var(--radius)}#hist li:hover,#hist li.cur{background:rgba(27,27,24,.06)}
 #hist li button{flex:1;min-width:0;text-align:left;background:none;border:0;padding:7px 8px;cursor:pointer;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#hist li .x{flex:none;opacity:0;padding:6px 8px;color:var(--soft)}#hist li:hover .x,#hist li .x:focus-visible{opacity:1}
+#hist li .x{flex:none;opacity:0;padding:6px 8px;color:var(--soft)}#hist li:hover .x,#hist li .x:focus-visible{opacity:1}@media (hover:none){#hist li .x{opacity:1}}#hist li .when{flex:none;font-size:11px;color:var(--soft);padding:0 4px}
 #hist .none{font-size:13px;color:var(--soft);padding:6px 8px}
 .sidesec{border-top:1px solid var(--line);padding:10px 4px 0}
 .sidesec h4{margin:0 0 6px;font:500 12px/1.4 var(--sans);color:var(--dim);display:flex;justify-content:space-between;align-items:center}
@@ -217,7 +217,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .attach{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);cursor:pointer;color:var(--ink)}.attach:hover{border-color:var(--ink)}
 .asave{display:flex;gap:8px;margin-top:8px}
 #byo input{font:14px var(--mono);padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--panel);color:var(--ink);width:100%}
-details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
+details.pick .menu{overscroll-behavior:contain}details.pick .menu::after{content:'';position:sticky;bottom:-6px;display:block;height:22px;margin:-22px -6px -6px;background:linear-gradient(to bottom,rgba(255,255,255,0),var(--panel));pointer-events:none}details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
 details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(330px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);padding:6px;max-height:min(420px,60vh);overflow:auto;font-size:14px}
 .crow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius);cursor:pointer}
 .crow:hover{background:var(--bg)}.crow .nm{flex:1;min-width:0}.crow small{display:block;font-size:12px;color:var(--dim);line-height:1.3}
@@ -241,9 +241,21 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 @media (max-width:860px){
 .trow{grid-template-columns:1fr}.trow .q,.trow.done .q{padding:0}.sqs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.sq{width:auto;height:76px}
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
-.side.open{transform:none}.scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(27,27,24,.35);opacity:0;pointer-events:none;transition:opacity .2s}.side.open~.scrim{opacity:1;pointer-events:auto}
+.side{visibility:hidden;transition:transform .2s,visibility 0s linear .2s}.side.open{transform:none;visibility:visible;transition:transform .2s}.scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(27,27,24,.35);opacity:0;pointer-events:none;transition:opacity .2s}.side.open~.scrim{opacity:1;pointer-events:auto}
 .composer{position:relative}.mp{position:static}.pop{left:0;right:0;width:auto}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
 .u{max-width:90%}.composer .chip.plain:not(#voice){display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
+@media (prefers-color-scheme:dark){
+:root{color-scheme:dark;--bg:#161614;--panel:#1F1F1C;--side:#1B1B18;--line:#2E2D28;--line2:#3D3C35;--ink:#F1EFE8;--dim:#A8A598;--soft:#7C7A70;--green:#3E9A5E;--green-d:#4BB06E;--tint:#1F3326;--warn:#E0924A;--red:#F2746B;
+--t0:#4A2A1D;--t0i:#F6D2C2;--t1:#4A3A18;--t1i:#F7E3B0;--t2:#1D3F37;--t2i:#C9EDE4;--t3:#47263A;--t3i:#F4D3E1}
+#hist li:hover,#hist li.cur{background:rgba(255,255,255,.07)}
+.st .si,.st .t code{background:rgba(255,255,255,.07)}.st.live .si{background:#4A3A18;color:#F7C873}.st.bad .si{background:#3A1F1C}
+.err{background:#3A1F1C;border-color:#6B2A24}
+.dock{background:linear-gradient(to bottom,rgba(22,22,20,0),var(--bg) 18px)}
+.rail button[aria-pressed=true],.crow.auto .nm{color:#CFE8BE}.crow.auto small{color:#9CCB7B}
+details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),var(--panel))}
+.sq:hover,.sq:focus-visible,.composer,.pop,details.pick .menu{box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
+.zchip.ok,.talkb{color:#161614!important}
+}
 @media (min-width:861px){.only-m{display:none}}
 /* Phones: the composer buttons fit on one row with the send button (Fleet shows its icon only, no arrows). */
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
@@ -403,17 +415,17 @@ const chatting=(on)=>{welcome.classList.toggle('gone',on);};
 const KEY='chat_history_v1';let chatId=null;
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}};
 const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30)));}catch(e){}};
-const saveChat=()=>{if(!history.length)return;const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,title:history[0].content.split('\\n')[0].slice(0,80),msgs:history});saveAll(all);drawHist();};
+const saveChat=()=>{if(!history.length)return;const prev=loadAll().find(c=>c.id===chatId);const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,at:(prev&&prev.at)||Date.now(),title:history[0].content.split('\\n')[0].slice(0,80),msgs:history});saveAll(all);drawHist();};
 function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q)||(c.msgs||[]).some(m=>String(m.content||'').toLowerCase().includes(q)||(m.files||[]).some(n=>String(n).toLowerCase().includes(q))));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
-  all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
+  all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b);if(c.at){const w=node('span','when',new Date(c.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}));w.title=new Date(c.at).toLocaleString();li.append(w);}li.append(x);hist.appendChild(li);});}
 $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
 // Result cards for a finished website or video. Built in run() and again when a saved chat is reopened, from the link in its answer.
 function siteCard(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
   const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
   const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);return r;}
-function videoCard(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';
+function videoCard(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';pl.style.aspectRatio='16/9';pl.addEventListener('loadedmetadata',down);
   const vb=node('div','vb');vb.innerHTML=svgAt(IC.video,30);vb.appendChild(node('b','','Your video is ready'));
   const dl=node('a','btn go','Download mp4');dl.href=video;dl.download='flisk-video.mp4';
   const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(video).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
