@@ -409,7 +409,18 @@ function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll()
   all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});}
 $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
-function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});drawHist();}
+// Result cards for a finished website or video. Built in run() and again when a saved chat is reopened, from the link in its answer.
+function siteCard(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
+  const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
+  const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);return r;}
+function videoCard(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';
+  const vb=node('div','vb');vb.innerHTML=svgAt(IC.video,30);vb.appendChild(node('b','','Your video is ready'));
+  const dl=node('a','btn go','Download mp4');dl.href=video;dl.download='flisk-video.mp4';
+  const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(video).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
+  vb.append(cp,dl);v.append(pl,vb);return v;}
+// Own-site result links in a saved answer: /s/<16 hex> is a website, /v/<16 hex>.mp4 a video.
+function resultLinks(text){const o=location.origin.replace(/[.]/g,'[.]'),site=new RegExp(o+'/s/[a-f0-9]{16}','g'),vid=new RegExp(o+'/v/[a-f0-9]{16}[.]mp4','g'),t=String(text||'');return {site:(t.match(site)||[])[0]||'',video:(t.match(vid)||[])[0]||''};}
+function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
 const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
@@ -727,14 +738,8 @@ async function run(task){
     const sv=node('div','asave'),dl2=node('button','btn','Save as file'),cp2=node('button','btn','Copy');dl2.type=cp2.type='button';
     dl2.onclick=()=>{const u=URL.createObjectURL(new Blob([answer],{type:'text/markdown'})),x=document.createElement('a');x.href=u;x.download='flisk-chat-answer.md';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);dl2.textContent='Saved ✓';setTimeout(()=>dl2.textContent='Save as file',1500);};
     cp2.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(answer).then(()=>{cp2.textContent='Copied';setTimeout(()=>cp2.textContent='Copy',1500);});};sv.append(dl2,cp2);turn.appendChild(sv);}
-  if(link){const r=node('div','result');r.innerHTML=IC.website.replace('<svg ','<svg width="34" height="34" style="border-radius:var(--radius);flex:none" aria-hidden="true" ')+'<div class="rt"><b>Your page is live</b><div class="url"></div></div>';r.querySelector('.url').textContent=link.replace(/^https?:\\/\\//,'');
-    const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(link).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
-    const op=node('a','btn go','Open');op.href=link;op.target='_blank';op.rel='noopener';r.append(cp,op);turn.appendChild(r);}
-  if(video){const v=node('div','vres'),pl=document.createElement('video');pl.controls=true;pl.preload='metadata';pl.playsInline=true;pl.src=video+'#t=0.8';
-    const vb=node('div','vb');vb.innerHTML=svgAt(IC.video,30);vb.appendChild(node('b','','Your video is ready'));
-    const dl=node('a','btn go','Download mp4');dl.href=video;dl.download='flisk-video.mp4';
-    const cp=node('button','btn','Copy link');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(video).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy link',1500);});};
-    vb.append(cp,dl);v.append(pl,vb);turn.appendChild(v);}
+  if(link)turn.appendChild(siteCard(link));
+  if(video)turn.appendChild(videoCard(video));
   down();go.disabled=false;box.focus();
 }
 // An error you can act on: the real reason, then the buttons for what usually fixes it.
