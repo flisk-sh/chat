@@ -117,6 +117,14 @@ test('the page speaks a reply with a voice for its language, not the browser lan
   expect(page).not.toContain("const lang=navigator.language||'en-US',v=pickVoice(lang)");
 });
 
+test('voice talk never goes quiet: Ava gets 3 s, then the browser voice, then a tap-to-hear button', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('{budget:3000,onSilent:');
+  expect(page).toContain('id="ohear" class="ohear" hidden');
+  expect(page).toContain('budget||6000');
+  expect(page).toContain('quiet>(talked<2000?1100:750)');
+});
+
 import { ssml, secMsGec, VOICE } from '../src/tts.js';
 
 test('the voice request uses Ava Multilingual, the locale heard, and escapes the text', () => {
