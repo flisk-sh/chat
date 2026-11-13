@@ -149,7 +149,7 @@ export const homePage = () =>
 <p class="note">Beta. Computers come from your own provider account (several have free credit), so chat costs you nothing and us nothing.</p>`,
   );
 
-export const messagePage = (title, text) => shell(`${title} · chat`, `<header><a class="logo" href="/"><span class="mark">C</span>chat</a></header><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back</a>`);
+export const messagePage = (title, text) => shell(`${title} · chat`, `<header><a class="logo" href="/"><span class="mark">C</span>chat</a></header><div class="hero" style="border-bottom:0"><h1>${esc(title)}</h1><p class="sub">${esc(text)}</p><a class="btn" href="/">Back to chat</a></div>`);
 
 const IDEAS = [
   'Make me a one-page website for a coffee shop called Moon Roast.',
@@ -263,7 +263,7 @@ export function appPage({ login, connected = [] }) {
       login && connected.length
         ? connected.map((id) => `<li class="on">${esc(PROVIDER_NAMES[id] || id)}</li>`).join('')
         : `<li class="off">${login ? 'None connected yet' : 'Sign in to see yours'}</li>`
-    }</ul>${login ? '<p style="margin:8px 0 0;font-size:12px;color:var(--dim)">Add a key here, or remove one in fleet (manage). Keys are stored encrypted in fleet; your own AI key is never saved.</p>' : ''}</section>
+    }</ul>${login ? '<p style="margin:8px 0 0;font-size:12px;color:var(--dim)">A task asks for a key when it needs one. Remove keys in fleet (manage). Keys are stored encrypted in fleet; your own AI key is never saved.</p>' : ''}</section>
 <section><h4>Coming soon</h4><div class="soon">🎙 Voice talk <span class="tag">soon</span></div><div class="soon">🎬 Video generation <span class="tag">soon</span></div><p style="margin:6px 0 0;font-size:12px;color:var(--dim)">Talk to chat and hear it answer in Ava, the warm voice from Flisk videos.</p></section>
 </aside><div class="main">
 <div class="hero"><h1>What should we <em>get done?</em></h1>
