@@ -273,7 +273,7 @@ html.nt #hist li:hover,html.nt #hist li.cur{background:rgba(0,0,0,.05)}
 html.nt .err{background:#FEF3F2;border-color:#FECDCA}
 html.nt .comps .on::before,html.nt .wdot.ok{background:#2F9E5B}
 html.nt .logo span{color:var(--ink)}
-html.nt .composer{box-shadow:0 14px 40px -22px rgba(20,20,40,.35)}
+html.nt .composer{box-shadow:var(--flisk-shadow)}
 html.nt .welcome{text-align:center}html.nt .welcome .sub{margin-left:auto;margin-right:auto}
 html.nt .sugg{text-align:left;margin-top:8px}
 html.nt .slot{margin:0 0 22px;text-align:left}html.nt .slot .fine{margin-top:10px}
@@ -282,8 +282,10 @@ html.nt .cats{justify-content:center}
 .tpill{display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);border:1px solid var(--line2);background:var(--panel);border-radius:var(--radius);padding:4px 6px 4px 12px;margin:0 0 18px}.tpill em{font-style:normal;font-size:11.5px;background:var(--tint);color:var(--ink);border-radius:var(--radius);padding:2px 8px}
 .look{display:inline-flex;align-items:center;gap:4px;margin-left:6px;white-space:nowrap}.look select{font:12px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:1px 4px}
 /* Ivory and Soft glow: a big centred title, the box under it, round icon tiles. */
-html[data-theme=ivory]{--bg:#FAF9F6;--panel:#fff;--side:#F3F2EE;--line:#E8E6E1;--line2:#DCD9D2;--ink:#1F1E1B;--dim:#6B6A65;--soft:#9A9890;--green:#1F1E1B;--green-d:#000;--tint:#E7F3EA;--radius:10px}
-html[data-theme=glow]{--bg:#fff;--panel:#fff;--side:#F7F7FB;--line:#ECEBF3;--line2:#DDDCEA;--ink:#16163A;--dim:#5E5D78;--soft:#9897AE;--green:#1E1B4B;--green-d:#100E33;--tint:#EEEBFF;--radius:14px}
+/* New looks set only the shared Flisk theme tokens (flisk-sh/flisk-themes); the chat's own names read them. */
+html.nt{--bg:var(--flisk-bg);--panel:var(--flisk-surface);--side:var(--flisk-raised);--ink:var(--flisk-ink);--dim:var(--flisk-muted);--line:var(--flisk-line);--green:var(--flisk-accent);--green-d:var(--flisk-accent-ink);--radius:var(--flisk-radius)}
+html[data-theme=ivory]{--flisk-bg:#FAF9F6;--flisk-surface:#fff;--flisk-raised:#F3F2EE;--flisk-ink:#1F1E1B;--flisk-muted:#6B6A65;--flisk-line:#E8E6E1;--flisk-accent:#1F1E1B;--flisk-accent-ink:#000;--flisk-on-accent:#fff;--flisk-hero-bg:#FAF9F6;--flisk-hero-ink:#1F1E1B;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:700;--flisk-radius:10px;--flisk-radius-control:10px;--flisk-radius-button:10px;--flisk-shadow:0 14px 40px -22px rgba(20,20,40,.35);--line2:#DCD9D2;--soft:#9A9890;--tint:#E7F3EA}
+html[data-theme=glow]{--flisk-bg:#fff;--flisk-surface:#fff;--flisk-raised:#F7F7FB;--flisk-ink:#16163A;--flisk-muted:#5E5D78;--flisk-line:#ECEBF3;--flisk-accent:#1E1B4B;--flisk-accent-ink:#100E33;--flisk-on-accent:#fff;--flisk-hero-bg:#fff;--flisk-hero-ink:#16163A;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:700;--flisk-radius:14px;--flisk-radius-control:14px;--flisk-radius-button:14px;--flisk-shadow:0 18px 40px -26px rgba(30,27,75,.45);--line2:#DDDCEA;--soft:#9897AE;--tint:#EEEBFF}
 html[data-theme=ivory] .tpill,html[data-theme=glow] .tpill{display:inline-flex}
 html[data-theme=ivory] .welcome h1,html[data-theme=glow] .welcome h1{font-size:clamp(34px,5vw,52px);letter-spacing:-.035em;font-weight:700}
 html[data-theme=ivory] .cat,html[data-theme=glow] .cat{flex-direction:column;border:0;background:none;padding:0;width:84px;gap:8px;font-size:12px;color:var(--dim)}
@@ -293,9 +295,9 @@ html[data-theme=ivory] .cat[aria-pressed=true],html[data-theme=glow] .cat[aria-p
 html[data-theme=ivory] .cat[aria-pressed=true] svg,html[data-theme=glow] .cat[aria-pressed=true] svg{border-color:var(--ink)}
 html[data-theme=glow] .welcome{background:radial-gradient(38% 30% at 30% 55%,#FFE6D8 0,rgba(255,255,255,0) 70%),radial-gradient(38% 30% at 70% 50%,#E8E2FF 0,rgba(255,255,255,0) 70%),radial-gradient(30% 22% at 50% 80%,#DDF0FF 0,rgba(255,255,255,0) 70%)}
 /* Focus: an icon rail, a greeting, the box, then cards for examples, recent chats and computers. */
-html[data-theme=focus]{--bg:#F6F4EE;--panel:#fff;--side:#F0EDE5;--line:#E6E2D8;--line2:#D9D4C8;--ink:#1F1E1B;--dim:#6B6960;--soft:#9A978C;--green:#1F1E1B;--green-d:#000;--tint:#E7F3EA;--radius:10px}
+html[data-theme=focus]{--flisk-bg:#F6F4EE;--flisk-surface:#fff;--flisk-raised:#F0EDE5;--flisk-ink:#1F1E1B;--flisk-muted:#6B6960;--flisk-line:#E6E2D8;--flisk-accent:#1F1E1B;--flisk-accent-ink:#000;--flisk-on-accent:#fff;--flisk-hero-bg:#F6F4EE;--flisk-hero-ink:#1F1E1B;--flisk-font-heading:'Instrument Serif',Georgia,serif;--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:400;--flisk-radius:10px;--flisk-radius-control:10px;--flisk-radius-button:10px;--flisk-shadow:0 14px 40px -22px rgba(20,20,40,.3);--line2:#D9D4C8;--soft:#9A978C;--tint:#E7F3EA}
 html[data-theme=focus] .h-def{display:none}html[data-theme=focus] .h-focus{display:inline-flex;align-items:center;gap:14px}
-html[data-theme=focus] .welcome h1{font:400 clamp(36px,5vw,50px)/1.1 'Instrument Serif',Georgia,serif;letter-spacing:-.01em}
+html[data-theme=focus] .welcome h1{font:var(--flisk-heading-weight) clamp(36px,5vw,50px)/1.1 var(--flisk-font-heading);letter-spacing:-.01em}
 html[data-theme=focus] .welcome .sub{display:none}
 html[data-theme=focus] .cat{padding:5px 12px 5px 6px;font-size:13px}
 html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;text-align:left;margin-top:8px}
@@ -304,7 +306,7 @@ html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap
 .frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
 .frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
 /* Voice first: a big talk circle in the middle, computers and things to say on the right. */
-html[data-theme=voice]{--bg:#F3F6FB;--panel:#fff;--side:#F3F6FB;--line:#E3E8F2;--line2:#DCE3F0;--ink:#1E2A4A;--dim:#5A6785;--soft:#8A95AE;--green:#1E2A4A;--green-d:#111A33;--tint:#E4ECFF;--radius:14px}
+html[data-theme=voice]{--flisk-bg:#F3F6FB;--flisk-surface:#fff;--flisk-raised:#F3F6FB;--flisk-ink:#1E2A4A;--flisk-muted:#5A6785;--flisk-line:#E3E8F2;--flisk-accent:#1E2A4A;--flisk-accent-ink:#111A33;--flisk-on-accent:#fff;--flisk-hero-bg:#F3F6FB;--flisk-hero-ink:#1E2A4A;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:700;--flisk-radius:14px;--flisk-radius-control:14px;--flisk-radius-button:14px;--flisk-shadow:0 14px 40px -22px rgba(20,30,60,.35);--line2:#DCE3F0;--soft:#8A95AE;--tint:#E4ECFF}
 html[data-theme=voice] .h-def{display:none}html[data-theme=voice] .h-voice{display:inline}
 html[data-theme=voice] .welcome h1{font-size:clamp(30px,4vw,40px);letter-spacing:-.03em;font-weight:700}
 html[data-theme=voice] .welcome{padding-top:6vh}
@@ -323,21 +325,21 @@ html.nt #talk{gap:24px;padding-top:34px}
 html.nt #talk>.a,html.nt .turn{position:relative}
 html.nt .turn>.a{padding:0}
 /* Ivory: quiet, Claude-like. Warm paper bubble for you, a round F mark beside each answer. */
-html[data-theme=ivory] .u{background:#EFEDE6;border:0;max-width:75%}
+html[data-theme=ivory] .u{background:var(--flisk-raised);border:0;max-width:75%}
 html[data-theme=ivory] #talk>.a,html[data-theme=ivory] .turn{padding-left:42px}
-html[data-theme=ivory] #talk>.a::before,html[data-theme=ivory] .turn::before{content:'F';position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:#1F1E1B;color:#FAF9F6;font:600 13px/28px var(--sans);text-align:center}
+html[data-theme=ivory] #talk>.a::before,html[data-theme=ivory] .turn::before{content:'F';position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--flisk-accent);color:var(--flisk-on-accent);font:600 13px/28px var(--flisk-font-body);text-align:center}
 html[data-theme=ivory] .work{border-bottom:0;padding:4px 0 0}
 html[data-theme=ivory] .stepsbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
 /* Soft glow: indigo bubble for you, answers on a white card with a soft glow behind the talk. */
 html[data-theme=glow] .scroll{background:radial-gradient(60% 40% at 15% 0,#FFF1EA 0,rgba(255,255,255,0) 70%),radial-gradient(50% 40% at 90% 10%,#EEEBFF 0,rgba(255,255,255,0) 70%)}
 html[data-theme=glow] .u{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:0;box-shadow:0 10px 24px -14px rgba(79,70,229,.7)}
 html[data-theme=glow] .u .fchip{background:rgba(255,255,255,.18);color:#fff;border-color:transparent}
-html[data-theme=glow] #talk>.a,html[data-theme=glow] .turn{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:0 18px 40px -30px rgba(30,27,75,.45)}
+html[data-theme=glow] #talk>.a,html[data-theme=glow] .turn{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--flisk-shadow)}
 html[data-theme=glow] .turn .stepsbox{background:#F7F6FD;border-radius:var(--radius);padding:8px 12px}
 html[data-theme=glow] .composer{border-color:transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,linear-gradient(120deg,#FDBA9A,#A5B4FC,#C4B5FD) border-box;border:1.5px solid transparent}
 /* Focus: reads like a document. Your task is a serif heading, the answer is the page under it. */
 html[data-theme=focus] #talk{gap:14px}
-html[data-theme=focus] .u{align-self:stretch;max-width:none;background:none;border:0;border-top:1px solid var(--line);padding:22px 0 4px;font:400 28px/1.2 'Instrument Serif',Georgia,serif;color:var(--ink)}
+html[data-theme=focus] .u{align-self:stretch;max-width:none;background:none;border:0;border-top:1px solid var(--line);padding:22px 0 4px;font:var(--flisk-heading-weight) 28px/1.2 var(--flisk-font-heading);color:var(--ink)}
 html[data-theme=focus] #talk>.u:first-child{border-top:0;padding-top:4px}
 html[data-theme=focus] .a{font-size:16px;line-height:1.75}
 html[data-theme=focus] .work{border-bottom:0;font-size:13px;font-style:italic}
@@ -345,13 +347,13 @@ html[data-theme=focus] .steps{border-left:1px solid var(--line2);padding-left:14
 html[data-theme=focus] .st .si{background:var(--bg);box-shadow:0 0 0 4px var(--bg);margin-left:-26px}
 html[data-theme=focus] .st{grid-template-columns:0 minmax(0,1fr);gap:16px}
 /* Voice first: a transcript. Each line is labelled with who said it, your lines in navy. */
-html[data-theme=voice] .u{background:#1E2A4A;color:#fff;border:0;max-width:78%}
+html[data-theme=voice] .u{background:var(--flisk-accent);color:var(--flisk-on-accent);border:0;max-width:78%}
 html[data-theme=voice] .u .fchip{background:rgba(255,255,255,.14);color:#fff;border-color:transparent}
 html[data-theme=voice] .u::before,html[data-theme=voice] #talk>.a::before,html[data-theme=voice] .turn::before{display:block;font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
 html[data-theme=voice] .u::before{content:'You';color:#B9C4E0}
 html[data-theme=voice] #talk>.a::before,html[data-theme=voice] .turn::before{content:'Flisk';color:#3B5BDB}
 html[data-theme=voice] #talk>.a,html[data-theme=voice] .turn{max-width:86%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px}
-html[data-theme=voice] .composer .bar #orbbtn{background:#1E2A4A;color:#fff;border-color:#1E2A4A}
+html[data-theme=voice] .composer .bar #orbbtn{background:var(--flisk-accent);color:var(--flisk-on-accent);border-color:var(--flisk-accent)}
 @media (max-width:860px){html[data-theme=voice] #talk>.a,html[data-theme=voice] .turn{max-width:none}html[data-theme=focus] .u{font-size:24px}}
 @media (min-width:861px){.only-m{display:none}}
 /* Phones: the composer buttons fit on one row with the send button (Fleet shows its icon only, no arrows). */

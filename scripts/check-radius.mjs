@@ -15,7 +15,8 @@ const EXTENSIONS = /\.(?:css|html|js|mjs)$/;
 
 // border-radius / border-top-left-radius / borderRadius (inline JS styles)
 const RADIUS_DECL = /(?<![\w-])(border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius|border(?:Top|Bottom|Start|End)?(?:Left|Right|Start|End)?Radius)\s*[:=]\s*['"`]?([^;}"'`\n!]+)/g;
-// Any custom property named like a radius token, other than the one allowed.
+// Any custom property named like a radius token, other than the one allowed
+// (--radius, and the shared --flisk-radius* theme tokens that feed it).
 const RADIUS_TOKEN_DEF = /(?<![\w-])(--(?:bs-)?(?:[\w-]*-)?radius[\w-]*)\s*:\s*([^;}\n]+)/g;
 
 export function findRadiusProblems(source, file = '') {
@@ -33,7 +34,7 @@ export function findRadiusProblems(source, file = '') {
   for (const match of source.matchAll(RADIUS_TOKEN_DEF)) {
     const [, name, raw] = match;
     const value = raw.trim();
-    if (file === TOKEN_FILE && (name === '--radius' || (name.startsWith('--bs-') && value === 'var(--radius)'))) continue;
+    if (file === TOKEN_FILE && (name === '--radius' || name.startsWith('--flisk-radius') || (name.startsWith('--bs-') && value === 'var(--radius)'))) continue;
     problems.push(`${file}:${lineOf(match.index)} ${name}: ${value} (only --radius in ${TOKEN_FILE} may set a radius)`);
   }
   return problems;
