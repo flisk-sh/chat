@@ -42,3 +42,9 @@ test('the page has the mic and the Voice toggle, and its script parses', () => {
   const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
   for (const s of scripts) expect(() => new Function(s)).not.toThrow();
 });
+
+test('a spoken task skips the six tap-to-pick questions so talk stays hands-free', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('if(!byVoice&&!history.length&&BUILD.test(task)');
+  expect(page).toContain('byVoice=true;form.requestSubmit();byVoice=false;');
+});

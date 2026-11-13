@@ -522,7 +522,7 @@ fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){fileNo
 // With Voice on, a spoken task is sent by itself and each answer is read aloud, a sentence at a time (Chrome stops
 // reading one long text after about 15 seconds).
 const voiceBtn=$('voice'),micBtn=$('mic'),TTS=window.speechSynthesis;
-let voiceOn=lsGet('chat_voice')==='1',rec=null,recTimer=null;
+let voiceOn=lsGet('chat_voice')==='1',rec=null,recTimer=null,byVoice=false;
 const TICK=String.fromCharCode(96),spoken=(t)=>String(t).split(TICK+TICK+TICK).filter((x,i)=>i%2===0).join(' ').replace(/https?:[^ ]+/g,' link ').replace(/[*_#>|~]/g,' ').split(String.fromCharCode(10)).join('. ').split(TICK).join('').replace(/ +/g,' ').replace(/([.!?]) *[.] +/g,'$1 ').trim().slice(0,3000);
 const stopTalk=()=>{try{TTS&&TTS.cancel();}catch(e){}};
 const GOOD=['Google','Natural','Neural','Premium','Enhanced','Samantha','Ava','Daniel'];
@@ -545,7 +545,7 @@ async function heard(blob){
     const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||('Voice answered '+res.status));
     const t=String(b.text||'').trim();if(!t)throw new Error('I did not catch any words. Try again a little closer to the mic.');
     box.value=((box.value.trim()?box.value.trim()+' ':'')+t).slice(0,2000);box.dispatchEvent(new Event('input'));
-    if(voiceOn&&!go.disabled)form.requestSubmit();else box.focus();
+    if(voiceOn&&!go.disabled){byVoice=true;form.requestSubmit();byVoice=false;}else box.focus();
   }catch(e){errMsg(String(e.message||e));}
   finally{box.placeholder=was;micIdle();}
 }
@@ -714,7 +714,7 @@ form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}userMsg(task);
-  if(!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+  if(!byVoice&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 try{if(matchMedia('(pointer:fine)').matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');userMsg(t);history.push({role:'user',content:t});run(t);}}catch(e){}}
