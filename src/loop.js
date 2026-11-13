@@ -156,17 +156,23 @@ function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true
   const call = chosen.free && env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl;
   return async (messages) => {
     if (!key) return { error: 'chat has no model key yet (INFERENCE_KEY)' };
-    let res;
-    try {
-      res = await call(url, {
+    // Newer Claude and OpenAI models refuse `temperature` ("`temperature` is deprecated for this model"), so a model the
+    // visitor brings is called without it, and a refusal that names it is retried once without it.
+    const send = async (withTemperature) => {
+      const r = await call(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, 'user-agent': 'flisk-chat', ...(chosen.referer ? { 'http-referer': 'https://chat.flisk.si', 'x-title': 'Flisk Chat' } : {}) },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0 }),
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, ...(withTemperature ? { temperature: 0 } : {}) }),
       });
+      return { res: r, body: await r.json().catch(() => null) };
+    };
+    let res, body;
+    try {
+      ({ res, body } = await send(chosen.free || chosen.referer || chosen.ai === 'openrouter'));
+      if (!res.ok && /temperature/i.test(JSON.stringify(body?.error ?? ''))) ({ res, body } = await send(false));
     } catch (e) {
       return { error: `the model did not answer: ${String(e?.message || e).slice(0, 150)}`, kind: 'provider' };
     }
-    const body = await res.json().catch(() => null);
     if (!res.ok || (body?.error && !body?.choices)) return explainModelError(body, res.status, chosen);
     const text = body?.choices?.[0]?.message?.content;
     if (typeof text === 'string' && text.trim()) return { text };

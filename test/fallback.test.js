@@ -133,3 +133,29 @@ test('each person gets only a share of the Workers AI fallback', async () => {
   expect(await a.overLimit()).toBe(true);
   expect(await freeModelOpts({ LIMIT_CACHE: cache }, 'bob').overLimit()).toBe(false);
 });
+
+// Claude 5 refuses `temperature` ("`temperature` is deprecated for this model").
+const claude = { ai: 'anthropic', free: false, url: 'https://api.anthropic.com/v1/chat/completions', key: 'sk-ant-test-key', model: 'claude-sonnet-5-5' };
+const bodyOf = (init) => JSON.parse(init.body);
+
+test('a Claude key is called without temperature', async () => {
+  const sent = [];
+  const fetchImpl = async (u, init) => { sent.push(bodyOf(init)); return answer('hi'); };
+  const r = await modelFrom({}, fetchImpl, claude)(msgs);
+  expect(r.text).toBe('hi');
+  expect(sent.length).toBe(1);
+  expect('temperature' in sent[0]).toBe(false);
+});
+
+test('a refusal that names temperature is retried once without it', async () => {
+  const sent = [];
+  const fetchImpl = async (u, init) => {
+    const b = bodyOf(init); sent.push(b);
+    return 'temperature' in b
+      ? Response.json({ error: { message: '`temperature` is deprecated for this model.' } }, { status: 400 })
+      : answer('ok');
+  };
+  const r = await modelFrom({}, fetchImpl, { ...claude, ai: 'openrouter', model: 'x/new' })(msgs);
+  expect(r.text).toBe('ok');
+  expect(sent.map((b) => 'temperature' in b)).toEqual([true, false]);
+});
