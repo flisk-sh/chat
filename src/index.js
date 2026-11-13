@@ -319,7 +319,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
-      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, fetchImpl, order, files: cleanFiles(body.files), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ task, history: body.history, model: modelFrom(env, fetchImpl, chosen), computer: fleet, fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(() => w.close().catch(() => {}));

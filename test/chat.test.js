@@ -522,3 +522,29 @@ test('the model box keeps the full OpenRouter list, never sends an empty model, 
   expect(page).not.toContain("Did you mean: '+f.near.join(', ')+'?';byWarn");
   expect(page).not.toContain("errMsg(f.name+' is over 150 KB.')");
 });
+
+describe('attached pictures', () => {
+  const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), write: async () => ({ status: 200, data: {} }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
+  const pic = cleanFiles([{ name: 'demo.jpg', type: 'image/jpeg', b64: true, content: 'AAAA' }]);
+  test('cleanFiles keeps the picture type only for real image types', () => {
+    expect(pic[0].image).toBe('image/jpeg');
+    expect(cleanFiles([{ name: 'x.svg', type: 'image/svg+xml', b64: true, content: 'AAAA' }])[0].image).toBeUndefined();
+  });
+  test('a model that sees images gets the picture itself', async () => {
+    let first;
+    await runTask2({ task: 'what tool is this?', model: async (m) => ((first ??= m.find((x) => x.role === 'user').content), { text: '{"say":"a hammer"}' }), computer, files: pic, vision: true });
+    expect(Array.isArray(first)).toBe(true);
+    expect(first[1]).toEqual({ type: 'image_url', image_url: { url: 'data:image/jpeg;base64,AAAA' } });
+  });
+  test('a model that cannot see gets text only', async () => {
+    let first;
+    await runTask2({ task: 'what tool is this?', model: async (m) => ((first ??= m.find((x) => x.role === 'user').content), { text: '{"say":"?"}' }), computer, files: pic, vision: false });
+    expect(typeof first).toBe('string');
+    expect(first).toContain('demo.jpg');
+  });
+});
+
+test('a first message with a file attached runs at once instead of asking the build questions', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  expect(page).toContain('if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)');
+});
