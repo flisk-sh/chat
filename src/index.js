@@ -171,7 +171,16 @@ function siteResponse(row) {
   });
 }
 
-export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil = null } = {}) {
+// A HEAD request (link checkers, uptime monitors) gets the same status and headers as GET, with no body.
+export async function handle(request, env = {}, opts = {}) {
+  if (request.method === 'HEAD' && !/^\/v\//.test(new URL(request.url).pathname)) {
+    const res = await handleRequest(new Request(request.url, { method: 'GET', headers: request.headers }), env, opts);
+    return new Response(null, { status: res.status, headers: res.headers });
+  }
+  return handleRequest(request, env, opts);
+}
+
+async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil = null } = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const origin = env.PUBLIC_ORIGIN || url.origin;
