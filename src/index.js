@@ -10,6 +10,25 @@ export const TASKS_PER_DAY = 20;
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
 export const VIDEOS_PER_LOGIN = 5;
+export const VOICE_PER_DAY = 60;
+export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
+export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
+
+// Speech to text for the mic button: the browser records, Workers AI Whisper writes it down. Works in every browser,
+// unlike the browser's own speech recognition (missing in Firefox, broken in Arc, Brave and in-app browsers).
+export async function transcribe(env, body) {
+  const audio = typeof body?.audio === 'string' ? body.audio : '';
+  if (!audio) return { status: 400, error: 'no audio was recorded' };
+  if (audio.length > MAX_AUDIO_B64) return { status: 413, error: 'keep it under a minute' };
+  if (!/^[A-Za-z0-9+/=]+$/.test(audio)) return { status: 400, error: 'the recording was not readable' };
+  if (!env.AI) return { status: 503, error: 'voice is not set up on this server' };
+  try {
+    const r = await env.AI.run(WHISPER_MODEL, { audio });
+    return { status: 200, text: String(r?.text || '').trim() };
+  } catch (e) {
+    return { status: 502, error: 'could not hear that, try again: ' + String(e?.message || e).slice(0, 120) };
+  }
+}
 const SITE_DAYS = 7;
 
 // The model picker's list comes from inference (/v1/catalog), so a model added there shows up here with no chat change.
@@ -228,6 +247,13 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (!card) return json(400, { error: 'pick one of the providers' });
       const r = await fleet.connect(card.id, String(body.key || ''));
       return r.error ? json(400, { error: r.error }) : json(200, { ok: true });
+    }
+
+    if (path === '/api/transcribe') {
+      const body = await readJson(request);
+      if (await overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: VOICE_PER_DAY, scope: 'voice-limit' })) return json(429, { error: `You've used today's ${VOICE_PER_DAY} voice messages. Type instead, or come back tomorrow.` });
+      const r = await transcribe(env, body);
+      return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text });
     }
 
     if (path === '/api/run') {
