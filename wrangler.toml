@@ -15,7 +15,7 @@ INFERENCE_MODEL = "flisk-wolf-chat"
 [[d1_databases]]
 binding = "DB"
 database_name = "flisk-chat"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "fea52917-992e-4d99-98c9-cf007f233fd7"
 
 # Secrets: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET (OAuth app, callback https://chat.flisk.si/auth/callback),
 # SESSION_SECRET (long random), FLEET_SERVICE_SECRET (same value as CHAT_SERVICE_SECRET on fleet, 32+ characters),
