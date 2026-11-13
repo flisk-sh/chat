@@ -96,6 +96,9 @@ form.ask .btn{border-width:0 0 0 1px;border-color:var(--ink);padding:0 28px}form
 form.ask{border-top:0}
 .tree{display:flex;flex-direction:column;gap:8px;max-width:100%}
 .trow{display:flex;gap:8px;align-items:stretch}
+.trow.new{animation:rowin .22s ease-out}
+@keyframes rowin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.trow,.sq{animation:none;transition:none}}
 .trow .q{width:120px;flex:none;font:11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--dim);padding-top:12px}
 .sq{flex:1;border:0;border-radius:0;padding:12px;font:14px/1.3 var(--sans);cursor:pointer;min-height:50px;text-align:left;transition:flex .25s,transform .25s,box-shadow .2s}
 .sq:hover,.sq:focus-visible,.sq.on{flex:1.8;box-shadow:inset 0 0 0 3px var(--ink);outline:0}
@@ -202,18 +205,19 @@ function ask6(task){
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+p).join('; ')+'.':task;
     history.push({role:'user',content:full});run(full);};
   const draw=()=>{rows.textContent='';
-    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className='trow';row.style.marginLeft=(i*14)+'px';
+    for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=document.createElement('div');row.className="trow"+(i===pick.length?" new":"");row.style.marginLeft=(i*14)+'px';
       const q=document.createElement('div');q.className='q';q.textContent=ZQ[i][1];row.appendChild(q);
       ZQ[i][2].forEach((t,k)=>{const s=document.createElement('button');s.type='button';s.className='sq p'+((i+k)%4)+(pick[i]===t?' on':'');s.textContent=t;
         const choose=()=>{if(sent||pick[i]===t)return;pick=pick.slice(0,i);pick[i]=t;draw();};
-        s.onmouseenter=choose;s.onfocus=choose;s.onclick=()=>{choose();if(pick.length===ZQ.length)finish();};row.appendChild(s);});
+        let tm=0;s.onmouseenter=()=>{clearTimeout(tm);tm=setTimeout(choose,220);};s.onmouseleave=()=>clearTimeout(tm);s.onfocus=choose;s.onclick=()=>{choose();if(pick.length===ZQ.length)finish();};row.appendChild(s);});
       rows.appendChild(row);}
     chips.textContent='';ZQ.forEach((z,i)=>{const c=document.createElement('span');c.className='zchip'+(pick[i]?' ok':'');c.textContent=z[0]+(pick[i]?': '+pick[i]:'');chips.appendChild(c);});
     const sk=document.createElement('button');sk.type='button';sk.className='zskip';sk.textContent=pick.length===ZQ.length?'Build it >>>':'Skip, just run it';sk.onclick=finish;chips.appendChild(sk);
     wrap.scrollIntoView({block:"nearest"});};
   draw();
 }
-form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task)return;box.value='';el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+let lastSend=0;
+form.onsubmit=(e)=>{e.preventDefault();const task=box.value.trim();if(!task||go.disabled||Date.now()-lastSend<800)return;lastSend=Date.now();box.value='';el('u',task);if(!history.length){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');el('u',t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
