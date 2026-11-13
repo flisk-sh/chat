@@ -172,6 +172,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .mi .ck{width:16px;height:16px;margin-top:3px;opacity:0}.mi.on .ck{opacity:1}
 .mgroup{font-size:12px;color:var(--soft);padding:8px 10px 2px}
 #byo{border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}#byo[hidden]{display:none}
+#byo .bystat{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}#byo #byrm{font:12px var(--mono);text-transform:uppercase;background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:4px 8px;color:var(--ink);cursor:pointer}#byo #byrm:hover{border-color:var(--red);color:var(--red)}
 #byo label{font-size:12px;color:var(--dim)}
 #byo input{font:14px var(--mono);padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--panel);color:var(--ink);width:100%}
 details.pick{position:relative}details.pick>summary{list-style:none}details.pick>summary::-webkit-details-marker{display:none}
@@ -288,8 +289,19 @@ function drawList(){const q=mq.value.trim().toLowerCase();mlist.textContent='';l
     const n=b.querySelector('.n');n.textContent=m.name;const pr=node('span','price'+(m.free?' free':''),m.free?'free':m.price);n.appendChild(pr);b.querySelector('.d').textContent=m.description;
     b.onclick=()=>{pick(m);if(m.free)closePop();else{(m.model?byoKey:byoModel).focus();}};mlist.appendChild(b);});
   if(!mlist.children.length)mlist.appendChild(node('div','mgroup','No model matches.'));}
-function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model;byoModel.parentElement.hidden=!!m.model;
-  $('byokeylabel').textContent='Your '+m.providerName+' API key: used for this task only, never saved';
+const SUGG={anthropic:['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5','claude-fable-5-2'],openai:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o4-mini'],openrouter:['google/gemini-2.5-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','qwen/qwen3-coder','meta-llama/llama-3.3-70b-instruct']};
+const lsGet=(k)=>{try{return localStorage.getItem(k)||'';}catch(e){return '';}};
+const lsSet=(k,v)=>{try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
+const byDl=$('bymodels'),byStat=$('bystat'),byRm=$('byrm');let orLoaded=false;
+const fillSugg=(list)=>{byDl.textContent='';list.forEach(id=>{const o=document.createElement('option');o.value=id;byDl.appendChild(o);});};
+const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Saved in this browser only, never on our servers.':'Saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
+async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const ids=(j.data||[]).map(x=>x.id).filter(Boolean).sort();if(ids.length&&cur.key==='openrouter')fillSugg(ids);else orLoaded=false;}catch(e){orLoaded=false;}}
+byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
+byoModel.addEventListener('input',()=>{if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());});
+byRm.onclick=()=>{lsSet('chat_key_'+cur.key,'');lsSet('chat_model_'+cur.key,'');byoKey.value='';if(!cur.model)byoModel.value='';stat();byoKey.focus();};
+function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.value=m.model||(m.free?'':lsGet('chat_model_'+m.key));byoModel.parentElement.hidden=!!m.model;
+  byoKey.value=m.free?'':lsGet('chat_key_'+m.key);fillSugg(SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
+  $('byokeylabel').textContent='Your '+m.providerName+' API key';
   mpBtn.querySelector('span').textContent=m.name;mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
@@ -495,7 +507,7 @@ export function appPage({ login, connected = [], models = DEFAULT_MODELS }) {
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span>Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
-<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="the model name from your provider" autocomplete="off"></div><div><label id="byokeylabel" for="byokey">Your API key: used for this task only, never saved</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"></div></div></div></div>
+<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" list="bymodels" placeholder="Start typing to search models" autocomplete="off"><datalist id="bymodels"></datalist></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><div class="bystat"><span id="bystat"></span><button type="button" id="byrm" hidden>Remove key</button></div></div></div></div></div>
 <details class="pick"><summary class="chip">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
 <button type="button" class="chip plain" disabled title="Coming soon">Voice · soon</button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
