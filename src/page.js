@@ -159,7 +159,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .pop[hidden]{display:none}
 .pop .ps{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--soft)}
 .pop .ps input{flex:1;border:0;outline:0;font:14px var(--sans);background:transparent;color:var(--ink);min-width:0}
-.pgrid{display:grid;grid-template-columns:78px minmax(0,1fr);max-height:min(360px,55vh)}
+.pgrid{display:grid;grid-template-columns:78px minmax(0,1fr);grid-template-rows:minmax(0,1fr);max-height:min(360px,40vh);min-height:0}
 .rail{border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;overflow:auto}
 .rail button{width:68px;border-radius:var(--radius);border:1px solid transparent;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 2px;font-size:11px;line-height:1.2;color:var(--dim)}.rail button>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rail button:hover{background:var(--bg)}.rail button[aria-pressed=true]{background:var(--tint);color:#173404}
@@ -200,7 +200,7 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 .trow{grid-template-columns:1fr}.trow .q{padding:0}.sq{flex:1 1 calc(33% - 8px);width:auto;height:76px}
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
 .side.open{transform:none}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
-.u{max-width:90%}}
+.u{max-width:90%}.composer .chip.plain{display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
 @media (min-width:861px){.only-m{display:none}}
 `;
 
@@ -324,6 +324,10 @@ function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.valu
 const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
 mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',drawList);
+// The picker lives inside the composer form: Enter there must never send the task. Search: choose the first match.
+// Model name: on to the key. Key (or both filled): done, close the picker and go back to the task box.
+pop.addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const t=e.target;if(t.tagName!=='INPUT')return;e.preventDefault();e.stopPropagation();
+  if(t===mq){const first=mlist.querySelector('.mi');if(first)first.click();}else if(t===byoModel&&!byoKey.value.trim()&&!byoKey.parentElement.parentElement.hidden){byoKey.focus();}else{closePop();box.focus();}});
 pick(cur);
 // Computers menu.
 const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$('sbsum');
@@ -331,7 +335,7 @@ const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);
 const syncSb=()=>{const p=picked();auto.checked=!p.length;sum.textContent=p.length?p.map(x=>document.querySelector('input[value='+x+']').dataset.label).join(', '):'Fleet: cheapest first';};
 auto.onchange=()=>{if(auto.checked)opts.forEach(o=>o.checked=false);syncSb();};opts.forEach(o=>o.onchange=syncSb);syncSb();
 const pk=document.querySelector('details.pick');
-document.addEventListener('click',e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;if(!pop.hidden&&!$('mp').contains(e.target))closePop();});
+document.addEventListener('click',e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;if(!pop.hidden&&e.target.isConnected&&!$('mp').contains(e.target))closePop();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!pop.hidden){closePop();mpBtn.focus();}else if(pk&&pk.open){pk.open=false;pk.querySelector('summary').focus();}else closeSide();});
 document.querySelectorAll('a[href="#setup"]').forEach(a=>a.onclick=(e)=>{e.preventDefault();pk.open=false;setup.hidden=false;chatting(true);setup.scrollIntoView({block:'start'});});
 let pending=null;
@@ -423,7 +427,7 @@ function limitCard(turn,task,b){
   c.querySelector('b').textContent=b.error||"You've used today's free tasks";
   c.querySelector('p').textContent='They come back in '+(h?h+' h ':'')+m+' min. Your task is back in the box: pick a model with your own key and it runs right away.';
   c.querySelector('.ring').textContent=n+'/'+n;
-  const k=node('button','btn go','Use my API key');k.type='button';k.onclick=()=>{openPop();const p=MODELS.find(x=>!x.free);if(p){railOn=p.provider;drawRail();drawList();}};
+  const k=node('button','btn go','Use my API key');k.type='button';k.onclick=(e)=>{e.stopPropagation();openPop();const p=MODELS.find(x=>!x.free);if(p){railOn=p.provider;drawRail();drawList();}};
   const cp=node('button','btn','Copy my task');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(task).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy my task',1500);});};
   c.querySelector('.acts').append(k,cp);turn.appendChild(c);box.value=task;fit();down();
 }
@@ -436,6 +440,8 @@ function ask6(task){
   const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Hover a square to choose it and see more, or type your own answer.'));
   const rows=node('div');rows.style.cssText='display:flex;flex-direction:column;gap:14px';const chips=node('div','zchips');wrap.append(rows,chips);
   let pick=[],sub=[],sent=false,prevLen=0;
+  const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
+  if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
   const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+ans(i)).join('; ')+'.':task;history.push({role:'user',content:full});run(full);};
