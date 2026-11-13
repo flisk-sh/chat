@@ -239,7 +239,12 @@ describe('the two pickers', () => {
     e.LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
     const cookie = await authed(e);
     for (let i = 0; i < 20; i++) await (await post(e, world({ replies: [...script] }), '/api/run', body({}), cookie)).text();
-    expect((await post(e, world({ replies: [...script] }), '/api/run', body({}), cookie)).status).toBe(429);
+    const over = await post(e, world({ replies: [...script] }), '/api/run', body({}), cookie);
+    expect(over.status).toBe(429);
+    const why = await over.json();
+    expect(why).toMatchObject({ limit: 20 });
+    expect(why.resetsIn).toBeGreaterThan(0);
+    expect(why.resetsIn).toBeLessThanOrEqual(86400_000);
     const own = await post(e, world({ replies: [...script] }), '/api/run', body({ ai: { ai: 'anthropic', key: 'sk-ant-secret-key-1' } }), cookie);
     expect(own.status).toBe(200);
     await own.text();
@@ -250,11 +255,12 @@ describe('the two pickers', () => {
     const w = world();
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e) } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('id="ai"');
-    expect(app).toContain('Fleet</b> (auto');
+    expect(app).toContain('Fleet, automatic');
     expect(app).toContain('name="sb" value="daytona"');
     expect(app).not.toContain('name="sb" value="e2b"');
-    expect(app).toContain('E2B · <a href="#setup">connect</a>');
-    expect(app).toContain('Blaxel · <a href="https://fleet.flisk.si/console?section=providers"');
+    expect(app).toMatch(/E2B<\/span><a class="cbtn" href="#setup">Connect<\/a>/);
+    expect(app).toMatch(/Blaxel<\/span><a class="cbtn" href="https:\/\/fleet\.flisk\.si\/console\?section=providers"/);
+    expect(app).toContain('<img src="data:image/svg+xml;base64,');
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
   });
 });
@@ -278,24 +284,28 @@ describe('service binding to inference', () => {
 });
 
 import { appPage as appPageUi } from '../src/page.js';
-test('app page shows history, key management and coming-soon voice and video', () => {
+test('app page shows history, key management, coming-soon voice and the video category', () => {
   const page = appPageUi({ login: 'ann', connected: ['upstash'] });
   expect(page).toContain('id="hist"');
   expect(page).toContain('fleet.flisk.si/console?section=providers');
   expect(page).toContain('Voice talk');
-  expect(page).toContain('Video generation');
+  expect(page).not.toContain('Video generation');
+  expect(page).toContain('data-cat="video"');
   expect(page).toContain('Upstash Box');
 });
 
 test('app page asks the six Zachman questions as squares before the first task', () => {
   const page = appPageUi({ login: 'ann', connected: [] });
   for (const q of ['What is it?', 'Who is it for?', 'Why do you need it?', 'Where should it live?', 'When do you need it?', 'How should it feel?']) expect(page).toContain(q);
-  expect(page).toContain('Skip, just run it');
+  expect(page).toContain('Skip, just build it');
+  // Every answer has its own smaller squares, and the video row is there.
+  expect(page).toContain('["A video","video",["Promo","Explainer","Social short"]]');
+  expect(page).toContain('Other…');
 });
 
 test('signed-out visitors are sent to sign-in from the computers menu', () => {
-  expect(appPageUi({ login: null, connected: [] })).toContain('href="/auth/start">sign in to connect</a>');
-  expect(appPageUi({ login: 'ann', connected: [] })).toContain('href="#setup">connect</a>');
+  expect(appPageUi({ login: null, connected: [] })).toContain('<a class="cbtn" href="/auth/start">Sign in</a>');
+  expect(appPageUi({ login: 'ann', connected: [] })).toContain('<a class="cbtn" href="#setup">Connect</a>');
 });
 
 import { cleanModels, DEFAULT_MODELS } from '../src/page.js';
@@ -329,4 +339,72 @@ test('the page uses the Flisk icons and shows the four kinds of task', () => {
   const page = appPageUi({ login: 'ann', connected: [] });
   for (const k of ['data-cat="website"', 'data-cat="app"', 'data-cat="answer"', 'data-cat="check"', 'id="mppop"', 'id="newchat"']) expect(page).toContain(k);
   expect(page).toContain('aria-label="Run"');
+});
+
+import { cleanVideo, makeVideo, VIDEO_PY } from '../src/video.js';
+import { parseAction as parseVideoAction } from '../src/loop.js';
+import { saveVideo, handle as handleVideo } from '../src/index.js';
+
+describe('video', () => {
+  test('a video action is parsed and cleaned', () => {
+    const a = parseVideoAction('{"video": {"title": "Moon Roast", "scenes": [{"text": "Fresh beans", "say": "We roast every morning."}, {"text": ""}]}}');
+    expect(a).toEqual({ type: 'video', spec: { title: 'Moon Roast', scenes: [{ text: 'Fresh beans', say: 'We roast every morning.' }] } });
+    expect(cleanVideo({ scenes: [] })).toBeNull();
+    expect(cleanVideo({ scenes: Array.from({ length: 20 }, () => ({ text: 'x'.repeat(500) })) }).scenes).toHaveLength(8);
+  });
+
+  test('makeVideo writes the script, waits for it, reads the mp4 back in parts and saves it', async () => {
+    const calls = [];
+    let polls = 0;
+    const computer = {
+      write: async (id, path, content) => (calls.push(['write', path, content.length]), { data: {} }),
+      run: async (id, cmd) => {
+        calls.push(['run', cmd.slice(0, 30)]);
+        if (cmd.includes('nohup')) return { data: { exitCode: 0, stdout: 'started' } };
+        if (cmd.includes('while [ ! -f done ]')) return { data: { exitCode: 0, stdout: ++polls < 2 ? 'running\nscene 1 of 2 done' : 'exit 0\nout.mp4 1000 bytes' } };
+        if (cmd.includes('split')) return { data: { exitCode: 0, stdout: 'part_aa\npart_ab\n' } };
+        return { data: { exitCode: 1 } };
+      },
+      read: async (id, path) => ({ data: { encoding: 'base64', content: btoa(path.slice(-2)) } }),
+    };
+    const notes = [];
+    let saved;
+    const r = await makeVideo({ computer, podId: 'p', spec: { title: 'T', scenes: [{ text: 'a', say: 'b' }] }, save: async (parts, title) => ((saved = { parts, title }), { url: 'https://chat.flisk.si/v/x.mp4' }), emit: (e) => notes.push(e.text) });
+    expect(r).toEqual({ url: 'https://chat.flisk.si/v/x.mp4' });
+    expect(saved).toEqual({ parts: [btoa('aa'), btoa('ab')], title: 'T' });
+    expect(calls[0]).toEqual(['write', '/tmp/flisk-video/make.py', VIDEO_PY.length]);
+    expect(notes).toContain('scene 1 of 2 done');
+  });
+
+  test('a render that fails comes back as an error the model can read', async () => {
+    const computer = { write: async () => ({ data: {} }), run: async (id, cmd) => ({ data: { exitCode: 0, stdout: cmd.includes('nohup') ? 'started' : 'exit 1\nNo module named PIL' } }), read: async () => ({}) };
+    const r = await makeVideo({ computer, podId: 'p', spec: { title: 'T', scenes: [{ text: 'a', say: '' }] }, save: async () => ({ url: 'x' }) });
+    expect(r.error).toContain('No module named PIL');
+  });
+
+  test('a saved video is served as mp4, with byte ranges for Safari', async () => {
+    const e = env();
+    const bytes = new Uint8Array(300).map((_, i) => i % 256);
+    const b64 = (u) => btoa(String.fromCharCode(...u));
+    const { url } = await saveVideo(e, 'ann', [b64(bytes.slice(0, 200)), b64(bytes.slice(200))], 'Moon', ORIGIN);
+    expect(url).toMatch(/\/v\/[a-f0-9]{16}\.mp4$/);
+    const path = new URL(url).pathname;
+    const full = await handleVideo(new Request(`${ORIGIN}${path}`), e);
+    expect(full.headers.get('content-type')).toBe('video/mp4');
+    expect(new Uint8Array(await full.arrayBuffer())).toEqual(bytes);
+    const part = await handleVideo(new Request(`${ORIGIN}${path}`, { headers: { range: 'bytes=190-209' } }), e);
+    expect(part.status).toBe(206);
+    expect(part.headers.get('content-range')).toBe('bytes 190-209/300');
+    expect(new Uint8Array(await part.arrayBuffer())).toEqual(bytes.slice(190, 210));
+    expect((await handleVideo(new Request(`${ORIGIN}/v/0000000000000000.mp4`), e)).status).toBe(404);
+  });
+});
+
+test('each kind of step gets its own icon, like tool calls in T3 Code', () => {
+  const page = appPageUi({ login: 'ann', connected: [] });
+  const js = page.slice(page.lastIndexOf('<script>') + 8, page.lastIndexOf('</script>'));
+  const line = js.split('\n').find((l) => l.startsWith('const cmdIcon'));
+  const cmdIcon = new Function(`${line};return cmdIcon`)();
+  expect(['curl -s https://x', 'pip install -q requests', 'python3 app.py', 'ls -la', 'flisk up', 'echo hi'].map(cmdIcon)).toEqual(['globe', 'download', 'code', 'folder', 'layers', 'terminal']);
+  for (const name of ['server', 'pen', 'upload', 'film', 'mic', 'power', 'alert']) expect(js).toContain(`${name}:'<`);
 });
