@@ -77,6 +77,22 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nDisallow: /s/\nDisallow: /api/\n', { headers: { 'content-type': 'text/plain' } });
 
+  // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.
+  if (request.method === 'GET' && path === '/health') {
+    const probe = async (u, call = fetchImpl) => {
+      try {
+        const r = await call(u, { method: 'GET', headers: { 'user-agent': 'flisk-chat-health' } });
+        const text = r.status >= 500 || r.status === 403 ? (await r.text()).slice(0, 120) : '';
+        return { status: r.status, ...(text ? { body: text } : {}) };
+      } catch (e) {
+        return { status: 0, error: String(e?.message || e).slice(0, 120) };
+      }
+    };
+    const fleet = (env.FLEET_URL || 'https://fleet.flisk.si').replace(/\/$/, '');
+    const inference = new URL(env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions').origin;
+    return json(200, { fleet: await probe(`${fleet}/v1/prices`), inference: await probe(`${inference}/v1/models`, env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl) });
+  }
+
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
   if (sm && request.method === 'GET') {
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(sm[1]).first();
