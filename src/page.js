@@ -100,7 +100,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 #talk{display:flex;flex-direction:column;gap:18px;padding:28px 0 24px}#talk:empty{display:none}
 .u{align-self:flex-end;max-width:80%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
 .turn{display:flex;flex-direction:column;gap:10px}
-.a{overflow-wrap:anywhere;line-height:1.65}.a a{font-weight:500;word-break:break-all}.a p{margin:0 0 .8em}.a p.h{font-weight:600;font-size:1.05em}.a ul,.a ol{margin:0 0 .8em;padding-left:1.3em}.a li{margin:.3em 0}.a code{font-family:var(--mono);font-size:.9em;background:var(--panel);padding:.1em .35em}.a .tw{overflow-x:auto;margin:.4em 0 1em}.a table{border-collapse:collapse;width:100%;min-width:420px}.a th{text-align:left;font-weight:600;padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}.a td{padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}
+.a{overflow-wrap:anywhere;line-height:1.65}.a a{font-weight:500;word-break:break-all}.wg{border:1px solid var(--line);background:var(--panel);padding:16px 18px;margin:8px 0 14px;border-radius:var(--radius)}.wtitle{font-weight:600;margin-bottom:10px}.wtop{display:flex;flex-wrap:wrap;align-items:center;gap:6px 24px}.wbig{display:flex;align-items:center;gap:10px}.wtemp{font-size:48px;line-height:1;font-weight:500}.wunit{align-self:flex-start;margin-top:6px;color:var(--dim)}.wmeta{display:flex;flex-direction:column;font-size:13px;color:var(--dim);gap:2px}.wplace{margin-left:auto;font-weight:600;text-align:right}.wline,.wchart{width:100%;height:auto;color:var(--dim);margin-top:10px;display:block}.wdays{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}.wday{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px}.wday em{font-style:normal;color:var(--dim);font-size:12px}.wlegend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:6px}.wlegend span:before{content:'';display:inline-block;width:10px;height:10px;background:var(--c);margin-right:6px}.wsvc{list-style:none;margin:0;padding:0}.wsvc li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.wsvc li:first-child{border-top:0}.wsvc span{color:var(--dim);font-size:13px}.wsvc em{margin-left:auto;font-style:normal;font-size:13px}.wdot{width:9px;height:9px;border-radius:50%;background:#bbb;flex:none}.wdot.ok{background:#1F7A3F}.wdot.bad{background:var(--red)}.a p{margin:0 0 .8em}.a p.h{font-weight:600;font-size:1.05em}.a ul,.a ol{margin:0 0 .8em;padding-left:1.3em}.a li{margin:.3em 0}.a code{font-family:var(--mono);font-size:.9em;background:var(--panel);padding:.1em .35em}.a .tw{overflow-x:auto;margin:.4em 0 1em}.a table{border-collapse:collapse;width:100%;min-width:420px}.a th{text-align:left;font-weight:600;padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}.a td{padding:.7em 1em .7em 0;border-bottom:1px solid var(--line)}
 .work{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--dim);border-bottom:1px solid var(--line);padding-bottom:8px}
 .work .l{display:inline-flex;align-items:center;gap:8px}
 .spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--green);animation:spin .8s linear infinite}
@@ -327,6 +327,53 @@ const md=(n,text)=>{n.textContent='';const L=String(text).split('\\n');let i=0;
     while(i<L.length&&L[i].trim()&&!LI.test(L[i])&&L[i].trim().charAt(0)!=='|'&&!/^#{1,4}\\s/.test(L[i])){buf.push(L[i]);i++;}
     const p=node('p');inl(p,buf.join(' '));n.appendChild(p);}
 };
+// Widgets: the server sends {type:'widget', kind, data}; WIDGET_DRAW[kind] builds the card from DOM nodes (no innerHTML from data).
+const SVGNS='http://www.w3.org/2000/svg';
+const sv=(tag,attrs,kids)=>{const e=document.createElementNS(SVGNS,tag);Object.keys(attrs||{}).forEach(k=>e.setAttribute(k,attrs[k]));(kids||[]).forEach(c=>e.appendChild(c));return e;};
+const skyIcon=(kind,size)=>{const s=sv('svg',{viewBox:'0 0 40 40',width:size,height:size,'aria-hidden':'true'});
+  const sun=()=>sv('circle',{cx:20,cy:20,r:8,fill:'#F5A623'}),cloud=(y)=>sv('path',{d:'M11 '+(y+10)+'a6 6 0 0 1 1-12 8 8 0 0 1 15 2 5 5 0 0 1 0 10z',fill:'#B8C0CC'});
+  const drops=(c)=>[14,21,28].forEach(x=>s.appendChild(sv('line',{x1:x,y1:31,x2:x-2,y2:36,stroke:c,'stroke-width':2.4,'stroke-linecap':'round'})));
+  if(kind==='sun')s.appendChild(sun());
+  else if(kind==='partly'){s.appendChild(sv('circle',{cx:15,cy:15,r:7,fill:'#F5A623'}));s.appendChild(cloud(14));}
+  else if(kind==='rain'){s.appendChild(cloud(10));drops('#2F6FDE');}
+  else if(kind==='snow'){s.appendChild(cloud(10));[14,21,28].forEach(x=>s.appendChild(sv('circle',{cx:x,cy:33,r:1.8,fill:'#7FA6D8'})));}
+  else if(kind==='storm'){s.appendChild(cloud(10));s.appendChild(sv('path',{d:'M21 28l-4 6h4l-2 5 6-8h-4l2-3z',fill:'#F5A623'}));}
+  else s.appendChild(cloud(14));
+  return s;};
+const fmtT=(v,u)=>v==null?'–':Math.round(v)+'°';
+const dayName=(d,i)=>i===0?'Today':new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short'});
+const WIDGET_DRAW={
+  weather(d){const c=node('div','wg wgw');
+    const top=node('div','wtop'),big=node('div','wbig');big.appendChild(skyIcon(d.now.icon,56));big.appendChild(node('span','wtemp',fmtT(d.now.temp)));big.appendChild(node('span','wunit',d.unit));
+    const meta=node('div','wmeta');[d.now.sky,'Feels like '+fmtT(d.now.feels),'Humidity '+(d.now.humidity==null?'–':d.now.humidity+'%'),'Wind '+(d.now.wind==null?'–':Math.round(d.now.wind)+' '+d.wind)].forEach(t=>meta.appendChild(node('span','',t)));
+    top.append(big,meta,node('div','wplace',d.place));c.appendChild(top);
+    const ts=d.hours.map(h=>h.temp).filter(v=>v!=null);
+    if(ts.length>1){const lo=Math.min.apply(null,ts),hi=Math.max.apply(null,ts),W=560,H=70,pad=14,n=d.hours.length;
+      const xy=(h,i)=>[pad+i*(W-2*pad)/(n-1),H-pad-(h.temp-lo)/((hi-lo)||1)*(H-2*pad-10)];
+      const g=sv('svg',{viewBox:'0 0 '+W+' '+(H+18),class:'wline',role:'img','aria-label':'Temperature over the next 24 hours'});
+      g.appendChild(sv('polyline',{points:d.hours.map((h,i)=>xy(h,i).join(',')).join(' '),fill:'none',stroke:'currentColor','stroke-width':2}));
+      d.hours.forEach((h,i)=>{const p=xy(h,i);const a=sv('text',{x:p[0],y:p[1]-6,'text-anchor':'middle','font-size':11,fill:'currentColor'});a.textContent=Math.round(h.temp)+'°';g.appendChild(a);const b=sv('text',{x:p[0],y:H+14,'text-anchor':'middle','font-size':10,fill:'#888'});b.textContent=h.time;g.appendChild(b);});
+      c.appendChild(g);}
+    const row=node('div','wdays');d.days.forEach((x,i)=>{const e=node('div','wday');e.appendChild(node('b','',dayName(x.date,i)));e.appendChild(skyIcon(x.icon,30));e.appendChild(node('span','',fmtT(x.high)+' / '+fmtT(x.low)));e.appendChild(node('em','',x.rain==null?'':x.rain+'% rain'));e.title=x.sky;row.appendChild(e);});
+    c.appendChild(row);return c;},
+  chart(d){const c=node('div','wg');if(d.title)c.appendChild(node('div','wtitle',d.title+(d.unit?' ('+d.unit+')':'')));
+    const W=560,H=220,L=44,R=12,T=12,B=28,all=[];d.series.forEach(s=>s.values.forEach(v=>{if(v!=null)all.push(v);}));
+    let lo=Math.min.apply(null,all),hi=Math.max.apply(null,all);if(d.type==='bar')lo=Math.min(0,lo);if(lo===hi){hi=lo+1;}{const raw=(hi-lo)/4,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p,st=(f<=1?1:f<=2?2:f<=5?5:10)*p;lo=Math.floor(lo/st)*st;hi=Math.ceil(hi/st)*st;}
+    const n=d.labels.length,X=(i)=>d.type==='bar'?L+(i+.5)*(W-L-R)/n:L+i*(W-L-R)/(n-1),Y=(v)=>T+(hi-v)/(hi-lo)*(H-T-B);
+    const COL=['#1F7A3F','#2F6FDE','#E0852B','#B03A8C'];
+    const g=sv('svg',{viewBox:'0 0 '+W+' '+H,class:'wchart',role:'img','aria-label':d.title||'Chart'});
+    for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=Y(v);g.appendChild(sv('line',{x1:L,y1:y,x2:W-R,y2:y,stroke:'currentColor','stroke-opacity':.12}));const t=sv('text',{x:L-6,y:y+4,'text-anchor':'end','font-size':11,fill:'#888'});t.textContent=Math.abs(v)>=100?Math.round(v):Math.round(v*10)/10;g.appendChild(t);}
+    const step=Math.ceil(n/8);d.labels.forEach((l,i)=>{if(i%step)return;const t=sv('text',{x:X(i),y:H-8,'text-anchor':'middle','font-size':11,fill:'#888'});t.textContent=l;g.appendChild(t);});
+    const bw=Math.max(3,(W-L-R)/n/(d.series.length+1));
+    d.series.forEach((s,si)=>{const col=COL[si%4];
+      if(d.type==='bar')s.values.forEach((v,i)=>{if(v==null)return;const x=X(i)-bw*d.series.length/2+si*bw,y0=Y(0),y1=Y(v);g.appendChild(sv('rect',{x:x,y:Math.min(y0,y1),width:bw*.9,height:Math.abs(y0-y1),fill:col}));});
+      else{const pts=s.values.map((v,i)=>v==null?null:X(i)+','+Y(v)).filter(Boolean);g.appendChild(sv('polyline',{points:pts.join(' '),fill:'none',stroke:col,'stroke-width':2.2,'stroke-linejoin':'round'}));}});
+    c.appendChild(g);if(d.series.length>1||d.series[0].name){const lg=node('div','wlegend');d.series.forEach((s,i)=>{const l=node('span','',s.name||('Series '+(i+1)));l.style.setProperty('--c',COL[i%4]);lg.appendChild(l);});c.appendChild(lg);}return c;},
+  services(d){const c=node('div','wg');c.appendChild(node('div','wtitle','Services · '+d.runtime+(d.ready?' · all ready':'')));
+    const ul=node('ul','wsvc');d.services.forEach(x=>{const li=node('li'),ok=/ready|running|ok|healthy/i.test(x.status);li.appendChild(node('i','wdot '+(ok?'ok':/error|fail|crash/i.test(x.status)?'bad':'wait')));li.appendChild(node('b','',x.name));li.appendChild(node('span','',[x.type,x.port?':'+x.port:''].filter(Boolean).join(' ')));li.appendChild(node('em','',x.status));ul.appendChild(li);});
+    c.appendChild(ul);return c;},
+};
+const drawWidget=(ev)=>{try{const f=WIDGET_DRAW[ev.kind];return f?f(ev.data):null;}catch(e){return null;}};
 const linkify=(n,text)=>{n.textContent='';String(text).split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;n.appendChild(a);}else n.appendChild(document.createTextNode(p));});};
 const add=(n)=>{talk.appendChild(n);down();return n;};
 const userMsg=(t)=>add(node('div','u',t));
@@ -504,6 +551,7 @@ async function run(task){
         else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
         else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
         else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
+        else if(ev.type==='widget'){const w=drawWidget(ev);if(w){turn.appendChild(w);down();}}
         else if(ev.type==='answer')answer=ev.text;
         else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
         else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
