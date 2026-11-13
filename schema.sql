@@ -52,3 +52,12 @@ CREATE TABLE IF NOT EXISTS pods (
 );
 CREATE INDEX IF NOT EXISTS pods_until ON pods (until);
 CREATE INDEX IF NOT EXISTS pods_login ON pods (login, created);
+
+-- The visitor's GitHub token from sign-in (scope public_repo), sealed with KEY_SECRET, so a task's computer can push and
+-- open PRs as them (src/github.js). Replaced on every sign-in, deleted on sign-out.
+CREATE TABLE IF NOT EXISTS github_tokens (
+  login TEXT PRIMARY KEY,
+  token_enc TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
