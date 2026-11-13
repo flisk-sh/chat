@@ -49,7 +49,7 @@ test('a spoken task skips the six tap-to-pick questions so talk stays hands-free
   expect(page).toContain('byVoice=true;form.requestSubmit();byVoice=false;');
 });
 
-import { spokenReply, talkMessages, TALK_SYSTEM } from '../src/index.js';
+import { spokenReply, talkReply, talkMessages, TALK_SYSTEM } from '../src/index.js';
 
 test('voice talk replies are plain spoken text, even when the model answers in JSON or Markdown', () => {
   expect(spokenReply('{"say":"The **moon** is far."}')).toBe('The moon is far.');
@@ -123,6 +123,19 @@ test('voice talk never goes quiet: Ava gets 3 s, then the browser voice, then a 
   expect(page).toContain('id="ohear" class="ohear" hidden');
   expect(page).toContain('budget||6000');
   expect(page).toContain('quiet>(talked<2000?1100:750)');
+});
+
+test('voice talk starts a build when asked, from the model JSON or from the words alone', async () => {
+  expect(talkReply('{"say":"Building it now.","build":"A hackathon app with sign-up and voting"}')).toEqual({ text: 'Building it now.', build: 'A hackathon app with sign-up and voting' });
+  expect(talkReply('```json\n{"say":"On it.","build":"a tip calculator"}\n```').build).toBe('a tip calculator');
+  expect(talkReply('Sure, I would make that.', 'Build me an app, hackathon app via Flisk').build).toBe('Build me an app, hackathon app via Flisk');
+  const hist = [{ role: 'user', content: 'make a website for my bakery' }, { role: 'assistant', content: 'Sounds good.' }, { role: 'user', content: 'Build it.' }];
+  expect(talkReply('Okay.', 'Build it.', hist).build).toBe('make a website for my bakery');
+  expect(talkReply('It is sunny.', 'what is the weather in London')).toEqual({ text: 'It is sunny.', build: '' });
+  expect(TALK_SYSTEM).toContain('"build"');
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('const toBuild=String(b.build');
+  expect(page).toContain('form.requestSubmit()');
 });
 
 import { ssml, secMsGec, VOICE } from '../src/tts.js';

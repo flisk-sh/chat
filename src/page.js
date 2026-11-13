@@ -775,9 +775,11 @@ async function oLoop(){
     catch(e){oSet('idle',String(e.message||e));return;}
     if(!oOn)return;const said=String(b.heard||'').trim(),reply=String(b.text||'').trim();
     if(!said){oSet('idle','I did not catch that. Tap the circle and try again.');return;}
-    if(b.lang)oLang=b.lang;oYou.textContent=said;oSay.textContent=reply;oTurns.push({role:'user',content:said},{role:'assistant',content:reply});
+    if(b.lang)oLang=b.lang;oYou.textContent=said;oSay.textContent=reply;oTurns.push({role:'user',content:said},{role:'assistant',content:reply});const toBuild=String(b.build||'').trim();
     oSet('speaking','Speaking… tap the circle to interrupt');
     await speakAll(reply,oLang);
+    // Asked to build: leave the talk (it is kept in the chat) and run the task on a real computer, as if typed.
+    if(toBuild&&oOn){oClose();box.value=toBuild;if(form.requestSubmit)form.requestSubmit();else form.dispatchEvent(new Event('submit',{cancelable:true}));return;}
   }
 }
 async function oOpen(){
