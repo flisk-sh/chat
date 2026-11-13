@@ -173,6 +173,7 @@ describe('safety', () => {
     expect(home).toContain('ctl.abort()');
     expect(home).toContain('Try again');
     expect(home).toContain("details.pick .menu::after");
+    expect(home).toContain('@media (prefers-color-scheme:dark){');
     expect(home).toContain('.side{visibility:hidden;');
     expect(home).toContain('@media (hover:none){#hist li .x{opacity:1}}');
     expect(home).toContain('Type this exact model name');
