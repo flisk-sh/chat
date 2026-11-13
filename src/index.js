@@ -1,7 +1,7 @@
 import { githubAuthorizeUrl, githubLogin } from './auth.js';
 import { fleetClient } from './fleet.js';
 import { MAX_TASK, modelFrom, resolveModel, runTask } from './loop.js';
-import { appPage, homePage, messagePage, PROVIDER_CARDS } from './page.js';
+import { appPage, messagePage, PROVIDER_CARDS } from './page.js';
 import { clearSession, makeSession, readSession, sameOrigin } from './session.js';
 
 export const TASKS_PER_DAY = 20;
@@ -126,7 +126,7 @@ export async function handle(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   const session = await readSession(env, request);
   if (request.method === 'GET' && path === '/') {
-    if (!session) return html(homePage());
+    if (!session) return html(appPage({ login: null, connected: [] }));
     const connections = await fleetClient(env, session.login, fetchImpl).connections().catch(() => ({}));
     return html(appPage({ login: session.login, connected: Object.keys(connections) }));
   }

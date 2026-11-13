@@ -149,6 +149,9 @@ describe('safety', () => {
     const w = world();
     const home = await (await handle(new Request(`${ORIGIN}/`), e, { fetchImpl: w.fetchImpl })).text();
     expect(home).toContain('Sign in with GitHub');
+    expect(home).toContain('id="ask"');
+    expect(home).toContain('window.__SIGNED__=false');
+    for (const m of home.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
     const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(m[1])).not.toThrow();
