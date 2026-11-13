@@ -64,7 +64,7 @@ describe('share: the model asks for a live link to the running app', () => {
 });
 
 describe('a task that shares its app keeps the computer', () => {
-  const script = (replies) => async () => ({ text: replies.shift() });
+  const script = (replies, seen = []) => async (m) => (seen.push(m[m.length - 1].content), { text: replies.shift() });
 
   test('share, then say: the link is live, the computer is kept and written down, never stopped', async () => {
     const c = computer();
@@ -85,6 +85,13 @@ describe('a task that shares its app keeps the computer', () => {
     expect(events.some((e) => e.type === 'pod_stopped')).toBe(false);
     expect(events.find((e) => e.type === 'output' && e.live)).toBeTruthy();
     expect(track).toEqual({ started: ['pod_upstash_box_1'], kept: [['pod_upstash_box_1', URL1]], stopped: [] });
+  });
+
+  test('the model is told the shared link, so it says it instead of making a copy', async () => {
+    const seen = [];
+    await runTask({ task: 'build crm via flisk', model: script(['{"run":"(nohup flisk up > /tmp/up.log 2>&1 &)"}', '{"share": 3000}', '{"say":"ok"}'], seen), computer: computer(), fetchImpl: site(), publish: async () => ({}), emit: () => {} });
+    expect(seen.at(-1)).toStartWith(`Shared. The running app's public link is ${URL1}.`);
+    expect(seen.at(-1)).not.toContain('undefined');
   });
 
   test('a task that does not share stops the computer and crosses it off', async () => {
