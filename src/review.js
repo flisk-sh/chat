@@ -7,7 +7,8 @@ const API = 'https://api.github.com';
 export const WOLF_DIFF = 14_000; // the free model answers at most 1024 tokens, so it only reads this much
 export const OWN_KEY_DIFF = 120_000;
 export const REVIEWS_PER_DAY = 10; // on the free model, per login
-const TRIGGER = /(?:^|[\s(])@(?:flisk-chat|chat)\b[^\n]*?\breview\b/i;
+const TRIGGER = /(?:^|[\s(])@(?:flisk-chat|chat)\b[^\n]*?\b(review|auto\s+(?:on|off))\b/i;
+const commandOf = (text) => (TRIGGER.exec(text || '')?.[1] || '').toLowerCase().replace(/\s+/, ' ');
 const WRITE = new Set(['write', 'maintain', 'admin']);
 const enc = new TextEncoder();
 const b64url = (u) => btoa(String.fromCharCode(...new Uint8Array(u))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -99,16 +100,26 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   const api = gh(token, fetchImpl);
   const say = (text) => api(`/repos/${repo}/issues/${issue.number}/comments`, { method: 'POST', body: { body: text } });
 
-  // Only people who can push may spend the budget.
-  const perm = await api(`/repos/${repo}/collaborators/${encodeURIComponent(sender)}/permission`);
-  if (!perm.ok || !WRITE.has(JSON.parse(perm.text || '{}').permission)) return { ignored: 'no write access' };
-  await api(`/repos/${repo}/issues/comments/${comment.id}/reactions`, { method: 'POST', body: { content: 'eyes' } });
+  // Only people who can push may spend the budget. An automatic review (event.auto) runs for whoever switched it on.
+  if (!event.auto) {
+    const perm = await api(`/repos/${repo}/collaborators/${encodeURIComponent(sender)}/permission`);
+    if (!perm.ok || !WRITE.has(JSON.parse(perm.text || '{}').permission)) return { ignored: 'no write access' };
+    await api(`/repos/${repo}/issues/comments/${comment.id}/reactions`, { method: 'POST', body: { content: 'eyes' } });
+    const cmd = commandOf(comment.body);
+    if (cmd === 'auto on' || cmd === 'auto off') {
+      if (cmd === 'auto on') await env.DB.prepare('INSERT OR REPLACE INTO auto_repos (repo, login, updated) VALUES (?, ?, ?)').bind(repo, sender, new Date().toISOString()).run();
+      else await env.DB.prepare('DELETE FROM auto_repos WHERE repo = ?').bind(repo).run();
+      await say(cmd === 'auto on' ? `Automatic reviews are on for ${repo}: every new pull request gets a review, using the AI and daily limit of @${sender}. Comment \`@flisk-chat auto off\` to stop.` : `Automatic reviews are off for ${repo}. \`@flisk-chat review\` still works.`);
+      return { auto: cmd };
+    }
+  }
 
   // Their own AI from chat.flisk.si, or the free one.
   const saved = await loadSettings(env, sender, { withKey: true }).catch(() => null);
   const chosen = saved ? resolveModel(saved) : { ai: 'wolf', free: true };
   if (chosen.error) return { error: chosen.error };
   if (chosen.free && (await overLimit(sender))) {
+    if (event.auto) return { limited: true };
     await say(`@${sender} you used today's ${REVIEWS_PER_DAY} free reviews. Save your own AI key at ${env.PUBLIC_ORIGIN}/reviews and reviews will use it with no daily limit.`);
     return { limited: true };
   }
@@ -150,10 +161,16 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
 export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil = null, overLimit } = {}) {
   const body = await request.text();
   if (!(await verifySignature(env.GITHUB_WEBHOOK_SECRET, body, request.headers.get('x-hub-signature-256')))) return new Response('bad signature', { status: 401 });
-  if (request.headers.get('x-github-event') !== 'issue_comment') return new Response('ignored', { status: 202 });
+  const kind = request.headers.get('x-github-event');
+  if (kind !== 'issue_comment' && kind !== 'pull_request') return new Response('ignored', { status: 202 });
   let ev;
   try { ev = JSON.parse(body); } catch { return new Response('bad json', { status: 400 }); }
-  if (ev.action !== 'created' || !ev.issue?.pull_request || ev.issue.state !== 'open' || ev.comment?.user?.type === 'Bot' || !TRIGGER.test(ev.comment?.body || '') || !ev.installation?.id) return new Response('ignored', { status: 202 });
+  if (kind === 'pull_request') {
+    if (!['opened', 'ready_for_review'].includes(ev.action) || ev.pull_request?.draft || ev.sender?.type === 'Bot' || !ev.installation?.id || !ev.repository?.full_name) return new Response('ignored', { status: 202 });
+    const row = await env.DB.prepare('SELECT login FROM auto_repos WHERE repo = ?').bind(ev.repository.full_name).first().catch(() => null);
+    if (!row) return new Response('ignored', { status: 202 });
+    ev = { repository: ev.repository, installation: ev.installation, issue: { number: ev.pull_request.number }, comment: { id: 0, user: { login: row.login } }, auto: true };
+  } else if (ev.action !== 'created' || !ev.issue?.pull_request || ev.issue.state !== 'open' || ev.comment?.user?.type === 'Bot' || !TRIGGER.test(ev.comment?.body || '') || !ev.installation?.id) return new Response('ignored', { status: 202 });
   if (!env.GITHUB_APP_KEY || !env.GITHUB_APP_ID) return new Response('not set up', { status: 503 });
   const job = reviewPullRequest(env, ev, { fetchImpl, overLimit }).then((r) => console.log('review', JSON.stringify(r))).catch((e) => console.log('review failed', String(e?.message || e).slice(0, 300)));
   if (waitUntil) waitUntil(job);

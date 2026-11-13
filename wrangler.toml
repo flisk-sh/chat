@@ -32,6 +32,6 @@ database_id = "fea52917-992e-4d99-98c9-cf007f233fd7"
 # INFERENCE_KEY (one key from inference.flisk.si; chat counts each person's tasks itself).
 
 # PR reviews ("@flisk-chat review"): a GitHub App with webhook https://chat.flisk.si/github/webhook, permissions Pull requests
-# read+write, Issues read+write, Contents read, Metadata read, event "Issue comment". Secrets: GITHUB_APP_ID, GITHUB_APP_KEY
+# read+write, Issues read+write, Contents read, Metadata read, events "Issue comment" and "Pull request" (the second one only for automatic reviews). Secrets: GITHUB_APP_ID, GITHUB_APP_KEY
 # (the .pem made PKCS#8: openssl pkcs8 -topk8 -nocrypt -in app.pem), GITHUB_WEBHOOK_SECRET, KEY_SECRET (long random; it
 # encrypts saved AI keys, so never change it). Then: bunx wrangler@4 d1 execute flisk-chat --remote --file schema.sql

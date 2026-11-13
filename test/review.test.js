@@ -120,6 +120,35 @@ describe('@flisk-chat review webhook', () => {
   });
 });
 
+describe('automatic reviews', () => {
+  const prEvent = (over = {}) => ({ action: 'opened', installation: { id: 7 }, repository: { full_name: 'o/r' }, pull_request: { number: 5, draft: false }, sender: { login: 'someone', type: 'User' }, ...over });
+  test('auto on stores the repo, a new PR is then reviewed for that person, auto off stops it', async () => {
+    const w = await setup();
+    await w.send(event({ comment: { id: 99, body: '@flisk-chat auto on', user: { login: 'odykyi', type: 'User' } } }));
+    expect(w.env.DB.raw.query('SELECT repo, login FROM auto_repos').all()).toEqual([{ repo: 'o/r', login: 'odykyi' }]);
+    expect(w.calls.find((c) => c.path.endsWith('/comments')).body.body).toContain('Automatic reviews are on');
+    w.calls.length = 0;
+    await w.send(prEvent(), { kind: 'pull_request' });
+    expect(reviewOf(w.calls).body).toContain('Adds eval.');
+    expect(w.calls.some((c) => c.path.endsWith('/permission') || c.path.endsWith('/reactions'))).toBe(false);
+    await w.send(event({ comment: { id: 100, body: '@flisk-chat auto off', user: { login: 'odykyi', type: 'User' } } }));
+    w.calls.length = 0;
+    await w.send(prEvent(), { kind: 'pull_request' });
+    expect(w.calls).toHaveLength(0);
+  });
+  test('without auto on, drafts, bots, closed and edited PRs do nothing, and a stranger cannot switch it on', async () => {
+    const w = await setup({ permission: 'read' });
+    await w.send(prEvent(), { kind: 'pull_request' });
+    await w.send(event({ comment: { id: 1, body: '@flisk-chat auto on', user: { login: 'stranger', type: 'User' } } }));
+    expect(w.env.DB.raw.query('SELECT * FROM auto_repos').all()).toEqual([]);
+    const w2 = await setup();
+    w2.env.DB.raw.query("INSERT INTO auto_repos VALUES ('o/r', 'odykyi', 'x')").run();
+    w2.calls.length = 0;
+    for (const e of [prEvent({ pull_request: { number: 5, draft: true } }), prEvent({ sender: { login: 'dependabot[bot]', type: 'Bot' } }), prEvent({ action: 'edited' })]) await w2.send(e, { kind: 'pull_request' });
+    expect(w2.calls).toHaveLength(0);
+  });
+});
+
 describe('saved key', () => {
   test('it is encrypted in D1, the page never shows it, and delete removes it', async () => {
     const { env } = await setup();
