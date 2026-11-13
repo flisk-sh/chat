@@ -22,7 +22,7 @@ Pick exactly one of these shapes:
 {"read": "<file>"}
 {"publish": "<path to an index.html>"}
 {"video": {"title": "<short title>", "scenes": [{"text": "<words on screen, at most 10>", "say": "<one spoken sentence>"}]}}
-{"system": {"title": "<name>", "services": [{"name": "<lowercase-name>", "does": "<one short phrase>"}]}}
+{"system": {"title": "<name>", "services": [{"name": "<lowercase-name>", "does": "<one short phrase>", "fields": ["<column>"]}]}}
 {"widget": {"kind": "<widget>", ...}}
 {"say": "<answer for the user>"}
 
@@ -31,17 +31,19 @@ Rules:
 - One action per reply. Keep commands short. Never wait for input; add -y to installs.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
 - Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
-- To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- To make a website that only shows things (a landing page, a portfolio, a menu, an event page: nothing for the visitor to add, save or delete): "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- Anything where people add, save, change or delete data (a CRM, a tracker, a shop, a booking tool, a to-do list, a dashboard with records) is an app, never a published page: build it with Flisk (below) so it has a real API, and share it. Never keep an app's data in localStorage and never publish a one-file copy of an app.
 - To make a video (the user asks for a video, a clip or a promo, or the answers say "What: A video"): send ONE "video" action with 4 to 6 scenes. Chat draws the scenes, records a voice-over and makes an mp4 on the computer (it takes a few minutes), then tells you the link. Then "say" the link in one sentence. Never invent a phone number, email address or street address.
-- For a system of many services (the user asks for a back office, an ERP-style suite, a platform, "several services", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} services named after the business areas (orders, stock, billing, customers...). Chat writes each service (its own folder, service.json, /health and a records API), a web page in front of all of them, starts everything with Flisk as plain processes and smoke-tests every part. Then change what matters with "write" (a service lives in /tmp/flisk-system/<name>/server.js; keep its PORT and /health). The computer stops when you answer, so the services cannot be opened from outside: ALWAYS finish with a page the user can click. "write" ONE self-contained index.html (inline CSS and JS, no external files, no calls to the API, under 200 KB, mobile friendly, bright and good looking) with one tab per service: a list of sample records, an add form and a delete button, data kept in localStorage; then "publish" it and "say" the link FIRST, then the measured result (how many services answered, in a table). Tell the user plainly that the link is a one-file clickable copy (data stays in their tab) and the services run again with flisk up. Be honest: the services are a working scaffold with records in memory, not a finished product. Never call it production ready.
+- For a bigger app with several parts (the user asks for a CRM, a back office, an ERP-style suite, a platform, "several services", "a bigger app", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} parts named after the business areas (contacts, deals, tasks; or orders, stock, billing...), each with up to 6 "fields" (the columns a person fills in), for example {"system": {"title": "Sales CRM", "services": [{"name": "contacts", "does": "people and companies", "fields": ["Name", "Email", "Company"]}, {"name": "deals", "does": "open deals", "fields": ["Title", "Value", "Stage"]}]}}. Chat makes ONE Flisk project in ~/app with a backend per part (records saved to a file), a website in front that adds, lists and deletes records with real calls to /api/<part>, starts it all with flisk up and checks every part through the website. Then change only what matters with "write" (the answer tells you the files), then send {"share": <the website port it gives you>} and "say" the link FIRST, then what was checked (a table). Never write a one-file copy. Be honest: it is a working first version with simple records, not a finished product.
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
-  1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; export PATH=$HOME/.local/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
+  1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash >/dev/null 2>&1; export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
   2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port from process.env.PORT and /health; every other route starts with /api, for example /api/contacts), the page into the website's index.html. The page calls the API with fetch('/api/...') on its own address, never localhost or a port number: Flisk's website forwards /api to the API. For data use SQLite in a file inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'; new DatabaseSync('data.db')), not a database server.
-  3. {"run": "export PATH=$HOME/.local/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
+  3. {"run": "export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
   4. Check it with curl through the website's port (curl the page, then add a record with POST /api/... and read it back), so the check goes the same way a visitor's clicks do.
-  5. {"share": <the website's port from that log>} gives the running app a public link: the real website and the real API, kept running after you answer. Then "say" that link FIRST, then what you checked with curl. Only if share answers an error that says the computer cannot have a public link: "write" ONE self-contained index.html copy of the page (data kept in localStorage, no API calls), "publish" it, say that link first and tell the user plainly it is a one-file copy.
-- Every build (website, app, shop, dashboard) ends with a shared or published link in the same answer. Never end with an offer to publish later or with only a localhost address.
+  5. {"share": <the website's port from that log>} gives the running app a public link: the real website and the real API, kept running after you answer. Then "say" that link FIRST, then what you checked with curl.
+- If share answers that this computer cannot have a public link, do NOT make a copy of the app. "say" plainly: the app was built and checked on the computer (what you checked), but this computer's provider cannot give it a public link, so it stops when you answer; connecting a provider that can (for example Upstash Box) gives a live link next time.
+- Every app ends with a shared live link and every show-only page with a published link, in the same answer. Never end with an offer to publish later or with only a localhost address.
 - Each task starts on a fresh computer: files and servers from earlier answers are gone. If the user asks for the link to something built earlier, build it again, then publish it.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
@@ -358,7 +360,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
   const t0 = Date.now();
   const finish = async (answer, error = null) => {
     if (podId && kept) {
-      emit({ type: 'pod_kept', url: kept.url, days: kept.wakesOnVisit ? KEEP_DAYS : 0, until: kept.expiresAt || null });
+      emit({ type: 'pod_kept', url: kept.url, days: kept.expiresAt ? 0 : KEEP_DAYS, until: kept.expiresAt || null });
     } else if (podId) {
       const s = await computer.stop(podId).catch(() => null);
       emit({ type: 'pod_stopped', ok: s?.status === 200 });
@@ -370,6 +372,9 @@ export async function runTask({ task, history = [], model, computer, publish, tr
   let providerRetries = 0;
   let kept = null; // the public URL of the running app: the computer is kept, not stopped
   let startedServer = false;
+  let ranApp = false; // flisk up or a bigger app runs: the answer is a shared live link, never a published copy
+  let appPort = null; // the website port a bigger app answered with
+  let shareRefused = false; // the provider cannot give this computer a public link
   let askedForLink = false;
   try {
     for (let step = 1; step <= maxSteps; step++) {
@@ -408,10 +413,10 @@ export async function runTask({ task, history = [], model, computer, publish, tr
       }
       // A server was started on the computer but nothing was published: the computer stops with this answer, so the user
       // would get an app they cannot open and have to ask for the link. Ask for the published copy once.
-      if (action.type === 'say' && !last && podId && startedServer && !links.length && !askedForLink) {
+      if (action.type === 'say' && !last && podId && startedServer && !links.length && !askedForLink && !shareRefused) {
         askedForLink = true;
         emit({ type: 'retry' });
-        messages.push({ role: 'user', content: 'No public link yet, and the computer stops when you answer unless the app is shared. Send {"share": <the website port>} so the running app gets a public link. If share already said this computer cannot have one: "write" ONE self-contained index.html copy of the page (same screens, data kept in localStorage, no API calls), "publish" it, then "say" the link first and tell the user it is the one-file copy. Next action as JSON only.' });
+        messages.push({ role: 'user', content: `No public link yet, and the computer stops when you answer unless the app is shared. Send {"share": ${appPort || '<the website port>'}} so the running app gets a public link. Never make a copy of the app. Next action as JSON only.` });
         continue;
       }
       if (action.type === 'say' || last) {
@@ -469,6 +474,7 @@ export async function runTask({ task, history = [], model, computer, publish, tr
       } else if (action.type === 'run') {
         emit({ type: 'run', command: action.command });
         if (/\b(flisk up|nohup)\b/.test(action.command)) startedServer = true;
+        if (/\bflisk up\b/.test(action.command)) ranApp = true;
         const r = await computer.run(podId, action.command);
         shown = r.error ? { error: r.error } : { exitCode: r.data.exitCode, stdout: clip(r.data.stdout), stderr: clip(r.data.stderr, 600) };
       } else if (action.type === 'write') {
@@ -487,22 +493,32 @@ export async function runTask({ task, history = [], model, computer, publish, tr
         emit({ type: 'system_plan', title: action.spec.title, services: action.spec.services.map((x) => x.name) });
         const made = await makeSystem({ computer, podId, spec: action.spec, emit });
         shown = made.error ? { error: made.error } : { exitCode: 0, stdout: made.summary, stderr: '' };
-        // Services are running on a computer that stops with the answer: the user still needs a page to click (see the nudge below).
-        if (!made.error) startedServer = true;
+        // The app runs on a computer that stops with the answer unless it is shared (see the nudge above).
+        if (!made.error) {
+          startedServer = ranApp = true;
+          appPort = made.web;
+        }
       } else if (action.type === 'share') {
         emit({ type: 'share', port: action.spec.port });
-        const r = await shareApp({ computer, podId, spec: action.spec, fetchImpl });
+        const r = await shareApp({ computer, podId, spec: action.spec, fetchImpl, provider });
+        if (r.refused) shareRefused = true;
         if (r.error) shown = { error: r.error };
         else {
           kept = r;
           links.push(r.url);
           await Promise.resolve(track.kept?.(podId, r.url, r.expiresAt)).catch(() => {});
           emit({ type: 'live', url: r.url });
-          const lasts = r.wakesOnVisit
+          const mins = r.expiresAt ? Math.max(1, Math.round((Date.parse(r.expiresAt) - Date.now()) / 60000)) : 0;
+          const lasts = !r.expiresAt
             ? `it sleeps when idle and wakes on a visit, deleted after ${KEEP_DAYS} days`
-            : `it works until ${new Date(r.expiresAt).toUTCString()} (about ${Math.max(1, Math.round((Date.parse(r.expiresAt) - Date.now()) / 60000))} minutes), when ${provider || 'the provider'} stops the computer; tell the user how long it lasts`;
+            : `it works until ${new Date(r.expiresAt).toUTCString()} (about ${mins > 90 ? `${Math.round(mins / 60)} hours` : `${mins} minutes`}), when ${provider || 'the provider'} ends the computer${r.wakesOnVisit ? ' (until then it sleeps when idle and a visit wakes it)' : ''}; tell the user how long it lasts`;
           shown = { live: r.url, note: `This is the running app (website and API), kept running after you answer; ${lasts}. Say this link first.` };
         }
+      } else if (action.type === 'publish' && ranApp) {
+        // An app with a running API is never shipped as a page: a copy of it cannot save anything.
+        shown = { error: shareRefused
+          ? 'do not publish a copy of the app. This computer cannot have a public link, so "say" that plainly: the app was built and checked here, and a provider that can share (for example Upstash Box) gives a live link next time.'
+          : `this task runs an app with an API, so do not publish a copy of it. Send {"share": ${appPort || '<the website port>'}} for a live link to the real app.` };
       } else if (action.type === 'publish') {
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);

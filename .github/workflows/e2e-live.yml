@@ -1,0 +1,54 @@
+# A real build on a real computer: chat's build code makes a two-part app on an Upstash Box through fleet, shares it, and a
+# browser checks that Add and Delete on the live link are real POST and DELETE calls to /api that last after a reload.
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   FLEET_SERVICE_SECRET  the same value as chat's FLEET_SERVICE_SECRET (fleet's CHAT_SERVICE_SECRET)
+#   UPSTASH_BOX_KEY       an Upstash Box API key from a test account (sent per call, never stored)
+# Without them the job passes with a notice saying it was skipped. Each run uses a few CPU minutes of that account.
+name: Live e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+  push:
+    branches: [main]
+    paths: ['src/system.js', 'src/share.js', 'src/fleet.js', 'src/loop.js', 'scripts/e2e-live.mjs', '.github/workflows/e2e-live.yml']
+  pull_request:
+    paths: ['src/system.js', 'src/share.js', 'src/fleet.js', 'src/loop.js', 'scripts/e2e-live.mjs', '.github/workflows/e2e-live.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FLEET_SERVICE_SECRET: ${{ secrets.FLEET_SERVICE_SECRET }}
+      UPSTASH_BOX_KEY: ${{ secrets.UPSTASH_BOX_KEY }}
+    steps:
+      - name: Secrets present?
+        id: secrets
+        run: |
+          if [ -z "$FLEET_SERVICE_SECRET" ] || [ -z "$UPSTASH_BOX_KEY" ]; then
+            echo "::notice title=Live e2e skipped::Add the repository secrets FLEET_SERVICE_SECRET and UPSTASH_BOX_KEY to run the live build check."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.run == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.run == 'true'
+        with:
+          node-version: 22
+      - name: Install Playwright with Chromium
+        if: steps.secrets.outputs.run == 'true'
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Build, share, click Add and Delete on the live link
+        if: steps.secrets.outputs.run == 'true'
+        run: node scripts/e2e-live.mjs
