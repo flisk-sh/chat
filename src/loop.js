@@ -15,8 +15,9 @@ Rules:
 - Use the computer for anything you can check: maths, code, data, files, web pages (curl).
 - One action per reply. Keep commands short. Never wait for input; add -y to installs.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
-- The reply must be valid JSON: escape every " inside a string as \\" and every newline as \\n.
+- The reply must be valid JSON: escape every \" inside a string as \\\" and every newline as \\\\n.
 - To make a website: "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- For multi-service apps (backend + frontend + database, etc.): install the Flisk CLI with `npm install -g @flisk-sh/flisk`, then use `flisk project --yes`, `flisk resource <name> --type backend|frontend|... --stack <stack> --yes`, and `flisk up` to start a properly wired stack with health checks and hot reload. Prefer Flisk over hand-written Compose or Dockerfiles when the task needs more than one service.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - In "say", give the result itself (numbers, the content, the link), not a description of the steps.`;
 
