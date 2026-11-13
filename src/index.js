@@ -270,7 +270,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     }
     const f = await request.formData().catch(() => null);
     const chosen = resolveModel({ ai: String(f?.get('ai') || ''), key: String(f?.get('key') || ''), model: String(f?.get('model') || '') });
-    if (chosen.error || chosen.free) return html(messagePage('Not saved', chosen.error || 'pick an AI'), 400);
+    if (chosen.error || chosen.free) return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: true, limit: REVIEWS_PER_DAY, error: chosen.error || 'pick an AI', form: { ai: String(f?.get('ai') || ''), model: String(f?.get('model') || '') } }), 400);
     const r = await saveSettings(env, session.login, { ai: chosen.ai, model: chosen.model, key: chosen.key });
     return r.error ? html(messagePage('Not saved', r.error), 503) : redirect('/reviews?ok=saved');
   }
