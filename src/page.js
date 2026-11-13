@@ -197,7 +197,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .bywarn{font-size:12px;color:var(--red);margin-top:4px}.bywarn[hidden]{display:none}
 #byo .byacts{display:flex;gap:8px;flex:none}#byo .byacts button{height:30px;padding:0 12px;line-height:1;display:inline-flex;align-items:center}#byo #bysave{font:12px var(--mono);text-transform:uppercase;background:var(--ink);color:var(--panel);border:1px solid var(--ink);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
 .errbox{border:1px solid #FECDCA;background:#FEF3F2;border-radius:var(--radius);padding:12px 14px}.errbox .err{border:0;padding:0;background:transparent}.errbox .next{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.errbox .next small{color:var(--dim);font-size:12px;width:100%}
-.files{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}.files:empty{display:none}.fnote{font-size:12px;color:var(--red);align-self:center}.fchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line2);background:var(--bg);border-radius:var(--radius);padding:2px 4px 2px 8px;font:12px var(--mono)}.fchip button{border:0;background:transparent;cursor:pointer;color:var(--dim);font-size:15px;line-height:1}
+.files{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}.files:empty{display:none}.ufiles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ufiles .fchip{padding:2px 8px}.ufiles img{width:40px;height:40px;object-fit:cover;border-radius:var(--radius)}.blind{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;color:var(--dim);border:1px dashed var(--line2);border-radius:var(--radius);padding:8px 12px;margin:6px 0}.fnote{font-size:12px;color:var(--red);align-self:center}.fchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line2);background:var(--bg);border-radius:var(--radius);padding:2px 4px 2px 8px;font:12px var(--mono)}.fchip button{border:0;background:transparent;cursor:pointer;color:var(--dim);font-size:15px;line-height:1}
 .attach{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);cursor:pointer;color:var(--ink)}.attach:hover{border-color:var(--ink)}
 .asave{display:flex;gap:8px;margin-top:8px}
 #byo input{font:14px var(--mono);padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--panel);color:var(--ink);width:100%}
@@ -451,12 +451,14 @@ const vaultReady=(async()=>{try{
 const lsGet=(k)=>{if(isSecret(k))return VAULT[k]||'';try{return localStorage.getItem(k)||'';}catch(e){return '';}};
 const lsSet=(k,v)=>{if(isSecret(k)){if(v)VAULT[k]=v;else delete VAULT[k];vq=vq.then(()=>vaultReady).then(()=>vaultSave(k,VAULT[k]||'')).catch(()=>{});return;}
   try{if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}catch(e){}};
-const byStat=$('bystat'),byRm=$('byrm'),bySave=$('bysave'),bySug=$('bysug'),byWarn=$('bywarn');let orLoaded=false,sugList=[],orIds=[],orNames={};
+const byStat=$('bystat'),byRm=$('byrm'),bySave=$('bysave'),bySug=$('bysug'),byWarn=$('bywarn');let orLoaded=false,sugList=[],orIds=[],orNames={},orSees={};
+// Can the chosen model look at a picture? Wolf cannot; OpenRouter says per model; Claude and OpenAI models can.
+const canSee=()=>{if(!cur||cur.free)return false;if(cur.key!=='openrouter')return true;const id=cur.model||byoModel.value.trim();return id in orSees?orSees[id]:true;};
 // Search every word of what was typed against the id and the name; best matches first (starts with, then contains), free ones marked.
 const rank=(q)=>{const w=q.toLowerCase().split(' ').filter(Boolean);if(!w.length)return sugList.slice(0,40);
   return sugList.map(id=>{const h=(id+' '+(orNames[id]||'')).toLowerCase();if(!w.every(x=>h.indexOf(x)>=0))return null;const tail=id.toLowerCase().split('/').pop();return [w.every(x=>tail.indexOf(x)===0||id.toLowerCase().indexOf(x)===0)?0:1,id.length,id];}).filter(Boolean).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).slice(0,40).map(x=>x[2]);};
 const drawSug=()=>{bySug.textContent='';if(cur.free||cur.model||!sugList.length){bySug.hidden=true;return;}const r=rank(byoModel.value.trim());
-  r.forEach(id=>{const li=node('li','');li.setAttribute('role','option');const a=node('b','',id);li.appendChild(a);if(orNames[id])li.appendChild(node('span','',orNames[id]));if(/:free$/.test(id))li.appendChild(node('i','fr','free'));
+  r.forEach(id=>{const li=node('li','');li.setAttribute('role','option');const a=node('b','',id);li.appendChild(a);if(orNames[id])li.appendChild(node('span','',orNames[id]));if(/:free$/.test(id))li.appendChild(node('i','fr','free'));if(orSees[id])li.appendChild(node('i','fr','sees images'));
     li.onmousedown=(e)=>{e.preventDefault();byoModel.value=id;lsSet('chat_model_'+cur.key,id);bySug.hidden=true;byWarn.hidden=true;byoKey.focus();};bySug.appendChild(li);});
   if(!r.length)bySug.appendChild(node('li','none','No model matches. Check the spelling, or paste the exact id from openrouter.ai/models.'));bySug.hidden=false;byoModel.setAttribute('aria-expanded','true');};
 const fillSugg=(list)=>{sugList=list;if(document.activeElement===byoModel)drawSug();};
@@ -466,7 +468,7 @@ const fixModel=(m)=>{if(cur.key!=='openrouter'||!sugList.length||!m||sugList.ind
   const t=sugList.filter(id=>id.endsWith('/'+m));if(t.length===1)return {ok:true,model:t[0],fixed:true};
   const near=rank(m).slice(0,4);return {ok:false,near};};
 const stat=()=>{const has=!!(cur&&!cur.free&&lsGet('chat_key_'+cur.key));byStat.textContent=has?'Encrypted and saved in this browser only, never on our servers.':'Encrypted and saved in this browser only once you paste it, never on our servers.';byRm.hidden=!has;};
-async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';});const ids=d.map(x=>x.id).sort();if(!ids.length){orLoaded=false;return;}
+async function loadOr(){if(orLoaded)return;orLoaded=true;try{const r=await fetch('https://openrouter.ai/api/v1/models');const j=await r.json();const d=(j.data||[]).filter(x=>x&&x.id);d.forEach(x=>{orNames[x.id]=x.name||'';orSees[x.id]=((x.architecture&&x.architecture.input_modalities)||[]).indexOf('image')>=0;});const ids=d.map(x=>x.id).sort();if(!ids.length){orLoaded=false;return;}
   OR=d.map(x=>orModel(x.id,x.name,(Number(x.pricing&&x.pricing.prompt)||0)*1e6,x.context_length));orIds=ids;if(cur.key==='openrouter')fillSugg(ids);const same=OR.find(m=>m.id===cur.id);if(same&&same.name!==cur.name)pick(same);else if(!pop.hidden)drawList();}catch(e){orLoaded=false;}}
 byoKey.addEventListener('input',()=>{if(!cur.free){lsSet('chat_key_'+cur.key,byoKey.value.trim());stat();}});
 byoModel.addEventListener('input',()=>{shownName();if(!cur.free&&!cur.model)lsSet('chat_model_'+cur.key,byoModel.value.trim());byWarn.hidden=true;drawSug();});
@@ -516,7 +518,7 @@ $('attach').onclick=()=>fileIn.click();
 const fileNote=(t)=>{const n=node('span','fnote',t);fileBox.appendChild(n);setTimeout(()=>n.remove(),5000);};
 fileIn.onchange=()=>{[...fileIn.files].forEach(f=>{if(attached.length>=3){fileNote('You can attach up to 3 files.');return;}if(f.size>150*1024){fileNote(f.name+' is over 150 KB.');return;}
   const ext=(f.name.split('.').pop()||'').toLowerCase(),text=TEXTY.indexOf(ext)>=0||(f.type||'').indexOf('text/')===0,r=new FileReader();
-  r.onload=()=>{let c=String(r.result||'');if(!text)c=c.slice(c.indexOf(',')+1);attached.push({name:f.name,content:c,b64:!text});drawFiles();};r.onerror=()=>fileNote('Could not read '+f.name+'.');
+  r.onload=()=>{let c=String(r.result||'');if(!text)c=c.slice(c.indexOf(',')+1);attached.push({name:f.name,type:f.type||'',content:c,b64:!text});drawFiles();};r.onerror=()=>fileNote('Could not read '+f.name+'.');
   if(text)r.readAsText(f);else r.readAsDataURL(f);});fileIn.value='';};
 // Voice. The mic records in the browser and chat writes it down on the server (Whisper), so it works in every browser.
 // With Voice on, a spoken task is sent by itself and each answer is read aloud, a sentence at a time (Chrome stops
@@ -591,8 +593,11 @@ const noteIcon=(t)=>/scene|draw/i.test(t)?'image':/voice|record/i.test(t)?'mic':
 async function run(task){
   go.disabled=true;chatting(true);closePop();
   const sendFiles=attached;attached=[];drawFiles();
+  if(sendFiles.length){const us=talk.querySelectorAll('.u'),u=us[us.length-1];if(u){const fl=node('div','ufiles');sendFiles.forEach(f=>{const c=node('span','fchip');if(f.b64&&/^image[/]/.test(f.type)){const im=document.createElement('img');im.src='data:'+f.type+';base64,'+f.content;im.alt='';c.appendChild(im);}c.appendChild(node('span','',f.name));fl.appendChild(c);});u.appendChild(fl);}}
+  const blind=sendFiles.some(f=>f.b64&&/^image[/]/.test(f.type))&&!canSee();
   const turn=add(node('div','turn')),work=node('div','work'),l=node('span','l'),wt=node('span','',''),ws=node('span','','Thinking');
   l.append(node('span','spin'),wt);work.append(l,ws);turn.appendChild(work);
+  if(blind){const bn=node('div','blind');bn.textContent=cur.free?'Flisk Wolf cannot see pictures: it only gets the file on the computer (size, metadata). To ask about what is in the picture, pick a model with your own key that sees images, such as Claude, GPT or Gemini.':'This model cannot see pictures: it only gets the file on the computer. To ask about what is in the picture, pick a model marked "sees images".';const pk2=node('button','btn','Pick a model');pk2.type='button';pk2.onclick=()=>openPop();bn.appendChild(pk2);turn.appendChild(bn);}
   const box2=node('details','stepsbox'),sum2=node('summary','','Steps'),list=node('ol','steps');box2.open=true;box2.append(sum2,list);box2.hidden=true;turn.appendChild(box2);
   const t0=Date.now(),tick=()=>{wt.textContent='Working for '+secs(Date.now()-t0);};tick();const timer=setInterval(tick,1000);
   let live=null,count=0,answer=null,failed=false,link=null,video=null,lastNote='';
@@ -602,7 +607,7 @@ async function run(task){
   const out=(s,bad)=>{if(!live||!s)return;const p=node('pre','',s.length>1500?s.slice(0,1500)+'\\n…':s);live.querySelector('.t').appendChild(p);if(bad){live.classList.remove('live','ok');live.classList.add('bad');live.querySelector('.si').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SI.alert+'</svg>';}down();};
   const end=(ok)=>{clearInterval(timer);if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
   try{
-    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
+    const res=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
@@ -714,7 +719,7 @@ form.onsubmit=(e)=>{e.preventDefault();stopTalk();const task=box.value.trim();if
   if(!cur.free&&!byoModel.value.trim()){openPop();pick(cur);byWarn.textContent='Type or pick a model name first, then press Run again.';byWarn.hidden=false;byoModel.focus();return;}
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}userMsg(task);
-  if(!byVoice&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
+  if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});run(task);};
 drawHist();
 try{if(matchMedia('(pointer:fine)').matches)box.focus();}catch(e){}
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');userMsg(t);history.push({role:'user',content:t});run(t);}}catch(e){}}

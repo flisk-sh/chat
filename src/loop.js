@@ -179,7 +179,8 @@ export function cleanFiles(list) {
     if (!path || !content || content.length > MAX_FILE_BYTES * 1.4) return [];
     const b64 = !!f.b64;
     if (b64 && !/^[A-Za-z0-9+/=\s]+$/.test(content)) return [];
-    return [{ path: path.replace(/ /g, '_'), content: b64 ? content.replace(/\s/g, '') : content, b64 }];
+    const image = b64 && /^image\/(png|jpeg|gif|webp)$/.test(String(f.type || '')) ? String(f.type) : null;
+    return [{ path: path.replace(/ /g, '_'), content: b64 ? content.replace(/\s/g, '') : content, b64, ...(image ? { image } : {}) }];
   });
 }
 
@@ -192,9 +193,14 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, stop } (fleet.js). publish(html) -> url. emit(event) gets every step.
-export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], emit = () => {}, maxSteps = MAX_STEPS }) {
+export async function runTask({ task, history = [], model, computer, publish, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, emit = () => {}, maxSteps = MAX_STEPS }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
-  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: task + where }];
+  // A model that sees images gets the attached pictures themselves, not only the file on the computer.
+  const pics = vision ? files.filter((f) => f.image) : [];
+  const first = pics.length
+    ? [{ type: 'text', text: `${task}${where} The picture${pics.length > 1 ? 's are' : ' is'} also shown to you here: look at ${pics.length > 1 ? 'them' : 'it'} to answer.` }, ...pics.map((f) => ({ type: 'image_url', image_url: { url: `data:${f.image};base64,${f.content}` } }))]
+    : task + where;
+  const messages = [{ role: 'system', content: SYSTEM }, ...cleanHistory(history), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
   const steps = [];
