@@ -556,6 +556,24 @@ test('a task is saved when it is sent, a reopened unfinished chat offers Run it 
   expect(page).toContain("addEventListener('beforeunload'");
 });
 
+test('the Fleet menu and the voice buttons sit inside the composer toolbar row (balanced divs)', async () => {
+  const { appPage } = await import('../src/page.js');
+  const html = appPage({ login: 'ann', connected: [], models: [] });
+  const from = html.indexOf('<div class="bar">');
+  expect(from).toBeGreaterThan(0);
+  const depthAt = (marker) => {
+    const end = html.indexOf(marker, from);
+    expect(end).toBeGreaterThan(from);
+    let depth = 0;
+    for (const m of html.slice(from, end).matchAll(/<div\b|<\/div>/g)) depth += m[0] === '</div>' ? -1 : 1;
+    return depth;
+  };
+  // Depth 1 = directly inside .bar. A stray </div> in the model popover would drop these out of the row.
+  expect(depthAt('<details class="pick"')).toBe(1);
+  expect(depthAt('id="mic"')).toBe(1);
+  expect(depthAt('id="orbbtn"')).toBe(1);
+});
+
 describe('attached pictures', () => {
   const computer = { start: async () => ({ data: { id: 'p', provider: 'x' } }), write: async () => ({ status: 200, data: {} }), run: async () => ({ data: { exitCode: 0, stdout: '', stderr: '' } }), stop: async () => ({ status: 200 }) };
   const pic = cleanFiles([{ name: 'demo.jpg', type: 'image/jpeg', b64: true, content: 'AAAA' }]);
