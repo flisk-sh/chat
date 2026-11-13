@@ -22,3 +22,5 @@ export function fleetClient(env, login, fetchImpl = fetch) {
     stop: async (id) => call('DELETE', `/v1/pods/${encodeURIComponent(id)}`),
   };
 }
+
+export const probe5 = 1;
