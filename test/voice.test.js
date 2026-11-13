@@ -132,6 +132,7 @@ test('voice talk starts a build when asked, from the model JSON or from the word
   const hist = [{ role: 'user', content: 'make a website for my bakery' }, { role: 'assistant', content: 'Sounds good.' }, { role: 'user', content: 'Build it.' }];
   expect(talkReply('Okay.', 'Build it.', hist).build).toBe('make a website for my bakery');
   expect(talkReply('It is sunny.', 'what is the weather in London')).toEqual({ text: 'It is sunny.', build: '' });
+  expect(talkReply('{"say":"I am building it now. Build a long app with many things.","build":"x"}').text).toBe('I am building it now.');
   expect(TALK_SYSTEM).toContain('"build"');
   const page = appPage({ login: 'ann', connected: [] });
   expect(page).toContain('const toBuild=String(b.build');
