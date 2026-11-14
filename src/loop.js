@@ -55,6 +55,22 @@ ${widgetPrompt()}
 
 Remember: reply is only the JSON object. Nothing else.`;
 
+// The first complete {...} in `s` from `start`, or '' when it never closes. Braces inside strings do not count.
+function firstObject(s, start) {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inString) {
+      if (c === '\\') i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return s.slice(start, i + 1);
+  }
+  return '';
+}
+
 export function parseAction(text) {
   let s = String(text ?? '').trim();
 
@@ -70,7 +86,16 @@ export function parseAction(text) {
   const end = s.lastIndexOf('}');
   if (start >= 0 && end > start) {
     try {
-      const a = JSON.parse(s.slice(start, end + 1));
+      let a;
+      try {
+        a = JSON.parse(s.slice(start, end + 1));
+      } catch (e) {
+        // Several actions in one reply (write, then publish, then an invented link): do the first, the loop asks for the next.
+        const first = firstObject(s, start);
+        if (!first || first.length === end + 1 - start) throw e;
+        a = JSON.parse(first);
+        if (typeof a?.say === 'string') throw e;
+      }
       if (typeof a?.run === 'string' && a.run.trim()) return { type: 'run', command: a.run.trim() };
       if (a?.write && typeof a.write.path === 'string' && typeof a.write.content === 'string') return { type: 'write', path: a.write.path, content: a.write.content };
       if (typeof a?.read === 'string' && a.read.trim()) return { type: 'read', path: a.read.trim() };
@@ -106,7 +131,7 @@ const clip = (s, n = OUT_CHARS) => {
   return t.length > n ? `${t.slice(0, n)}\n…(${t.length - n} more characters cut)` : t;
 };
 
-// Who answers. "wolf" is Flisk Inference (free, shared, answers capped at 1024 tokens). The others use the visitor's own API key,
+// Who answers. "wolf" is Flisk Inference (free, shared, answers capped at 2048 tokens). The others use the visitor's own API key,
 // sent with the request and never stored; only these three addresses are allowed, so a key can't be sent anywhere else.
 export const BYO = {
   anthropic: { label: 'Claude (my API key)', url: 'https://api.anthropic.com/v1/chat/completions', model: 'claude-sonnet-5-5' },
@@ -168,7 +193,7 @@ function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true
   const model = chosen.free ? env.INFERENCE_MODEL || 'flisk-wolf-chat' : chosen.model;
   const key = chosen.free ? env.INFERENCE_KEY : chosen.key;
   // Claude 5 thinks before it answers and thinking counts against max_tokens, so a Claude key gets room for both.
-  const maxTokens = chosen.free || chosen.referer ? 1024 : chosen.ai === 'anthropic' ? 16000 : 4096;
+  const maxTokens = chosen.free ? 2048 : chosen.referer ? 1024 : chosen.ai === 'anthropic' ? 16000 : 4096;
   // The free model is another Worker on our own domain: Cloudflare refuses a Worker calling it by its public address
   // (error 1033), so the call goes through a service binding when there is one.
   const call = chosen.free && env.INFERENCE ? (u, init) => env.INFERENCE.fetch(u, init) : fetchImpl;

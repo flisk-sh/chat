@@ -56,6 +56,11 @@ describe('parseAction', () => {
     expect(parseAction('{"publish":"/tmp/site/index.html"}')).toEqual({ type: 'publish', path: '/tmp/site/index.html' });
     expect(parseAction(`{"run": "echo "hi""}`).type).toBe('bad');
     expect(parseAction('The answer is 42.')).toEqual({ type: 'say', text: 'The answer is 42.' });
+    // Several actions in one reply: the first is done, the invented link after it is never shown.
+    const three = '{"write": {"path": "index.html", "content": "<p>{hi} \\"x\\"</p>"}}\n{"publish": "index.html"}\n{"say": "https://example.com/made-up"}';
+    expect(parseAction(three)).toEqual({ type: 'write', path: 'index.html', content: '<p>{hi} "x"</p>' });
+    // Two answers stay as they were before: shown as written, not cut to the first.
+    expect(parseAction('{"say": "one"}\n{"say": "two"}')).toEqual({ type: 'say', text: '{"say": "one"}\n{"say": "two"}' });
   });
 
   test('DSML / tool-call style output is bad so the loop retries', () => {
@@ -244,7 +249,7 @@ describe('the two pickers', () => {
     const w = world({ replies: [...script] });
     await (await post(e, w, '/api/run', body({}), await authed(e))).text();
     expect(w.state.podBody.order).toBeUndefined();
-    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'inf.test', auth: 'Bearer ik', model: 'flisk-wolf-chat', max: 1024 });
+    expect(w.log.find((l) => l.modelCall).modelCall).toMatchObject({ host: 'inf.test', auth: 'Bearer ik', model: 'flisk-wolf-chat', max: 2048 });
   });
 
   test('ticked computers become the order fleet may use', async () => {
