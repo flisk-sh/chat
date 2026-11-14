@@ -37,7 +37,7 @@ export const SPEAK_PER_DAY = 2000;
 const alexaCache = (env) => env.VOICE_CACHE || (typeof caches !== 'undefined' && caches.default) || null;
 const alexaAudio = (bytes) => new Response(bytes, { headers: { 'content-type': 'audio/mpeg', 'content-length': String(bytes.length), 'cache-control': 'public, max-age=86400' } });
 async function alexaVoiceBytes(env, text) {
-  const stream = await (env.SPEAK || speakStream)(text, '', { backup: null, hedgeMs: 1500, firstMs: 3500 });
+  const stream = await (env.SPEAK || speakStream)(text, '', { backup: null, hedgeMs: 2000, firstMs: 5000 });
   const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
   if (bytes.length < 500) throw new Error('the voice sent no audio');
   return bytes;
