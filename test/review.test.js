@@ -310,9 +310,9 @@ describe('review analytics', () => {
     const body = JSON.stringify(event());
     const sig = await sign('whs', body);
     await handle(new Request('https://chat.test/github/webhook', { method: 'POST', body, headers: { 'x-hub-signature-256': sig, 'x-github-event': 'issue_comment' } }), w.env, { fetchImpl });
-    expect(orig.raw.query('SELECT status, error FROM review_runs').get()).toEqual({ status: 'failed', error: 'diff 502' });
+    expect(orig.raw.query('SELECT status, error, ai FROM review_runs').get()).toEqual({ status: 'failed', error: 'diff 502', ai: 'Flisk Wolf (free)' });
     expect(w.calls.some((c) => c.path === '/repos/o/r/issues/5/comments' && c.body.body.includes('did not give the diff'))).toBe(true);
-    expect(w.calls.some((c) => c.host === 'discord.test' && c.body.content.includes('diff 502'))).toBe(true);
+    expect(w.calls.some((c) => c.host === 'discord.test' && c.body.content.includes('diff 502') && c.body.content.includes('Flisk Wolf (free)'))).toBe(true);
   });
 
   test('a review the Worker stopped is reported once by the hourly check', async () => {
