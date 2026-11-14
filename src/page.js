@@ -168,7 +168,12 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .composer{background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 10px 30px -18px rgba(27,27,24,.35);padding:12px 12px 10px 16px;transition:border-color .15s,box-shadow .15s}
 .composer:focus-within{border-color:var(--ink)}
 /* Everything but the + and Send stays folded until + is pressed. */
-html:not(.plus) .composer .bar>:not(#plus):not(#go),html:not(.plus) .cats,html:not(.plus) .sidesec .comps,html:not(.plus) .rcol .rc,html:not(.plus) .rcol h5:first-child{display:none!important}
+html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.rcol .rc{display:none!important}
+.bar{position:relative}.plusmenu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:30;width:min(300px,calc(100vw - 32px));display:flex;flex-direction:column;align-items:stretch;gap:2px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);padding:6px;}
+.plusmenu>.chip,.plusmenu>.attach,.plusmenu .mp>.chip,.plusmenu details.pick>summary{width:100%;justify-content:flex-start;border-color:transparent;background:transparent;padding:8px 10px;text-align:left}.plusmenu>.chip:hover,.plusmenu>.attach:hover,.plusmenu .mp>.chip:hover,.plusmenu details.pick>summary:hover{background:var(--line)}
+.plusmenu .mp,.plusmenu details.pick{width:100%}.plusmenu .chev{margin-left:auto}
+.plusmenu .cats{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line2)}.plusmenu .cat{border-color:transparent;background:transparent;width:100%;padding:4px 10px 4px 4px}.plusmenu .cat:hover{transform:none;background:var(--line)}
+.plusmenu #orbbtn::after{content:"Voice talk";margin-left:8px;font-size:14px}.plusmenu #voice::after{content:"Read answers aloud";margin-left:8px;font-size:14px}.plusmenu #mic::after{content:"Speak your task";margin-left:8px;font-size:14px}.plusmenu .attach::after{content:"Attach files";margin-left:8px;font-size:14px}
 #plus[aria-expanded=true]{color:#fff;background:var(--green);border-color:var(--green)}#plus svg{transition:transform .15s}#plus[aria-expanded=true] svg{transform:rotate(45deg)}
 .composer .bar #go{margin-left:auto}
 .composer textarea{display:block;width:100%;min-height:52px;max-height:200px;border:0;outline:0;resize:none;background:transparent;font:16px/1.5 var(--sans);color:var(--ink);padding:2px 0 8px}
@@ -672,7 +677,12 @@ const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$
 const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);
 const syncSb=()=>{const p=picked();auto.checked=!p.length;sum.textContent=p.length?p.map(x=>document.querySelector('input[value='+x+']').dataset.label).join(', '):'Fleet: cheapest first';};
 auto.onchange=()=>{if(auto.checked)opts.forEach(o=>o.checked=false);syncSb();};opts.forEach(o=>o.onchange=syncSb);syncSb();
-{const pb=document.getElementById('plus');if(pb)pb.onclick=()=>{const on=document.documentElement.classList.toggle('plus');pb.setAttribute('aria-expanded',String(on));};}
+{const pb=document.getElementById('plus'),pm=document.getElementById('plusmenu'),cats=document.querySelector('.cats');
+if(pm&&cats)pm.prepend(cats);
+const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));};
+if(pb)pb.onclick=()=>setPlus(!document.documentElement.classList.contains('plus'));
+document.addEventListener('click',(e)=>{if(document.documentElement.classList.contains('plus')&&!e.target.closest('#plus,#plusmenu')&&!e.target.closest('.sidesec,.rcol'))setPlus(false);});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&document.documentElement.classList.contains('plus'))setPlus(false);});}
 const pk=document.querySelector('details.pick');
 document.addEventListener('click',e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;if(!pop.hidden&&e.target.isConnected&&!$('mp').contains(e.target))closePop();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!pop.hidden){closePop();mpBtn.focus();}else if(pk&&pk.open){pk.open=false;pk.querySelector('summary').focus();}else closeSide();});
@@ -1092,7 +1102,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <form id="ask" class="composer"><div id="files" class="files"></div><textarea id="task" maxlength="2000" rows="2" placeholder="What should it do?" aria-label="Task"></textarea>
 <div class="bar">
 <button type="button" id="plus" class="chip ico" aria-expanded="false" aria-controls="ask" title="More: model, computers, voice, attach" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-<button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
+<div id="plusmenu" class="plusmenu" role="menu" aria-label="More options"><button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
 <div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
@@ -1101,6 +1111,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
 <button type="button" id="voice" class="chip ico" aria-pressed="false" title="Read answers aloud" aria-label="Read answers aloud"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg></button>
 <button type="button" id="orbbtn" class="chip ico talkb" title="Voice talk: just talk, it answers out loud" aria-label="Start voice talk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button>
+</div>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
 <p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line. <label class="look">Look <select id="look" aria-label="Look of the page">${THEMES.map(([id, label]) => `<option value="${id}"${id === theme ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label></p>

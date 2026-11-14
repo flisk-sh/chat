@@ -573,10 +573,10 @@ test('the Fleet menu and the voice buttons sit inside the composer toolbar row (
     for (const m of html.slice(from, end).matchAll(/<div\b|<\/div>/g)) depth += m[0] === '</div>' ? -1 : 1;
     return depth;
   };
-  // Depth 1 = directly inside .bar. A stray </div> in the model popover would drop these out of the row.
-  expect(depthAt('<details class="pick"')).toBe(1);
-  expect(depthAt('id="mic"')).toBe(1);
-  expect(depthAt('id="orbbtn"')).toBe(1);
+  // Depth 2 = inside the + menu, which sits in .bar. A stray </div> in the model popover would drop these out of the row.
+  expect(depthAt('<details class="pick"')).toBe(2);
+  expect(depthAt('id="mic"')).toBe(2);
+  expect(depthAt('id="orbbtn"')).toBe(2);
 });
 
 describe('attached pictures', () => {
@@ -927,11 +927,12 @@ describe('a build ends with a public link', () => {
 
 // The composer shows only + and Send; the rest opens from +.
 describe('composer plus', () => {
-  test('a + button folds the model, computers, voice and attach controls, and the start chips', async () => {
+  test('a + button opens a small menu with the model, computers, voice, attach and the start chips', async () => {
     const html = await (await handle(new Request(`${ORIGIN}/`), env())).text();
     expect(html).toContain('id="plus"');
-    expect(html).toContain('html:not(.plus) .composer .bar>:not(#plus):not(#go)');
-    expect(html).toContain("document.documentElement.classList.toggle('plus')");
+    expect(html).toContain('html:not(.plus) .plusmenu');
+    expect(html).toContain('id="plusmenu"');
+    expect(html).toContain("document.documentElement.classList.toggle('plus',on)");
   });
 });
 
