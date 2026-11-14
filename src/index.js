@@ -121,12 +121,22 @@ const SECURITY = {
 // The page has five looks. A visitor who has none yet gets the next one in turn and keeps it in a cookie; the
 // switch under the box changes it. The turn counter lives in the isolate, so it is round robin per isolate.
 let themeTurn = Math.floor(Math.random() * THEME_IDS.length);
+// The shared Flisk look (the bar's ?flisk_theme= parameter, or its flisk_theme cookie on .flisk.si) maps onto the closest of
+// the five chat looks: ivory and soft glow have their own, other light looks get Focus, dark looks get Classic.
+const LIGHT_LOOKS = new Set(['paper-tool', 'editorial-ruled', 'soft-satoshi', 'clean', 'ice', 'chapters']);
+export const lookForFliskTheme = (id) => (id === 'ivory' ? 'ivory' : id === 'cool-glow' ? 'glow' : LIGHT_LOOKS.has(id) ? 'focus' : /^[a-z-]{2,24}$/.test(id || '') ? 'classic' : undefined);
+const setLook = (theme) => ({ theme, cookie: `chat_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax; Secure` });
 export const pickTheme = (request) => {
-  const saved = /(?:^|;\s*)chat_theme=([a-z]+)/.exec(request.headers.get('cookie') || '')?.[1];
+  const cookies = request.headers.get('cookie') || '';
+  // A look sent in the link wins: the person just chose it on another Flisk site.
+  const fromLink = lookForFliskTheme(new URL(request.url).searchParams.get('flisk_theme') || '');
+  if (fromLink) return setLook(fromLink);
+  const saved = /(?:^|;\s*)chat_theme=([a-z]+)/.exec(cookies)?.[1];
   if (THEME_IDS.includes(saved)) return { theme: saved, cookie: '' };
+  const shared = lookForFliskTheme(/(?:^|;\s*)flisk_theme=([a-z-]+)/.exec(cookies)?.[1]);
+  if (shared) return setLook(shared);
   themeTurn = (themeTurn + 1) % THEME_IDS.length;
-  const theme = THEME_IDS[themeTurn];
-  return { theme, cookie: `chat_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax; Secure` };
+  return setLook(THEME_IDS[themeTurn]);
 };
 
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });

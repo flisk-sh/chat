@@ -939,6 +939,22 @@ describe('composer plus', () => {
 // The page has five looks. A new visitor gets the next one in turn, kept in a cookie; a saved look is kept; the switch lists all five.
 describe('looks', () => {
   const look = (html) => /<html lang="en" data-theme="([a-z]+)"/.exec(html)?.[1];
+  test('the look chosen on another Flisk site carries over: link parameter first, then the shared cookie, then a saved chat look', async () => {
+    const get = async (url, cookie) => {
+      const res = await handle(new Request(`${ORIGIN}${url}`, cookie ? { headers: { cookie } } : {}), env());
+      return { look: look(await res.text()), set: res.headers.get('set-cookie') || '' };
+    };
+    expect((await get('/?flisk_theme=ivory')).look).toBe('ivory');
+    expect((await get('/?flisk_theme=cool-glow')).look).toBe('glow');
+    expect((await get('/?flisk_theme=graphite')).look).toBe('classic');
+    expect((await get('/?flisk_theme=paper-tool')).look).toBe('focus');
+    expect((await get('/?flisk_theme=ivory', 'chat_theme=glow')).look).toBe('ivory');
+    const shared = await get('/', 'flisk_theme=graphite');
+    expect(shared.look).toBe('classic');
+    expect(shared.set).toContain('chat_theme=classic');
+    expect((await get('/', 'chat_theme=focus; flisk_theme=graphite')).look).toBe('focus');
+    expect((await get('/?flisk_theme=%3Cscript%3E')).set).toContain('chat_theme=');
+  });
   test('each new look also styles the chat screen: your messages, answers and steps', async () => {
     const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
     for (const t of ['ivory', 'glow', 'focus', 'voice']) {
