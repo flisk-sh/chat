@@ -156,10 +156,28 @@ export function cspWithPod(pod, origin) {
   return SECURITY['content-security-policy'].replace("script-src 'unsafe-inline'", `script-src 'unsafe-inline' 'wasm-unsafe-eval' ${from}`).replace("connect-src 'self'", `connect-src 'self' ${ws} ${from}`) + '; worker-src blob:';
 }
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
+// The backup voice when Ava (Microsoft) is slow: MeloTTS on the account's Workers AI. It costs about 18 neurons per
+// minute of speech (Aura, the nicer one, costs ~75 times more and would eat the free 10,000 a day), answers a short
+// reply in 0.4-1.4 s, and comes as 44.1 kHz WAV (about 700 KB for a 150-character answer; 4 ms CPU to decode).
+// It speaks only these languages; other answers wait for Ava.
+export const MELO_MODEL = '@cf/myshell-ai/melotts';
+const MELO_LANGS = new Set(['en', 'es', 'fr', 'zh', 'ja', 'ko']);
+export function meloBackup(env, lang = '') {
+  const l = String(lang || 'en').slice(0, 2).toLowerCase();
+  if (!env.AI || !MELO_LANGS.has(l)) return null;
+  const say = async (words) => {
+    const r = await env.AI.run(MELO_MODEL, { prompt: words, lang: l });
+    const audio = String(r?.audio || '');
+    const bytes = typeof Uint8Array.fromBase64 === 'function' ? Uint8Array.fromBase64(audio) : Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
+    if (bytes.length < 500) throw new Error('the backup voice sent no audio');
+    return new Response(bytes).body;
+  };
+  return Object.assign(say, { kind: 'melo', type: 'audio/wav' });
+}
 // '2 tries, won 2 | 1 at0 o412 s520 a- x | 2 at800 o1190 s1290 a1450': for each ask of the voice, ms from the request
 // to its start (at), socket open (o), Microsoft's turn start (s) and first audio (a); x = it failed.
 export function voiceDesc(info = {}) {
-  const asks = (info.asks || []).map((r, i) => `${i + 1} at${r.at ?? 0} o${r.o ?? '-'} s${r.s ?? '-'} a${r.a ?? '-'}${r.x ? ' x' : ''}`);
+  const asks = (info.asks || []).map((r, i) => `${i + 1}${r.kind ? ' ' + r.kind : ''} at${r.at ?? 0} o${r.o ?? '-'} s${r.s ?? '-'} a${r.a ?? '-'}${r.x ? ' x' : ''}`);
   return [`${info.tries || 1} tries${info.won ? `, won ${info.won}` : ''}`, ...asks].join(' | ');
 }
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -484,9 +502,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     if (await overDailyLimit(await who(session.login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_SPEAK_PER_DAY : SPEAK_PER_DAY, scope: anon ? 'speak-anon' : 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
     const info = {}, t0 = Date.now();
     try {
-      const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8), { info });
+      const lang = String(url.searchParams.get('l') || '').slice(0, 8);
+      const stream = await (env.SPEAK || speakStream)(text, lang, { info, backup: meloBackup(env, lang) });
       // Time to the first audio and how many asks it took, so a slow voice can be told apart in the browser.
-      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${voiceDesc(info)}"` } });
+      return new Response(stream, { headers: { 'content-type': info.type || 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${voiceDesc(info)}"` } });
     } catch (e) {
       const res = json(502, { error: String(e?.message || e).slice(0, 160) });
       res.headers.set('server-timing', `voice;desc="${voiceDesc(info)}"`);

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { handle, voiceDesc, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
+import { handle, voiceDesc, meloBackup, MELO_MODEL, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
 import { makeSession } from '../src/session.js';
 import { appPage } from '../src/page.js';
 
@@ -366,4 +366,41 @@ test('voice: Server-Timing says when each ask opened, started and spoke', () => 
   expect(voiceDesc({ tries: 2, won: 2, asks: [{ at: 0, o: 412, s: 520, x: 1 }, { at: 800, o: 1190, s: 1290, a: 1450 }] }))
     .toBe('2 tries, won 2 | 1 at0 o412 s520 a- x | 2 at800 o1190 s1290 a1450');
   expect(voiceDesc({})).toBe('1 tries');
+});
+
+test('voice: when Ava stalls, the backup voice (Melo) speaks instead, and says it is WAV', async () => {
+  const v = fakeVoice([null]); const info = {}; const seen = [];
+  const backup = Object.assign(async (w, l) => { seen.push([w, l]); return new Response(new Uint8Array([7, 7])).body; }, { kind: 'melo', type: 'audio/wav' });
+  expect(await firstByte(await speakStream('hi there', 'en', { open: v.open, hedgeMs: 30, firstMs: 2000, backup, info }))).toBe(7);
+  expect(seen).toEqual([['hi there', 'en']]);
+  expect(v.made.length).toBe(1); // no second Microsoft ask when there is a backup
+  expect(v.made[0].closed).toBe(true);
+  expect(info.won).toBe(2);
+  expect(info.type).toBe('audio/wav');
+  expect(voiceDesc(info)).toMatch(/^2 tries, won 2 \| 1 at0 o\d+ s- a- \| 2 melo at\d+ o- s- a\d+$/);
+});
+
+test('voice: a fast Ava never waits for the backup, and a failing backup still lets Ava finish', async () => {
+  let calls = 0;
+  const backup = Object.assign(async () => { calls++; throw new Error('melo down'); }, { kind: 'melo', type: 'audio/wav' });
+  const info = {};
+  expect(await firstByte(await speakStream('hi', 'en', { open: fakeVoice([10]).open, hedgeMs: 200, backup, info }))).toBe(1);
+  expect(calls).toBe(0);
+  expect(info.type).toBeUndefined();
+  expect(await firstByte(await speakStream('hi', 'en', { open: fakeVoice([150]).open, hedgeMs: 20, firstMs: 2000, backup }))).toBe(1);
+  expect(calls).toBe(1);
+});
+
+test('voice: the Melo backup decodes Workers AI audio, only for languages Melo speaks', async () => {
+  const wav = new Uint8Array(900).fill(5);
+  const runs = [];
+  const env = { AI: { run: async (m, i) => { runs.push([m, i]); return { audio: btoa(String.fromCharCode(...wav)) }; } } };
+  expect(meloBackup(env, 'uk')).toBeNull();
+  expect(meloBackup({}, 'en')).toBeNull();
+  const b = meloBackup(env, 'fr-FR');
+  expect(b.type).toBe('audio/wav');
+  expect(new Uint8Array(await new Response(await b('Bonjour')).arrayBuffer())).toEqual(wav);
+  expect(runs).toEqual([[MELO_MODEL, { prompt: 'Bonjour', lang: 'fr' }]]);
+  expect(meloBackup(env, '')).not.toBeNull(); // no language means English
+  await expect(meloBackup({ AI: { run: async () => ({ audio: '' }) } }, 'en')('x')).rejects.toThrow('no audio');
 });
