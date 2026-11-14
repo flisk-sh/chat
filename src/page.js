@@ -331,7 +331,7 @@ html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap
 .frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
 .frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
 /* Earth: black, a photoreal globe with a light on each country people use Flisk Chat from, thin rules, light Inter. */
-html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:300;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--t0:#2E1D17;--t0i:#F6C9B4;--t1:#2C2615;--t1i:#F2DC9E;--t2:#142B26;--t2i:#A9E3D3;--t3:#2E1A26;--t3i:#F0C2D6;--sans:'Inter',Geist,system-ui,sans-serif}
+html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:200;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--t0:#2E1D17;--t0i:#F6C9B4;--t1:#2C2615;--t1i:#F2DC9E;--t2:#142B26;--t2i:#A9E3D3;--t3:#2E1A26;--t3i:#F0C2D6;--sans:'Inter',Geist,system-ui,sans-serif}
 .earthc{display:none}.ex{display:none}
 html[data-theme=earth].home .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
 html[data-theme=earth].home.earthon .earthc{opacity:1}
@@ -363,6 +363,18 @@ html[data-theme=earth].home:not(.ex-about) .tpill,html[data-theme=earth].home:no
 /* Earth reads like terafab.ai: no colour anywhere, one white button, the rest grey glass over the photo. The bar's pink sponsor button is the one exception (it has no part=tone). */
 html[data-theme=earth] flisk-bar::part(tone),html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}
 html[data-theme=earth].home .side{background:rgba(0,0,0,.4);backdrop-filter:blur(14px)}
+/* Earth type: terafab-thin. Everything is Inter 300, big headings 200, nothing above 400, so no bold anywhere. */
+html[data-theme=earth] body,html[data-theme=earth] body *{font-weight:300}
+html[data-theme=earth] b,html[data-theme=earth] strong,html[data-theme=earth] th,html[data-theme=earth] h4,html[data-theme=earth] h5,html[data-theme=earth] .newchat,html[data-theme=earth] .excta button,html[data-theme=earth] .send,html[data-theme=earth] .btn{font-weight:400}
+html[data-theme=earth] .welcome h1{font-weight:200;letter-spacing:-.04em}
+html[data-theme=earth] .welcome h1 *{font-weight:200}
+/* History: quiet. Small thin rows, a tiny spaced day label instead of a date on every row. */
+#hist .day{padding:14px 8px 4px;font:400 10px/1.4 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--soft);list-style:none}
+#hist .day:first-child{padding-top:4px}
+#hist .more button{flex:1;text-align:left;font-size:12px;color:var(--soft);padding:10px 8px}#hist .more button:hover{color:var(--ink)}
+html[data-theme=earth] #hist li button{font-size:13px;color:var(--dim);padding:6px 8px}
+html[data-theme=earth] #hist li:hover button,html[data-theme=earth] #hist li.cur button{color:var(--ink)}
+html[data-theme=earth] #hist li.day,html[data-theme=earth] #hist li.day:hover{background:none}
 .excta{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
 .excta button{border:0;background:rgba(255,255,255,.14);color:var(--ink);padding:10px 15px;font:500 13px/1 var(--sans);cursor:pointer;border-radius:var(--radius);backdrop-filter:blur(8px)}
 .excta button:first-child{background:var(--ink);color:var(--bg)}
@@ -434,7 +446,7 @@ html[data-theme=voice] .composer .bar #orbbtn{background:var(--flisk-accent);col
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
 `;
 
-const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400&family=Geist+Mono:wght@400;500;600&display=swap">';
+const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Inter:wght@200;300;400;500&family=Inter+Tight:wght@200;300;400&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
 const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, no sign-in needed.';
@@ -621,7 +633,10 @@ const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30
 const saveChat=()=>{if(!history.length)return;const prev=loadAll().find(c=>c.id===chatId);const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,at:(prev&&prev.at)||Date.now(),title:history[0].content.split('\\n')[0].slice(0,80),msgs:history});saveAll(all);drawHist();};
 function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q)||(c.msgs||[]).some(m=>String(m.content||'').toLowerCase().includes(q)||(m.files||[]).some(n=>String(n).toLowerCase().includes(q))));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
-  all.forEach(c=>{const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title;b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b);if(c.at){const w=node('span','when',new Date(c.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}));w.title=new Date(c.at).toLocaleString();li.append(w);}li.append(x);hist.appendChild(li);});}
+  const LIM=10;let showAll=!!q||hist.dataset.all==='1';const rows=showAll?all:all.slice(0,LIM);let lastDay='';
+  const dayName=(t)=>{const d=new Date(t),n=new Date(),k=(a)=>a.toDateString();if(k(d)===k(n))return 'Today';const y=new Date(n);y.setDate(n.getDate()-1);if(k(d)===k(y))return 'Yesterday';return d.toLocaleDateString(undefined,{day:'numeric',month:'short'});};
+  rows.forEach(c=>{const dn=c.at?dayName(c.at):'';if(dn&&dn!==lastDay){lastDay=dn;hist.appendChild(node('li','day',dn));}const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title+(c.at?' · '+new Date(c.at).toLocaleString():'');b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});
+  if(!showAll&&all.length>LIM){const li=node('li','more'),m=node('button','','Show '+(all.length-LIM)+' older');m.type='button';m.onclick=()=>{hist.dataset.all='1';drawHist();};li.append(m);hist.appendChild(li);}}
 $('q').addEventListener('input',drawHist);
 function newChat(){history=[];go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
 // Result cards for a finished website or video. Built in run() and again when a saved chat is reopened, from the link in its answer.

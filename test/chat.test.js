@@ -1048,7 +1048,7 @@ describe('looks', () => {
     expect(html).toContain('html[data-theme=earth]:not(.ex-users) .expanel{display:none}');
     expect(html).toContain(EARTH_JS.trim());
     expect(html).toContain('three.module.min.js');
-    expect(html).toContain('family=Inter:wght@300');
+    expect(html).toContain('family=Inter:wght@200;300');
     const csp = res.headers.get('content-security-policy');
     expect(csp).toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.181\.0\/build\/(;| )/);
     expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.jsdelivr\.net\/gh\/mrdoob\/three\.js@r181\/examples\/textures\/planets\//);
