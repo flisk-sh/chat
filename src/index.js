@@ -23,6 +23,9 @@ export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
 export const VIDEOS_PER_LOGIN = 5;
 export const VOICE_PER_DAY = 60;
+// The mic sends one request per spoken phrase (it writes while you talk), so phrases have their own, larger allowance.
+export const VOICE_PARTS_PER_DAY = 400;
+export const ANON_VOICE_PARTS_PER_DAY = 120;
 export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
 export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
 export const TALK_PER_DAY = 100;
@@ -467,7 +470,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
     if (path === '/api/transcribe') {
       const body = await readJson(request);
-      if (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY, scope: anon ? 'voice-anon' : 'voice-limit' })) return json(429, { error: `You've used today's ${anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY} voice messages.${anon ? ' Sign in with GitHub for more, or come back tomorrow.' : ' Type instead, or come back tomorrow.'}` });
+      const part = body?.part === true;
+      const limit = part ? (anon ? ANON_VOICE_PARTS_PER_DAY : VOICE_PARTS_PER_DAY) : anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY;
+      const scope = (part ? 'voice-part' : 'voice') + (anon ? '-anon' : '-limit');
+      if (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit, scope })) return json(429, { error: `You've used today's voice (${limit} ${part ? 'spoken phrases' : 'voice messages'}).${anon ? ' Sign in with GitHub for more, or come back tomorrow.' : ' Type instead, or come back tomorrow.'}` });
       const r = await transcribe(env, body);
       return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text, lang: r.lang });
     }
