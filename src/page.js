@@ -791,7 +791,11 @@ const AUD=new Audio();AUD.preload='auto';let sayGen=0;
 const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 const unlockAudio=()=>{try{AUD.src=SILENT;const p=AUD.play();if(p)p.catch(()=>{});}catch(e){}};
 const stopTalk=()=>{sayGen++;try{AUD.pause();}catch(e){}try{TTS&&TTS.cancel();}catch(e){}};
-const GOOD=['Google','Natural','Neural','Premium','Enhanced','Samantha','Ava','Daniel'];
+// When Ava cannot start, the browser reads with a lady's voice too: the ranked names below come first, a man's voice
+// (Daniel, Alex, Google UK English Male...) is used only when the browser has nothing else for that language.
+const LADY=['Ava','Samantha','Google US English','Aria','Jenny','Emma','Michelle','Zira','Allison','Susan','Google UK English Female','Female','Serena','Karen','Moira','Tessa','Kate','Fiona','Victoria','Natural','Neural','Premium','Enhanced','Google'];
+const MALE=['Male','Daniel','Alex','Fred','Tom','Aaron','Arthur','Gordon','Rishi','Ralph','Albert','Bruce','Junior','Reed','Rocko','Eddy','Grandpa','Guy','Davis','Andrew','Brian','Christopher','Eric','Roger','Steffan','Thomas','Oliver','Ryan','David','Mark','George','James','Evan','Nathan','Jorge','Diego','Juan','Yuri','Maxim','Dmitry','Ostap','Pavel','Martin','Markus','Luca','Ivan','Lee'];
+const isMale=(v)=>String(v.name).split(/[^A-Za-z]+/).some(w=>MALE.indexOf(w)>=0);
 // Which language a text is in: Whisper's answer when there is one, else a guess from the letters, else the browser's.
 const LOC={en:'en-US',uk:'uk-UA',ru:'ru-RU',es:'es-ES',de:'de-DE',fr:'fr-FR',it:'it-IT',pt:'pt-BR',pl:'pl-PL',nl:'nl-NL',tr:'tr-TR',cs:'cs-CZ',ja:'ja-JP',ko:'ko-KR',zh:'zh-CN',ar:'ar-SA',he:'he-IL',hi:'hi-IN',el:'el-GR',sv:'sv-SE',fi:'fi-FI',da:'da-DK',no:'nb-NO',ro:'ro-RO',hu:'hu-HU',bg:'bg-BG',vi:'vi-VN',th:'th-TH',id:'id-ID',kk:'kk-KZ',ka:'ka-GE',be:'be-BY'};
 const langOf=(t,hint)=>{if(hint)return String(hint).slice(0,2).toLowerCase();t=String(t||'');
@@ -800,7 +804,10 @@ const langOf=(t,hint)=>{if(hint)return String(hint).slice(0,2).toLowerCase();t=S
   const w=' '+t.toLowerCase()+' ';if(/[¿¡ñ]/.test(w)||/ (el|los|las|que|es|por|para|una|cuál|qué) /.test(w))return 'es';if(/[ßäöü]/.test(w)||/ (der|die|und|ist|nicht|ich) /.test(w))return 'de';
   if(/[çœ]/.test(w)||/ (le|les|est|une|vous|je|pas|des) /.test(w))return 'fr';if(/[ãõ]/.test(w)||/ (não|você|uma|para|com) /.test(w))return 'pt';if(/[łąęśźż]/.test(w))return 'pl';
   if(/ (the|and|is|you|what|how|to) /.test(w))return 'en';return (navigator.language||'en').slice(0,2).toLowerCase();};
-const pickVoice=(lang)=>{if(!TTS)return null;const l=String(lang).slice(0,2).toLowerCase(),vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===l);return vs.find(v=>GOOD.some(g=>v.name.indexOf(g)>=0))||vs.find(v=>v.default)||vs[0]||null;};
+const pickVoice=(lang)=>{if(!TTS)return null;const l=String(lang).slice(0,2).toLowerCase(),vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===l);if(!vs.length)return null;
+  const pool=vs.filter(v=>!isMale(v)),from=pool.length?pool:vs,home=LOC[l]||'';
+  const rank=(v)=>{const i=LADY.findIndex(g=>v.name.indexOf(g)>=0);return (i<0?LADY.length:i)*4+(v.lang.replace('_','-')===home?0:2)+(v.default?0:1);};
+  return from.slice().sort((a,b)=>rank(a)-rank(b))[0];};
 const utter=(x,lang,v)=>{const u=new SpeechSynthesisUtterance(x);u.lang=v?v.lang:(LOC[lang]||lang);if(v)u.voice=v;return u;};
 const sentences=(t)=>{const out=[];spoken(t).replace(/([.!?…]) +/g,'$1|').split('|').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(out.length&&(out[out.length-1].length<40||out.length>=8))out[out.length-1]+=' '+x;else out.push(x);});return out;};
 // Ava's voice streams from /voice, so it starts on the first chunk. When it has not started within 6 s, or fails
