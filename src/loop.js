@@ -34,14 +34,15 @@ Rules:
 - Put files under your home folder and write it as ~ (for example ~/site/index.html). Never type /home/<name> or /root: the user name differs per computer.
 - For more than one line of code, "write" a file first, then "run" it. Never put several lines into python3 -c.
 - Escape every " inside a string as \\" and every newline as \\n so the JSON is valid.
-- To make a website that only shows things (a landing page, a portfolio, a menu, an event page: nothing for the visitor to add, save or delete): "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
+- To make a website that only shows things (a landing page, a portfolio, a menu, an event page: nothing for the visitor to add, save or delete): "write" ONE self-contained index.html (inline CSS and JS, no CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence. If the user asks for separate files, "write" index.html, styles.css and app.js into one folder (for example ~/site), link them from index.html with <link rel="stylesheet" href="styles.css"> and <script src="app.js" defer></script>, and "publish" the index.html: chat puts the files next to it into the published page. Write each file once; never copy files to a second place.
+- When the answers say "What: A website", it is a show-only website, even with a menu, prices or an order or contact form: never build it with Flisk. A form on it does not save anything: its button says where to send the order or message ("Add your order email here").
 - Anything where people add, save, change or delete data (a CRM, a tracker, a shop, a booking tool, a to-do list, a dashboard with records) is an app, never a published page: build it with Flisk (below) so it has a real API, and share it. Never keep an app's data in localStorage and never publish a one-file copy of an app.
 - To make a video (the user asks for a video, a clip or a promo, or the answers say "What: A video"): send ONE "video" action with 4 to 6 scenes. Chat draws the scenes, records a voice-over and makes an mp4 on the computer (it takes a few minutes), then tells you the link. Then "say" the link in one sentence. Never invent a phone number, email address or street address.
 - For a bigger app with several parts (the user asks for a CRM, a back office, an ERP-style suite, a platform, "several services", "a bigger app", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} parts named after the business areas (contacts, deals, tasks; or orders, stock, billing...), each with up to 6 "fields" (the columns a person fills in), for example {"system": {"title": "Sales CRM", "services": [{"name": "contacts", "does": "people and companies", "fields": ["Name", "Email", "Company"]}, {"name": "deals", "does": "open deals", "fields": ["Title", "Value", "Stage"]}]}}. Chat makes ONE Flisk project in ~/app with a backend per part (records saved to a file), a website in front that adds, lists and deletes records with real calls to /api/<part>, starts it all with flisk up and checks every part through the website. Do NOT rewrite the generated files unless the user asked for a specific change (the page already works); send {"share": <the website port it gives you>} right away and "say" the link FIRST, then what was checked (a table). Never write a one-file copy. Be honest: it is a working first version with simple records, not a finished product.
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
   1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash >/dev/null 2>&1; export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
-  2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port from process.env.PORT and /health; every other route starts with /api, for example /api/contacts), the page into the website's index.html. The page calls the API with fetch('/api/...') on its own address, never localhost or a port number: Flisk's website forwards /api to the API. For data use SQLite in a file inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'; new DatabaseSync('data.db')), not a database server.
+  2. "write" your code over the generated files without reading them first: the API into ~/app/api/src/index.js (keep its port from process.env.PORT and /health; every other route starts with /api, for example /api/contacts), the website into three files in ~/app/web: the markup into index.html, its styles into src/style.css and its script into src/main.ts (plain JavaScript is fine there). index.html loads them with <link rel="stylesheet" href="/src/style.css"> and <script type="module" src="/src/main.ts"></script>, the way the generated website does. Never put code in the web folder itself or in web/public, and never copy a file to a second place. The page calls the API with fetch('/api/...') on its own address, never localhost or a port number: Flisk's website forwards /api to the API. For data use SQLite in a file inside the API (Node 22: import { DatabaseSync } from 'node:sqlite'; new DatabaseSync('data.db')), not a database server.
   3. {"run": "export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
   4. Check it with curl through the website's port (curl the page, then add a record with POST /api/... and read it back), so the check goes the same way a visitor's clicks do.
   5. {"share": <the website's port from that log>} gives the running app a public link: the real website and the real API, kept running after you answer. Then "say" that link FIRST, then what you checked with curl.
@@ -74,6 +75,52 @@ function firstObject(s, start) {
 
 // Models guess the home folder (/home/user, /home/ubuntu, /root), but it differs per computer (Upstash: /home/boxuser,
 // where /home/user cannot be made). A path under a guessed home folder goes to the real one: ~ is expanded on the computer.
+// A published page is one file. A site written as index.html plus its own styles.css and app.js (the user asked for
+// separate files) is bundled here: each stylesheet <link> and <script src> that names a file next to the page is
+// replaced by that file's text. Links to other sites, to / paths and to data: stay as they are.
+const LOCAL = (href) => href && !/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(href);
+const attr = (tag, name) => tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'))?.slice(1).find((v) => v != null);
+export async function inlineLocal(html, pagePath, read) {
+  const dir = String(pagePath).includes('/') ? String(pagePath).replace(/\/[^/]*$/, '/') : '';
+  const files = new Map();
+  const missing = [];
+  const deferred = [];
+  const load = async (href) => {
+    const path = dir + href.replace(/^\.\//, '').replace(/[?#].*$/, '');
+    if (!files.has(path)) {
+      const r = await read(path);
+      files.set(path, r.error || r.data?.encoding !== 'utf8' ? null : r.data.content);
+      if (files.get(path) == null) missing.push(href);
+    }
+    return files.get(path);
+  };
+  const tags = [...html.matchAll(/<link\b[^>]*>|<script\b[^>]*>\s*<\/script\s*>/gi)];
+  let out = '';
+  let at = 0;
+  for (const m of tags) {
+    const tag = m[0];
+    const isLink = /^<link/i.test(tag);
+    const href = attr(tag, isLink ? 'href' : 'src');
+    if (!LOCAL(href) || (isLink && !/stylesheet/i.test(attr(tag, 'rel') || ''))) continue;
+    const text = await load(href);
+    if (text == null) continue;
+    const open = isLink ? '' : tag.match(/^<script\b([^>]*)>/i)[1];
+    const keep = open.replace(/\s(?:src|defer|async)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, '');
+    const block = isLink ? `<style>\n${text.replace(/<\/style/gi, '<\\/style')}\n</style>` : `<script${keep}>\n${text.replace(/<\/script/gi, '<\\/script')}\n</script>`;
+    // An inline script cannot be deferred, so a deferred one moves to the end of the body, where it runs at the same point.
+    const later = !isLink && /\sdefer\b/i.test(open) && !/type\s*=\s*["']?module/i.test(open);
+    out += html.slice(at, m.index) + (later ? '' : block);
+    if (later) deferred.push(block);
+    at = m.index + tag.length;
+  }
+  out += html.slice(at);
+  if (deferred.length) {
+    const end = out.search(/<\/body\s*>(?![\s\S]*<\/body\s*>)/i);
+    out = end < 0 ? `${out}\n${deferred.join('\n')}` : `${out.slice(0, end)}${deferred.join('\n')}\n${out.slice(end)}`;
+  }
+  return { html: out, missing };
+}
+
 export function homePath(path) {
   return String(path).replace(/^\/(?:home\/[^/]+|root)(?=\/|$)/, '~');
 }
@@ -588,10 +635,12 @@ export async function runTask({ task, history = [], github = undefined, origin =
         stats.copy = true;
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);
+        const page = r.error || r.data.encoding !== 'utf8' ? null : await inlineLocal(r.data.content, action.path, (p) => computer.read(podId, p));
         if (r.error) shown = { error: r.error };
-        else if (r.data.encoding !== 'utf8') shown = { error: 'that file is not text' };
+        else if (!page) shown = { error: 'that file is not text' };
+        else if (page.missing.length) shown = { error: `the page links ${page.missing.join(', ')}, which could not be read next to it: write ${page.missing.length === 1 ? 'that file' : 'those files'} first, then publish again` };
         else {
-          const made = await publish(r.data.content);
+          const made = await publish(page.html);
           if (made.error) shown = { error: made.error };
           else {
             links.push(made.url);

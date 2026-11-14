@@ -1233,7 +1233,7 @@ function ask6(task){
   const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Click a square to choose it and see more, or type your own answer.'));
   const rows=node('div');rows.style.cssText='display:flex;flex-direction:column;gap:14px';const chips=node('div','zchips');wrap.append(rows,chips);
   let pick=[],sub=[],sent=false,prevLen=0,fk='';
-  const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(erp|back office|platform|services|microservices?|suite)\\b/i.test(task)?'A system of services':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
+  const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(erp|back office|platform|services|microservices?|suite)\\b/i.test(task)?'A system of services':/\\b(app|tool|dashboard|calculator)\\b(?!\\.\\w)/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
   if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
   const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();chips.querySelectorAll('.zchip:not(.ok)').forEach(c=>c.remove());
