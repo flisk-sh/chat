@@ -441,6 +441,8 @@ test('Dutch is read by Fenna, a native Dutch lady voice; other languages keep Av
   expect(ssml('Hallo', 'nl')).toContain("<voice name='nl-NL-FennaNeural'>");
   expect(ssml('Hallo', 'nl')).toContain("xml:lang='nl-NL'");
   for (const l of ['en', 'uk', 'de', '']) expect(voiceFor(l)).toBe(VOICE);
+  expect(voiceFor('es')).toBe('es-ES-ElviraNeural');
+  expect(ssml('Hola', 'es')).toContain("<voice name='es-ES-ElviraNeural'>");
 });
 
 test('the page hears Dutch text, says Dutch mm-hm in talk, and skips the Dutch man voice Xander', () => {
@@ -461,4 +463,11 @@ test('the page waits less for Ava in languages MeloTTS cannot speak, and knows t
   expect(page).toContain('Math.min(opts.budget,2000)');
   for (const l of ['en', 'es', 'fr', 'zh', 'ja', 'ko']) expect(meloBackup({ AI: {} }, l)).not.toBeNull();
   expect(meloBackup({ AI: {} }, 'uk')).toBeNull();
+});
+
+test('Spanish browser fallback takes a lady (Mónica, Paulina), never Jorge or Juan', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  const cut = (a, b) => page.slice(page.indexOf(a), page.indexOf(b));
+  const pick = (voices, lang) => new Function('TTS', `${cut('const LADY=', 'const langOf=')}${cut('const pickVoice=', 'const utter=')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
+  expect(pick([{ name: 'Jorge', lang: 'es-ES', default: true }, { name: 'Juan', lang: 'es-MX' }, { name: 'Paulina', lang: 'es-MX' }, { name: 'Mónica', lang: 'es-ES' }], 'es').name).toBe('Mónica');
 });

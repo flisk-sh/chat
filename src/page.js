@@ -796,7 +796,7 @@ const unlockAudio=()=>{try{AUD.src=SILENT;const p=AUD.play();if(p)p.catch(()=>{}
 const stopTalk=()=>{sayGen++;try{AUD.pause();}catch(e){}try{TTS&&TTS.cancel();}catch(e){}};
 // When Ava cannot start, the browser reads with a lady's voice too: the ranked names below come first, a man's voice
 // (Daniel, Alex, Google UK English Male...) is used only when the browser has nothing else for that language.
-const LADY=['Ava','Samantha','Google US English','Aria','Jenny','Emma','Michelle','Zira','Allison','Susan','Google UK English Female','Female','Serena','Karen','Moira','Tessa','Kate','Fiona','Victoria','Fenna','Colette','Ellen','Claire','Natural','Neural','Premium','Enhanced','Google'];
+const LADY=['Ava','Samantha','Google US English','Aria','Jenny','Emma','Michelle','Zira','Allison','Susan','Google UK English Female','Female','Serena','Karen','Moira','Tessa','Kate','Fiona','Victoria','Fenna','Colette','Ellen','Claire','Elvira','Monica','Mónica','Paulina','Marisol','Natural','Neural','Premium','Enhanced','Google'];
 const MALE=['Male','Daniel','Alex','Fred','Tom','Aaron','Arthur','Gordon','Rishi','Ralph','Albert','Bruce','Junior','Reed','Rocko','Eddy','Grandpa','Guy','Davis','Andrew','Brian','Christopher','Eric','Roger','Steffan','Thomas','Oliver','Ryan','David','Mark','George','James','Evan','Nathan','Jorge','Diego','Juan','Yuri','Maxim','Dmitry','Ostap','Pavel','Martin','Markus','Luca','Ivan','Lee','Xander','Maarten','Arnaud'];
 const isMale=(v)=>String(v.name).split(/[^A-Za-z]+/).some(w=>MALE.indexOf(w)>=0);
 // Which language a text is in: Whisper's answer when there is one, else a guess from the letters, else the browser's.

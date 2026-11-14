@@ -4,8 +4,9 @@
 import { hashSecMsGecV2 } from 'msedge-tts/dist/SecMsGec.js';
 
 export const VOICE = 'en-US-AvaMultilingualNeural';
-// Languages where a native lady's voice sounds better than Ava's accent: Dutch gets Fenna (nl-NL), from the same service.
-export const VOICES = { nl: 'nl-NL-FennaNeural' };
+// Languages where a native lady's voice sounds better than Ava's accent, from the same service: Dutch gets Fenna
+// (nl-NL), Spanish gets Elvira (es-ES).
+export const VOICES = { nl: 'nl-NL-FennaNeural', es: 'es-ES-ElviraNeural' };
 export const voiceFor = (lang = '') => VOICES[String(lang).slice(0, 2).toLowerCase()] || VOICE;
 export const RATE = '-5%';
 export const PITCH = '-4Hz';
