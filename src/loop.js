@@ -35,7 +35,7 @@ Rules:
 - To make a website that only shows things (a landing page, a portfolio, a menu, an event page: nothing for the visitor to add, save or delete): "write" ONE self-contained index.html (inline CSS and JS, no external files or CDNs, under 200 KB, good looking: a hero section, a calm colour palette, system fonts, cards or sections with spacing and rounded corners; mobile friendly. Never invent a phone number, email address or street address: write "Add your address here" style placeholders), then "publish" it, then "say" the link in one sentence.
 - Anything where people add, save, change or delete data (a CRM, a tracker, a shop, a booking tool, a to-do list, a dashboard with records) is an app, never a published page: build it with Flisk (below) so it has a real API, and share it. Never keep an app's data in localStorage and never publish a one-file copy of an app.
 - To make a video (the user asks for a video, a clip or a promo, or the answers say "What: A video"): send ONE "video" action with 4 to 6 scenes. Chat draws the scenes, records a voice-over and makes an mp4 on the computer (it takes a few minutes), then tells you the link. Then "say" the link in one sentence. Never invent a phone number, email address or street address.
-- For a bigger app with several parts (the user asks for a CRM, a back office, an ERP-style suite, a platform, "several services", "a bigger app", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} parts named after the business areas (contacts, deals, tasks; or orders, stock, billing...), each with up to 6 "fields" (the columns a person fills in), for example {"system": {"title": "Sales CRM", "services": [{"name": "contacts", "does": "people and companies", "fields": ["Name", "Email", "Company"]}, {"name": "deals", "does": "open deals", "fields": ["Title", "Value", "Stage"]}]}}. Chat makes ONE Flisk project in ~/app with a backend per part (records saved to a file), a website in front that adds, lists and deletes records with real calls to /api/<part>, starts it all with flisk up and checks every part through the website. Then change only what matters with "write" (the answer tells you the files), then send {"share": <the website port it gives you>} and "say" the link FIRST, then what was checked (a table). Never write a one-file copy. Be honest: it is a working first version with simple records, not a finished product.
+- For a bigger app with several parts (the user asks for a CRM, a back office, an ERP-style suite, a platform, "several services", "a bigger app", or the answers say "What: A system of services"): send ONE "system" action with 3 to ${MAX_SERVICES} parts named after the business areas (contacts, deals, tasks; or orders, stock, billing...), each with up to 6 "fields" (the columns a person fills in), for example {"system": {"title": "Sales CRM", "services": [{"name": "contacts", "does": "people and companies", "fields": ["Name", "Email", "Company"]}, {"name": "deals", "does": "open deals", "fields": ["Title", "Value", "Stage"]}]}}. Chat makes ONE Flisk project in ~/app with a backend per part (records saved to a file), a website in front that adds, lists and deletes records with real calls to /api/<part>, starts it all with flisk up and checks every part through the website. Do NOT rewrite the generated files unless the user asked for a specific change (the page already works); send {"share": <the website port it gives you>} right away and "say" the link FIRST, then what was checked (a table). Never write a one-file copy. Be honest: it is a working first version with simple records, not a finished product.
 - For an app with several parts (a website plus an API, a worker; the user asks for an app, a shop, a dashboard with data): use Flisk. This computer has no Docker, so Flisk runs each part as a plain process. Follow these steps exactly; never read flisk --help or files under .flisk/:
   1. {"run": "curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash >/dev/null 2>&1; export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~ && flisk create app --frontend vanilla --language node --yes 2>&1 | tail -8; ls ~/app/api ~/app/api/src ~/app/web"}
      It makes ~/app/api (a Node API in src/index.js that already answers /health) and ~/app/web (the website), each with a service.json that has a \"command\".
@@ -43,7 +43,7 @@ Rules:
   3. {"run": "export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; cd ~/app && (cd api && npm install --silent) && (cd web && npm install --silent); (nohup flisk up > /tmp/up.log 2>&1 &); sleep 20; tail -15 /tmp/up.log"}
   4. Check it with curl through the website's port (curl the page, then add a record with POST /api/... and read it back), so the check goes the same way a visitor's clicks do.
   5. {"share": <the website's port from that log>} gives the running app a public link: the real website and the real API, kept running after you answer. Then "say" that link FIRST, then what you checked with curl.
-- If share answers that this computer cannot have a public link, do NOT make a copy of the app. "say" plainly: the app was built and checked on the computer (what you checked), but this computer's provider cannot give it a public link, so it stops when you answer; connecting a provider that can (for example Upstash Box) gives a live link next time.
+- Only if share returned an error saying this computer cannot have a public link (never when it returned a live link): do NOT make a copy of the app. "say" plainly: the app was built and checked on the computer (what you checked), but this computer's provider cannot give it a public link, so it stops when you answer; connecting a provider that can (for example Upstash Box) gives a live link next time.
 - Every app ends with a shared live link and every show-only page with a published link, in the same answer. Never end with an offer to publish later or with only a localhost address.
 - Each task starts on a fresh computer: files and servers from earlier answers are gone. If the user asks for the link to something built earlier, build it again, then publish it.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
@@ -374,6 +374,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
   let providerRetries = 0;
   let kept = null; // the public URL of the running app: the computer is kept, not stopped
   let startedServer = false;
+  let builtSystem = false; // a bigger app was built by chat: its generated page must not be replaced by a stub
   let ranApp = false; // flisk up or a bigger app runs: the answer is a shared live link, never a published copy
   let appPort = null; // the website port a bigger app answered with
   let shareRefused = false; // the provider cannot give this computer a public link
@@ -486,6 +487,14 @@ export async function runTask({ task, history = [], github = undefined, origin =
         shown = r.error ? { error: scrub(r.error, token) } : { exitCode: r.data.exitCode, stdout: clip(scrub(r.data.stdout, token)), stderr: clip(scrub(r.data.stderr, token), 600) };
       } else if (action.type === 'write') {
         emit({ type: 'write', path: action.path, bytes: action.content.length });
+        // A short stub over the generated page leaves the live link blank; keep the working page.
+        if (builtSystem && /(^|\/)app\/web\/index\.html$/.test(action.path) && action.content.length < 1500) {
+          shown = { error: 'Refused: that is far shorter than the working page already there, so it would blank the website. Keep the generated page and go straight to share, or write the whole page.' };
+          emit({ type: 'output', error: shown.error });
+          steps.push({ action, output: shown });
+          messages.push({ role: 'user', content: `${JSON.stringify(shown)}\n\nNext action as JSON only.` });
+          continue;
+        }
         const r = await computer.write(podId, action.path, action.content);
         shown = r.error ? { error: r.error } : { written: action.path };
       } else if (action.type === 'video') {
@@ -502,7 +511,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
         shown = made.error ? { error: made.error } : { exitCode: 0, stdout: made.summary, stderr: '' };
         // The app runs on a computer that stops with the answer unless it is shared (see the nudge above).
         if (!made.error) {
-          startedServer = ranApp = true;
+          startedServer = ranApp = builtSystem = true;
           appPort = made.web;
         }
       } else if (action.type === 'share') {

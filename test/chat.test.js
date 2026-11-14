@@ -876,6 +876,27 @@ describe('a build ends with a public link', () => {
     expect(ok.seen.some((m) => m.startsWith('No public link yet'))).toBe(false);
   });
 
+  test('after a bigger app is built, a stub written over its page is refused so the live link is not blank', async () => {
+    const writes = [];
+    const computer = {
+      ...fakeComputer(),
+      write: async (_id, path, content) => (writes.push([path, content.length]), { data: {} }),
+      run: async (_id, cmd) => ({
+        data: {
+          exitCode: 0,
+          stdout: cmd.includes('ports api=') || cmd.includes('flisk create') ? 'ports api=4000 web=3000' : cmd.includes('healthy=') || cmd.includes('healthy') ? 'healthy=1/1 web=200' : 'contacts add=201 read=1 delete=200\nsummary=200',
+          stderr: '',
+        },
+      }),
+    };
+    const sys = '{"system":{"title":"CRM","services":[{"name":"contacts"},{"name":"deals"},{"name":"tasks"}]}}';
+    const { seen, model } = script([sys, '{"write":{"path":"~/app/web/index.html","content":"<html>...</html>"}}', '{"say":"done"}']);
+    await runTask2({ task: 'build a bigger CRM', model, computer, publish: async () => ({}), maxSteps: 8 });
+    expect(seen.some((m) => m.includes('would blank the website'))).toBe(true);
+    // the only writes to the page are the generated one
+    expect(writes.filter(([p, n]) => p === '~/app/web/index.html' && n < 1500)).toEqual([]);
+  });
+
   test('a task that never started a server is not asked for a link', async () => {
     const calc = script(['{"run":"echo 4"}', '{"say":"4"}']);
     const r = await runTask2({ task: '2+2', model: calc.model, computer: fakeComputer(), publish: async () => ({}), maxSteps: 8 });
