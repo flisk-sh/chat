@@ -442,8 +442,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     if (text.length > MAX_SPEAK) return json(413, { error: `keep it under ${MAX_SPEAK} characters` });
     if (await overDailyLimit(await who(session.login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_SPEAK_PER_DAY : SPEAK_PER_DAY, scope: anon ? 'speak-anon' : 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
     try {
-      const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8));
-      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+      const info = {}, t0 = Date.now();
+      const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8), { info });
+      // Time to the first audio and how many asks it took, so a slow voice can be told apart in the browser.
+      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${info.tries || 1} tries"` } });
     } catch (e) {
       return json(502, { error: String(e?.message || e).slice(0, 160) });
     }
@@ -492,11 +494,15 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
     if (path === '/api/talk') {
       const body = await readJson(request);
+      const timing = [];
+      const timed = (name, t0) => timing.push(`${name};dur=${Date.now() - t0}`);
       // One round trip per spoken turn: the audio comes with the request, is written down here, then answered.
       let heard = '', lang = String(body?.lang || '').slice(0, 8);
       if (body?.audio) {
         if (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY, scope: anon ? 'voice-anon' : 'voice-limit' })) return json(429, { error: `You've used today's ${anon ? ANON_VOICE_PER_DAY : VOICE_PER_DAY} voice messages.${anon ? ' Sign in with GitHub for more, or come back tomorrow.' : ' Come back tomorrow.'}` });
+        const t0 = Date.now();
         const t = await transcribe(env, body);
+        timed('stt', t0);
         if (t.error) return json(t.status, { error: t.error });
         heard = t.text;
         lang = t.lang || lang;
@@ -511,10 +517,14 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const chosen = resolveModel(body.ai);
       if (chosen.error) return json(400, { error: chosen.error, kind: chosen.kind });
       if (chosen.free && (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_TALK_PER_DAY : TALK_PER_DAY, scope: anon ? 'talk-anon' : 'talk-limit' }))) return json(429, { error: `That's your ${anon ? ANON_TALK_PER_DAY : TALK_PER_DAY} free voice replies for today.${anon ? ' Sign in with GitHub for more.' : ''} Keep going free with your own OpenRouter account in the model menu, or come back tomorrow.` });
+      const t1 = Date.now();
       const r = await modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon))(messages);
-      if (r.error) return json(502, { error: r.error, kind: r.kind });
+      timed('llm', t1);
+      // Server-Timing says which step of a slow turn was slow (Whisper or the model).
+      const withTiming = (res) => { res.headers.set('server-timing', timing.join(', ')); return res; };
+      if (r.error) return withTiming(json(502, { error: r.error, kind: r.kind }));
       const { text, build } = talkReply(r.text, heard || String(messages[messages.length - 1]?.content || ''), messages);
-      return text ? json(200, { heard, lang, text, ...(build ? { build } : {}) }) : json(502, { error: 'the model sent an empty answer' });
+      return withTiming(text ? json(200, { heard, lang, text, ...(build ? { build } : {}) }) : json(502, { error: 'the model sent an empty answer' }));
     }
 
     if (path === '/api/run') {
