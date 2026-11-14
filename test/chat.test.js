@@ -908,6 +908,15 @@ describe('a build ends with a public link', () => {
     expect(writes.filter(([p, n]) => p === '~/app/web/index.html' && n < 1500)).toEqual([]);
   });
 
+  test('a bigger app tells the model its first action is the system action; a calculator does not', async () => {
+    const sysPrompts = [];
+    const spy = async (m) => (sysPrompts.push(m[0].content), { text: '{"say":"ok"}' });
+    await runTask2({ task: 'build a bigger CRM with flisk', model: spy, computer: fakeComputer(), publish: async () => ({}), maxSteps: 4 });
+    await runTask2({ task: 'what is 2+2', model: spy, computer: fakeComputer(), publish: async () => ({}), maxSteps: 4 });
+    expect(sysPrompts[0]).toContain('your FIRST action must be the "system" action');
+    expect(sysPrompts[1]).not.toContain('your FIRST action must be the "system" action');
+  });
+
   test('a task that never started a server is not asked for a link', async () => {
     const calc = script(['{"run":"echo 4"}', '{"say":"4"}']);
     const r = await runTask2({ task: '2+2', model: calc.model, computer: fakeComputer(), publish: async () => ({}), maxSteps: 8 });
