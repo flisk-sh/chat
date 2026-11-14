@@ -47,3 +47,11 @@ test('the + menu rows stay clickable: the Computers list opens in place, rows sp
   expect(page).toContain('html .plusmenu>.chip.ico.on{background:transparent;color:var(--ink);');
   expect(page).toContain('.chip.ico.on{color:var(--flisk-on-accent,#fff);');
 });
+
+test('picking a kind of task in the + menu shows a result: menu closes, hint changes, ideas open', () => {
+  // the pick only refilled #sugg, which Earth hides until "Try an idea" is open, so nothing visible happened
+  expect(page).toContain("pm.querySelectorAll('.cat').forEach(b=>b.addEventListener('click',");
+  expect(page).toContain("t.placeholder=CATHINT[b.dataset.cat];setPlus(false);");
+  expect(page).toContain("const ti=document.querySelector('[data-ex=ideas]');if(ti&&ti.getAttribute('aria-expanded')!=='true')ti.click();");
+  expect(page).toContain("answer:'Ask anything'");
+});
