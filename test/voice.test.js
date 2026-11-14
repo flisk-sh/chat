@@ -485,3 +485,12 @@ test('German, Portuguese and French browser fallbacks take a lady, never a man',
   expect(pick([v('Felipe', 'pt-BR', true), v('Luciana', 'pt-BR')], 'pt').name).toBe('Luciana');
   expect(pick([v('Thomas', 'fr-FR', true), v('Yannick', 'fr-CA'), v('Amélie', 'fr-CA')], 'fr').name).toBe('Amélie');
 });
+
+test('voice: Ava speaks slowly, and the daily read-aloud caps cover a few long talks (one ask per sentence)', async () => {
+  const { RATE, ssml } = await import('../src/tts.js');
+  const { ANON_SPEAK_PER_DAY, SPEAK_PER_DAY } = await import('../src/index.js');
+  expect(Number.parseInt(RATE, 10)).toBeLessThanOrEqual(-10);
+  expect(ssml('Hello', 'en')).toContain(`rate='${RATE}'`);
+  expect(ANON_SPEAK_PER_DAY).toBeGreaterThanOrEqual(600);
+  expect(SPEAK_PER_DAY).toBeGreaterThanOrEqual(2000);
+});

@@ -18,7 +18,7 @@ export const TASKS_PER_DAY = 20;
 export const ANON_TASKS_PER_DAY = 10;
 export const ANON_VOICE_PER_DAY = 20;
 export const ANON_TALK_PER_DAY = 30;
-export const ANON_SPEAK_PER_DAY = 150;
+export const ANON_SPEAK_PER_DAY = 600; // one ask per sentence: 150 ran out after a few talks and the page fell back to the robotic browser voice
 export const ANON_PER_PERSON_BACKUP = 10;
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
@@ -30,7 +30,7 @@ export const ANON_VOICE_PARTS_PER_DAY = 120;
 export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
 export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
 export const TALK_PER_DAY = 100;
-export const SPEAK_PER_DAY = 600; // answers read aloud by the Ava voice, per login
+export const SPEAK_PER_DAY = 2000; // answers read aloud by the Ava voice, per login
 export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
 - Answer in one or two short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
 - Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
