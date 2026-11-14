@@ -133,7 +133,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .optin{display:block;margin:6px 2px 0;color:var(--dim);font-size:12px;line-height:1.35}
 .byor{display:block;margin:6px 0 2px;padding:0;border:0;background:none;color:var(--ink);text-decoration:underline;font-size:13px;cursor:pointer}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--radius);padding:7px 14px;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap}
-.btn:hover{border-color:var(--ink)}.btn.go{background:var(--green);border-color:var(--green);color:#fff}.btn.go:hover{background:var(--green-d)}
+.btn:hover{border-color:var(--ink)}.btn.go{background:var(--green);border-color:var(--green);color:var(--flisk-on-accent,#fff)}.btn.go:hover{background:var(--green-d)}
 .btn[disabled]{opacity:.55;cursor:wait}
 .err{color:var(--red);background:#FEF3F2;border:1px solid #FECDCA;border-radius:var(--radius);padding:10px 14px;white-space:pre-wrap;font-size:14px}
 .note{font-size:13px;color:var(--dim);margin:6px 0 0}
@@ -176,7 +176,7 @@ html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.
 .plusmenu .mp,.plusmenu details.pick{width:100%}.plusmenu .chev{margin-left:auto}
 .plusmenu .cats{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line2)}.plusmenu .cat{border-color:transparent;background:transparent;width:100%;padding:4px 10px 4px 4px}.plusmenu .cat:hover{transform:none;background:var(--line)}
 .plusmenu #orbbtn::after{content:"Voice talk";margin-left:8px;font-size:14px}.plusmenu #voice::after{content:"Read answers aloud";margin-left:8px;font-size:14px}.plusmenu #mic::after{content:"Speak your task";margin-left:8px;font-size:14px}.plusmenu .attach::after{content:"Attach files";margin-left:8px;font-size:14px}
-#plus[aria-expanded=true]{color:#fff;background:var(--green);border-color:var(--green)}#plus svg{transition:transform .15s}#plus[aria-expanded=true] svg{transform:rotate(45deg)}
+#plus[aria-expanded=true]{color:var(--flisk-on-accent,#fff);background:var(--green);border-color:var(--green)}#plus svg{transition:transform .15s}#plus[aria-expanded=true] svg{transform:rotate(45deg)}
 .composer .bar #go{margin-left:auto}
 .composer textarea{display:block;width:100%;min-height:52px;max-height:200px;border:0;outline:0;resize:none;background:transparent;font:16px/1.5 var(--sans);color:var(--ink);padding:2px 0 8px}
 .composer textarea::placeholder{color:var(--soft)}
@@ -208,6 +208,8 @@ html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.
 .mp{position:relative}
 .scrim{display:none}
 .pop{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;width:min(520px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);overflow:hidden}
+/* An open menu sits above everything after the box (the idea buttons have their own blur layer). */
+.composer:has(.pop:not([hidden])),html.plus .composer{position:relative;z-index:25}
 .pop[hidden]{display:none}.pop{max-height:calc(100vh - 150px);overflow:auto}
 .pop .ps{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--soft)}
 .pop .ps input{flex:1;border:0;outline:0;font:14px var(--sans);background:transparent;color:var(--ink);min-width:0}
@@ -280,7 +282,7 @@ details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),
 html.nt{color-scheme:light}
 html.nt body{background:var(--bg)}
 html.nt .dock{background:linear-gradient(to bottom,rgba(255,255,255,0),var(--bg) 18px)}
-html.nt .talkb{color:#fff!important;background:var(--ink)!important;border-color:var(--ink)!important}
+html.nt .talkb{color:var(--bg)!important;background:var(--ink)!important;border-color:var(--ink)!important}
 html.nt #hist li:hover,html.nt #hist li.cur{background:rgba(0,0,0,.05)}
 html.nt .err{background:#FEF3F2;border-color:#FECDCA}
 html.nt .comps .on::before,html.nt .wdot.ok{background:#2F9E5B}
@@ -291,6 +293,7 @@ html.nt .sugg{text-align:left;margin-top:8px}
 html.nt .slot{margin:0 0 22px;text-align:left}html.nt .slot .fine{margin-top:10px}
 html.nt .slot .pop,html.nt .slot details.pick .menu{bottom:auto;top:calc(100% + 10px)}
 html.nt .cats{justify-content:center}
+html.nt .rail button[aria-pressed=true]{color:var(--ink)}
 .tpill{display:none;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);border:1px solid var(--line2);background:var(--panel);border-radius:var(--radius);padding:4px 6px 4px 12px;margin:0 0 18px}.tpill em{font-style:normal;font-size:11.5px;background:var(--tint);color:var(--ink);border-radius:var(--radius);padding:2px 8px}
 .look{display:inline-flex;align-items:center;gap:4px;margin-left:6px;white-space:nowrap}.look select{font:12px var(--sans);color:var(--dim);background:transparent;border:1px solid var(--line2);border-radius:var(--radius);padding:1px 4px}
 /* Ivory and Soft glow: a big centred title, the box under it, round icon tiles. */
@@ -713,7 +716,17 @@ function pick(m){cur=m;aiSel.value=m.key||'wolf';byo.hidden=m.free;byoModel.valu
   byoKey.value=m.free?'':lsGet('chat_key_'+m.key);byWarn.hidden=true;fillSugg(m.key==='openrouter'&&orIds.length?orIds:SUGG[m.key]||[]);if(m.key==='openrouter')loadOr();stat();
   $('byokeylabel').textContent='Your '+m.providerName+' API key';$('byor').hidden=m.key!=='openrouter';
   mpBtn.querySelector('.mpname').textContent=m.name;shownName();mpBtn.querySelector('.ti').innerHTML=tile(m,22);try{sessionStorage.setItem('chat_model',m.id);}catch(e){}drawList();}
-const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';mq.focus();};
+// Keep a pop-up menu inside the window: it keeps its own place unless that runs past an edge, opens on the side of its button with more room (never under the Flisk bar), and scrolls when it is taller than that room.
+const placeFloat=(el,anchor)=>{if(!el||!anchor)return;const s=el.style;s.left=s.right=s.top=s.bottom=s.width=s.maxHeight='';if(el.hidden||!el.offsetParent)return;
+  const vw=document.documentElement.clientWidth,vh=innerHeight,g=8,fb=document.querySelector('flisk-bar'),fbr=fb?fb.getBoundingClientRect():null,top0=fbr&&fbr.height?Math.max(g,fbr.bottom+g):g;
+  let L=g,R=vw-g,T=top0,B=vh-g;for(let p=el.parentElement;p&&p!==document.body;p=p.parentElement){const st=getComputedStyle(p);if(st.overflowX!=='visible'||st.overflowY!=='visible'){const r=p.getBoundingClientRect();L=Math.max(L,r.left+g);R=Math.min(R,r.right-g);T=Math.max(T,r.top+g);B=Math.min(B,r.bottom-g);}}
+  const a=anchor.getBoundingClientRect(),n=el.getBoundingClientRect(),o=el.offsetParent.getBoundingClientRect(),w=Math.min(n.width,R-L);
+  const below=B-a.bottom-10,above=a.top-T-10,h=el.scrollHeight,down=h<=below||(h>above&&below>=above);
+  s.width=w+'px';s.right='auto';s.left=(Math.min(Math.max(L,n.left),R-w)-o.left)+'px';
+  if(down){s.bottom='auto';s.top=(a.bottom+10-o.top)+'px';s.maxHeight=Math.max(120,below)+'px';}else{s.top='auto';s.bottom=(o.bottom-a.top+10)+'px';s.maxHeight=Math.max(120,above)+'px';}
+  s.overflowY='auto';};
+const openPop=()=>{pop.hidden=false;mpBtn.setAttribute('aria-expanded','true');drawRail();drawList();mq.value='';placeFloat(pop,mpBtn);mq.focus();};
+addEventListener('resize',()=>{if(!pop.hidden)placeFloat(pop,mpBtn);const pm=document.getElementById('plusmenu');if(pm&&document.documentElement.classList.contains('plus'))placeFloat(pm,document.getElementById('plus'));});
 const closePop=()=>{if(pop.hidden)return;pop.hidden=true;mpBtn.setAttribute('aria-expanded','false');};
 mpBtn.onclick=()=>pop.hidden?openPop():closePop();mq.addEventListener('input',()=>{if(mq.value.trim())loadOr();drawList();});
 // The picker lives inside the composer form: Enter there must never send the task. Search: choose the first match.
@@ -733,7 +746,7 @@ const setMode=(m)=>{mb.forEach(b=>b.setAttribute('aria-checked',String(b.dataset
 mb.forEach(b=>b.onclick=()=>setMode(b.dataset.mode));let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MODE[m0])m0='chat';setMode(m0);}
 {const pb=document.getElementById('plus'),pm=document.getElementById('plusmenu'),cats=document.querySelector('.cats');
 if(pm&&cats)pm.prepend(cats);
-const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));};
+const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));if(on)placeFloat(pm,pb);};
 if(pb)pb.onclick=()=>setPlus(!document.documentElement.classList.contains('plus'));
 document.addEventListener('click',(e)=>{if(document.documentElement.classList.contains('plus')&&!e.target.closest('#plus,#plusmenu')&&!e.target.closest('.sidesec,.rcol'))setPlus(false);});
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&document.documentElement.classList.contains('plus'))setPlus(false);});}
