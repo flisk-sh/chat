@@ -186,3 +186,13 @@ test('a refused microphone gets steps for the device in hand, iPhone Chrome incl
   // The level meter's AudioContext is made before the permission prompt, inside the tap.
   expect(page.indexOf('oCtx=new AC()')).toBeLessThan(page.indexOf("oStream=await navigator.mediaDevices.getUserMedia"));
 });
+
+test('the mic writes the words into the box live while you talk, and Whisper replaces them at the end', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('window.SpeechRecognition||window.webkitSpeechRecognition');
+  expect(page).toContain('r.interimResults=true');
+  expect(page).toContain('rec.start();liveStart();');
+  expect(page).toContain('liveStop();');
+  // The live words are kept when Whisper fails or the visitor is signed out.
+  expect(page).toContain('t=t||liveSaid;');
+});
