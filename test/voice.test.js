@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { handle, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
+import { handle, voiceDesc, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
 import { makeSession } from '../src/session.js';
 import { appPage } from '../src/page.js';
 
@@ -322,6 +322,10 @@ test('voice: when the first ask stalls, a second ask is made and the one that sp
   expect(await firstByte(await speakStream('hi', '', { open: v.open, hedgeMs: 50, firstMs: 2000, info }))).toBe(2);
   expect(Date.now() - t0).toBeLessThan(1000);
   expect(info.tries).toBe(2);
+  expect(info.won).toBe(2);
+  expect(info.asks[0].a).toBeUndefined();
+  expect(info.asks[1].at).toBeGreaterThanOrEqual(40);
+  expect(info.asks[1].a).toBeGreaterThan(info.asks[1].o);
   expect(v.made[0].closed).toBe(true); // the stalled one is given up
 });
 
@@ -356,4 +360,10 @@ test('the browser fallback voice is a lady, never Daniel or a Male voice when a 
   expect(pick([v('Daniel', 'en-GB')], 'en').name).toBe('Daniel');
   expect(pick([v('Samantha', 'en-US')], 'de')).toBe(null);
   expect(page).not.toContain("'Samantha','Ava','Daniel'");
+});
+
+test('voice: Server-Timing says when each ask opened, started and spoke', () => {
+  expect(voiceDesc({ tries: 2, won: 2, asks: [{ at: 0, o: 412, s: 520, x: 1 }, { at: 800, o: 1190, s: 1290, a: 1450 }] }))
+    .toBe('2 tries, won 2 | 1 at0 o412 s520 a- x | 2 at800 o1190 s1290 a1450');
+  expect(voiceDesc({})).toBe('1 tries');
 });

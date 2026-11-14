@@ -55,12 +55,14 @@ async function openSocket(url) {
 // One ask on its own connection: resolves with a stream of mp3 bytes on the first audio, sent on as Microsoft sends
 // them (it sometimes paces audio at speaking speed, so waiting for the whole file would add seconds); rejects when the
 // connection ends with no audio. close() gives it up, even while the connection is still opening.
-function ask(words, lang, open, totalMs) {
+// 'rec' gets ms from 't0' to the socket open (o), Microsoft's turn start (s) and the first audio (a).
+function ask(words, lang, open, totalMs, rec = {}, t0 = Date.now()) {
   let ws = null, gone = false;
   const close = () => { gone = true; try { ws?.close(); } catch {} };
   const p = (async () => {
     const sock = await open(`${WSS}?TrustedClientToken=${TOKEN}&Sec-MS-GEC=${await secMsGec()}&Sec-MS-GEC-Version=2-143.0.3650.96&ConnectionId=${uuid()}`);
     ws = sock;
+    rec.o = Date.now() - t0;
     if (gone) { try { sock.close(); } catch {} throw new Error('given up'); }
     const { readable, writable } = new TransformStream();
     const out = writable.getWriter();
@@ -75,7 +77,7 @@ function ask(words, lang, open, totalMs) {
         chain.then(() => out.close()).catch(() => {}).then(() => { if (!started) reject(new Error('the voice service sent no audio')); });
       };
       sock.addEventListener('message', (e) => {
-        if (typeof e.data === 'string') { if (e.data.includes('Path:turn.end')) end(); return; }
+        if (typeof e.data === 'string') { if (rec.s == null && e.data.includes('Path:turn.start')) rec.s = Date.now() - t0; if (e.data.includes('Path:turn.end')) end(); return; }
         // Binary frame (a Blob in Workers, an ArrayBuffer in Bun): 2-byte header length, the header, then mp3 bytes.
         const got = typeof e.data?.arrayBuffer === 'function' ? e.data.arrayBuffer() : Promise.resolve(e.data instanceof ArrayBuffer ? e.data : e.data.buffer);
         chain = chain.then(async () => {
@@ -85,7 +87,7 @@ function ask(words, lang, open, totalMs) {
           const audio = new Uint8Array(buf, 2 + headLen);
           if (!audio.length) return;
           out.write(audio).catch(() => {}); // not awaited: the reader only starts once the stream is handed back
-          if (!started) { started = true; resolve(readable); }
+          if (!started) { started = true; rec.a = Date.now() - t0; resolve(readable); }
         });
       });
       sock.addEventListener('close', end);
@@ -103,11 +105,12 @@ function ask(words, lang, open, totalMs) {
 // Hedged: from Cloudflare, Microsoft now and then holds the first audio of a request for 2-8 s (or never sends it),
 // while a second request made at the same moment starts in 0.2 s. So when no audio has come 'hedgeMs' after asking,
 // it asks again on a new connection (at once when the first fails), and whichever speaks first is streamed; the other
-// is closed. 'info' gets how many asks it took.
+// is closed. 'info' gets how many asks it took (tries), which one spoke (won, from 1) and each ask's timings (asks).
 export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 60000, hedgeMs = 800, open = openSocket, info = {} } = {}) {
   const words = String(text || '').trim();
   if (!words) throw new Error('nothing to say');
-  const asks = [];
+  const asks = [], t0 = Date.now();
+  info.asks = [];
   return new Promise((resolve, reject) => {
     let done = false, failed = 0, last = null, hedge = 0;
     const finish = (err, stream, won) => {
@@ -115,15 +118,18 @@ export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 6
       done = true;
       clearTimeout(first); clearTimeout(hedge);
       info.tries = asks.length;
+      if (won) info.won = asks.indexOf(won) + 1;
       for (const a of asks) if (a !== won) a.close();
       if (err) reject(err); else resolve(stream);
     };
     const first = setTimeout(() => finish(new Error('the voice service took too long')), firstMs);
     const start = () => {
-      const a = ask(words, lang, open, totalMs);
+      const rec = { at: Date.now() - t0 };
+      info.asks.push(rec);
+      const a = ask(words, lang, open, totalMs, rec, t0);
       asks.push(a);
       a.p.then((stream) => finish(null, stream, a), (e) => {
-        last = e; failed++;
+        last = e; failed++; rec.x = 1;
         if (asks.length < 2 && hedgeMs) { clearTimeout(hedge); start(); } else if (failed === asks.length) finish(last);
       });
     };
