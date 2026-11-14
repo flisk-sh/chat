@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { handle, voiceDesc, meloBackup, MELO_MODEL, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
+import { handle, voiceDesc, meloBackup, MELO_MODEL, MAX_AUDIO_B64, transcribe, hedgedRun, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
 import { makeSession } from '../src/session.js';
 import { appPage } from '../src/page.js';
 
@@ -23,6 +23,37 @@ test('transcribe says what went wrong: empty, too long, not base64, no AI, model
   const r = await transcribe({ AI: ai(new Error('boom')) }, { audio: 'QUJD' });
   expect(r.status).toBe(502);
   expect(r.error).toContain('boom');
+});
+
+const later = (ms, v) => new Promise((ok, no) => setTimeout(() => (v instanceof Error ? no(v) : ok(v)), ms));
+test('hedgedRun: a fast first answer never starts a second ask', async () => {
+  let n = 0;
+  expect(await hedgedRun(() => (n++, later(5, 'a')), 50)).toBe('a');
+  await later(80);
+  expect(n).toBe(1);
+});
+test('hedgedRun: when the first ask stalls, a second one starts at hedgeMs and its answer wins', async () => {
+  const plan = [later(400, 'slow'), later(10, 'fast')];
+  let n = 0;
+  const t0 = Date.now();
+  expect(await hedgedRun(() => plan[n++], 30)).toBe('fast');
+  expect(Date.now() - t0).toBeLessThan(200);
+  expect(n).toBe(2);
+});
+test('hedgedRun: a failed first ask is retried at once; two failures give the error', async () => {
+  const plan = [later(1, new Error('busy')), later(5, 'ok')];
+  let n = 0;
+  const t0 = Date.now();
+  expect(await hedgedRun(() => plan[n++], 1000)).toBe('ok');
+  expect(Date.now() - t0).toBeLessThan(200);
+  let m = 0;
+  await expect(hedgedRun(() => (m++, later(1, new Error('down'))), 1000)).rejects.toThrow('down');
+  expect(m).toBe(2);
+});
+test('transcribe asks Whisper again when the first ask stalls', async () => {
+  let n = 0;
+  const AI = { run: async () => (n++ === 0 ? later(500, { text: 'late' }) : { text: 'hello', transcription_info: { language: 'en' } }) };
+  expect(await transcribe({ AI }, { audio: 'QUJD' }, { hedgeMs: 20 })).toEqual({ status: 200, text: 'hello', lang: 'en' });
 });
 
 test('spoken phrases (part: true) have their own daily allowance, apart from the 60 voice messages', async () => {
@@ -422,4 +453,12 @@ test('the page hears Dutch text, says Dutch mm-hm in talk, and skips the Dutch m
   expect(langOf('Ich habe heute keine Zeit, das ist nicht gut.')).toBe('de');
   const pick = (voices, lang) => new Function('TTS', `${cut('const LADY=', 'const langOf=')}${cut('const pickVoice=', 'const utter=')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
   expect(pick([{ name: 'Xander', lang: 'nl-NL', default: true }, { name: 'Ellen', lang: 'nl-BE' }], 'nl').name).toBe('Ellen');
+});
+
+test('the page waits less for Ava in languages MeloTTS cannot speak, and knows the same languages as the server', async () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain("const MELO_SPEAKS=['en','es','fr','zh','ja','ko']");
+  expect(page).toContain('Math.min(opts.budget,2000)');
+  for (const l of ['en', 'es', 'fr', 'zh', 'ja', 'ko']) expect(meloBackup({ AI: {} }, l)).not.toBeNull();
+  expect(meloBackup({ AI: {} }, 'uk')).toBeNull();
 });

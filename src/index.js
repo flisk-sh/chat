@@ -84,14 +84,32 @@ export function talkMessages(history, lang = '') {
 
 // Speech to text for the mic button: the browser records, Workers AI Whisper writes it down. Works in every browser,
 // unlike the browser's own speech recognition (missing in Firefox, broken in Arc, Brave and in-app browsers).
-export async function transcribe(env, body) {
+// Whisper on Workers AI usually answers in ~1 s but sometimes waits 3-6 s in a queue (measured 2026-11-14). A second ask
+// started at hedgeMs, or at once when the first one fails, is usually fast, so the first answer wins.
+export const WHISPER_HEDGE_MS = 1100;
+export function hedgedRun(run, hedgeMs = WHISPER_HEDGE_MS) {
+  return new Promise((ok, fail) => {
+    let started = 0, failed = 0, done = false, timer = 0;
+    const start = () => {
+      if (done || started >= 2) return;
+      started++;
+      Promise.resolve().then(run).then(
+        (r) => { if (done) return; done = true; clearTimeout(timer); ok(r); },
+        (e) => { if (done) return; failed++; if (started < 2) { clearTimeout(timer); start(); } else if (failed === 2) { done = true; fail(e); } },
+      );
+    };
+    start();
+    timer = setTimeout(start, hedgeMs);
+  });
+}
+export async function transcribe(env, body, { hedgeMs = WHISPER_HEDGE_MS } = {}) {
   const audio = typeof body?.audio === 'string' ? body.audio : '';
   if (!audio) return { status: 400, error: 'no audio was recorded' };
   if (audio.length > MAX_AUDIO_B64) return { status: 413, error: 'keep it under a minute' };
   if (!/^[A-Za-z0-9+/=]+$/.test(audio)) return { status: 400, error: 'the recording was not readable' };
   if (!env.AI) return { status: 503, error: 'voice is not set up on this server' };
   try {
-    const r = await env.AI.run(WHISPER_MODEL, { audio });
+    const r = await hedgedRun(() => env.AI.run(WHISPER_MODEL, { audio }), hedgeMs);
     const lang = String(r?.transcription_info?.language || '').toLowerCase().replace(/[^a-z-]/g, '').slice(0, 8);
     return { status: 200, text: String(r?.text || '').trim(), lang };
   } catch (e) {
