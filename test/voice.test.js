@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { handle, MAX_AUDIO_B64, transcribe, WHISPER_MODEL } from '../src/index.js';
+import { handle, MAX_AUDIO_B64, transcribe, VOICE_PARTS_PER_DAY, VOICE_PER_DAY, WHISPER_MODEL } from '../src/index.js';
 import { makeSession } from '../src/session.js';
 import { appPage } from '../src/page.js';
 
@@ -23,6 +23,15 @@ test('transcribe says what went wrong: empty, too long, not base64, no AI, model
   const r = await transcribe({ AI: ai(new Error('boom')) }, { audio: 'QUJD' });
   expect(r.status).toBe(502);
   expect(r.error).toContain('boom');
+});
+
+test('spoken phrases (part: true) have their own daily allowance, apart from the 60 voice messages', async () => {
+  const e = env({ AI: ai({ text: 'hi' }) });
+  const cookie = (await makeSession(e, 'ann')).split(';')[0];
+  for (let i = 0; i < VOICE_PER_DAY; i++) expect((await post(e, { audio: 'QUJD' }, cookie)).status).toBe(200);
+  expect((await post(e, { audio: 'QUJD' }, cookie)).status).toBe(429);
+  expect((await post(e, { audio: 'QUJD', part: true }, cookie)).status).toBe(200);
+  expect(VOICE_PARTS_PER_DAY).toBeGreaterThan(VOICE_PER_DAY);
 });
 
 test('/api/transcribe needs a sign-in, then answers with the text', async () => {
@@ -187,14 +196,14 @@ test('a refused microphone gets steps for the device in hand, iPhone Chrome incl
   expect(page.indexOf('oCtx=new AC()')).toBeLessThan(page.indexOf("oStream=await navigator.mediaDevices.getUserMedia"));
 });
 
-test('the mic writes the words into the box live while you talk, and Whisper replaces them at the end', () => {
+test('the mic writes while you talk: it cuts at each pause and sends every phrase to Whisper as a part', () => {
   const page = appPage({ login: 'ann', connected: [] });
-  expect(page).toContain('window.SpeechRecognition||window.webkitSpeechRecognition');
-  expect(page).toContain('r.interimResults=true');
-  expect(page).toContain('rec.start();liveStart();');
-  expect(page).toContain('liveStop();');
-  // The live words are kept when Whisper fails or the visitor is signed out.
-  expect(page).toContain('t=t||liveSaid;');
+  expect(page).not.toContain('webkitSpeechRecognition');
+  expect(page).toContain('if(cur.spoke&&(quiet>650||now-cur.t0>12000))cut(false);');
+  expect(page).toContain('if(p.spoke&&blob.size>800)sends.push(sendPart(blob));');
+  expect(page).toContain('type:blob.type,part:true})');
+  const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  for (const js of scripts) expect(() => new Function(js)).not.toThrow();
 });
 
 // Drives the page's own hearOne with a fake microphone and clock: loud = talking, quiet = a pause.

@@ -812,32 +812,25 @@ drawVoice();
 const micIdle=(label)=>{micBtn.classList.remove('rec','busy');micBtn.disabled=false;micBtn.setAttribute('aria-label',label||'Speak your task');micBtn.title=label||'Speak your task';};
 const b64=(blob)=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result||'');ok(s.slice(s.indexOf(',')+1));};r.onerror=()=>no(new Error('could not read the recording'));r.readAsDataURL(blob);});
 // Audio to words on the server; null means "sign in first".
-async function toText(blob){const res=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type})});
+async function toText(blob){const res=await fetch('/api/transcribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type,part:true})});
   if(res.status===401)return null;const b=await res.json().catch(()=>({}));if(!res.ok)throw new Error(b.error||('Voice answered '+res.status));return String(b.text||'').trim();}
-async function heard(blob){
-  micBtn.classList.remove('rec');micBtn.classList.add('busy');micBtn.disabled=true;micBtn.title='Writing down what you said';const was=box.placeholder;box.placeholder='Writing down what you said…';
-  try{if(blob.size<800&&!liveSaid)throw new Error('I did not hear anything. Hold the mic a bit longer and talk.');
-    let t=null;try{t=await toText(blob);}catch(e){if(!liveSaid)throw e;}if(t===null&&!liveSaid){try{sessionStorage.setItem('chat_pending',box.value);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});return;}t=t||liveSaid;if(!t)throw new Error('I did not catch any words. Try again a little closer to the mic.');
-    showSaid(t);
+// The mic writes while you talk: it records phrase by phrase, cutting at each short pause, and sends every phrase to
+// Whisper on its own, so the words land in the box a moment after you say them, in every browser. The browser's own
+// recognizer is not used: in Arc, Brave and headless Chrome it starts, then hears nothing and says nothing.
+let micBase='',micParts=[],micWait=0,micFail='',micOut=false;
+function showSaid(){const t=micParts.filter(Boolean).join(' ').replace(/ +/g,' ').trim();
+  box.value=((micBase?micBase+' ':'')+t+(micWait?' …':'')).trim().slice(0,2000);box.dispatchEvent(new Event('input'));box.scrollTop=box.scrollHeight;}
+function sendPart(blob){const i=micParts.length;micParts.push('');micWait++;showSaid();
+  return toText(blob).then((t)=>{if(t===null)micOut=true;else micParts[i]=t;},(e)=>{micFail=String(e.message||e);}).finally(()=>{micWait--;showSaid();});}
+async function micDone(sends){
+  micBtn.classList.remove('rec');micBtn.classList.add('busy');micBtn.disabled=true;micBtn.title='Writing down what you said';
+  try{await Promise.all(sends);showSaid();const said=micParts.filter(Boolean).join(' ').trim();
+    if(!said&&micOut){try{sessionStorage.setItem('chat_pending',box.value);}catch(e){}signin.hidden=false;signin.scrollIntoView({block:'center'});return;}
+    if(!said)throw new Error(micFail||(sends.length?'I did not catch any words. Try again a little closer to the mic.':'I did not hear anything. Tap the mic, talk, then tap it again.'));
     if(voiceOn&&!go.disabled){byVoice=true;form.requestSubmit();byVoice=false;}else box.focus();
   }catch(e){errMsg(String(e.message||e));}
-  finally{box.placeholder=was;micIdle();liveSaid='';}
+  finally{micIdle();}
 }
-// Live words while you talk: the browser's own recognizer (Chrome, Edge, Safari) writes into the box as you speak; the
-// server's Whisper text replaces it when you stop, and the live words stay if Whisper fails. Browsers without it
-// (Firefox, Arc, Brave, in-app) still get the Whisper text at the end.
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let live=null,liveSaid='',micBase='';
-function showSaid(t){box.value=((micBase?micBase+' ':'')+t).slice(0,2000);box.dispatchEvent(new Event('input'));box.scrollTop=box.scrollHeight;}
-function liveStart(){if(!SR||IOS)return;let before='';const r=new SR();live=r;
-  r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;
-  // Rebuild from every result of this run (finals and the guess in progress) so nothing is counted twice; Chrome ends a
-  // run after a pause, so the next run starts after the words already heard.
-  r.onresult=(e)=>{let now='';for(let i=0;i<e.results.length;i++)now+=e.results[i][0].transcript+' ';
-    liveSaid=(before+' '+now).replace(/ +/g,' ').trim();if(rec)showSaid(liveSaid);};
-  r.onerror=(e)=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='network')live=null;};
-  r.onend=()=>{before=liveSaid;if(live===r&&rec){try{r.start();}catch(e){}}};
-  try{r.start();}catch(e){live=null;}}
-function liveStop(){const r=live;live=null;if(r){try{r.stop();}catch(e){}}}
 // What to do when the microphone is refused, in the words of the device in hand. On an iPhone, Chrome and Safari both
 // need the phone's own switch (Settings) as well as the site's prompt, and a refused prompt is not asked again.
 const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -852,15 +845,31 @@ function micHelp(e,again){const n=e&&e.name;
 async function listen(){
   if(rec){rec.stop();return;}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){errMsg('This browser cannot record. Try Chrome, Safari, Edge or Firefox.');return;}
-  stopTalk();let stream;
+  stopTalk();
+  // The level meter's AudioContext is made inside the tap, before the mic prompt: an iPhone leaves a later one silent.
+  const AC=window.AudioContext||window.webkitAudioContext;let ctx=null;try{ctx=new AC();ctx.resume().catch(()=>{});}catch(e){ctx=null;}
+  let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
-  catch(e){errMsg(micHelp(e,'tap the mic again'));return;}
+  catch(e){if(ctx)ctx.close().catch(()=>{});errMsg(micHelp(e,'tap the mic again'));return;}
   const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
-  const chunks=[];rec=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream);
-  rec.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  rec.onstop=()=>{clearTimeout(recTimer);liveStop();stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||type||'audio/webm'});rec=null;heard(blob);};
-  micBase=box.value.trim();liveSaid='';rec.start();liveStart();micBtn.classList.add('rec');micBtn.setAttribute('aria-label','Stop and send what I said');micBtn.title='Listening. Tap again when you are done.';
-  recTimer=setTimeout(()=>{if(rec)rec.stop();},55000);
+  let an=null,src=null,buf=null;
+  try{if(ctx){an=ctx.createAnalyser();an.fftSize=1024;src=ctx.createMediaStreamSource(stream);src.connect(an);buf=new Float32Array(an.fftSize);}}catch(e){an=null;}
+  micBase=box.value.trim();micParts=[];micWait=0;micFail='';micOut=false;
+  const sends=[];let ending=false,cur=null,quiet=0,last=Date.now(),timer=0;
+  const finish=()=>{clearInterval(timer);clearTimeout(recTimer);stream.getTracks().forEach(t=>t.stop());try{if(src)src.disconnect();if(ctx)ctx.close().catch(()=>{});}catch(e){}rec=null;micDone(sends);};
+  // One phrase = one small recording. Without a level meter (no AudioContext) the whole talk is one phrase.
+  const newPart=()=>{const p={chunks:[],spoke:!an,t0:Date.now(),r:type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream)};
+    p.r.ondataavailable=(e)=>{if(e.data&&e.data.size)p.chunks.push(e.data);};
+    p.r.onstop=()=>{const blob=new Blob(p.chunks,{type:p.r.mimeType||type||'audio/webm'});if(p.spoke&&blob.size>800)sends.push(sendPart(blob));if(p.last)finish();};
+    p.r.start();return p;};
+  const cut=(lastOne)=>{const p=cur;p.last=lastOne;if(!lastOne)cur=newPart();quiet=0;if(p.r.state!=='inactive')p.r.stop();else if(lastOne)finish();};
+  cur=newPart();
+  if(an)timer=setInterval(()=>{an.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++)sum+=buf[i]*buf[i];const rms=Math.sqrt(sum/buf.length),now=Date.now(),dt=now-last;last=now;
+    if(rms>0.02){cur.spoke=true;quiet=0;}else if(cur.spoke)quiet+=dt;
+    if(cur.spoke&&(quiet>650||now-cur.t0>12000))cut(false);},60);
+  rec={stop:()=>{if(ending)return;ending=true;clearInterval(timer);cut(true);}};
+  micBtn.classList.add('rec');micBtn.setAttribute('aria-label','Stop and send what I said');micBtn.title='Listening. The words appear as you pause. Tap again when you are done.';
+  recTimer=setTimeout(()=>{if(rec)rec.stop();},120000);
 }
 if(navigator.mediaDevices&&window.MediaRecorder){micBtn.hidden=false;micBtn.onclick=listen;}
 // Voice talk (Flisk Oracle): listen until you pause, write it down, the model answers in a few spoken sentences, read it
