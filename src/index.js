@@ -120,9 +120,8 @@ const SECURITY = {
   // The Earth look loads three.js and its globe textures from these exact folders only (see earth.js).
   'content-security-policy': `default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://flisk.si https://flisk.sh ${THREE_SRC}; img-src 'self' data: blob: https://flisk.si ${TEXTURES.join(' ')}; media-src 'self' data: blob:; connect-src 'self' https://analytics.flisk.si https://openrouter.ai/api/v1/models https://openrouter.ai/api/v1/auth/keys; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'`,
 };
-// The page has five looks. A visitor who has none yet gets the next one in turn and keeps it in a cookie; the
-// switch under the box changes it. The turn counter lives in the isolate, so it is round robin per isolate.
-let themeTurn = Math.floor(Math.random() * THEME_IDS.length);
+// A visitor who has no look yet gets Earth and keeps it in a cookie; the switch under the box changes it.
+export const DEFAULT_THEME = 'earth';
 // The shared Flisk look (the bar's ?flisk_theme= parameter, or its flisk_theme cookie on .flisk.si) maps onto the closest of
 // the five chat looks: ivory and soft glow have their own, other light looks get Focus, dark looks get Classic.
 const LIGHT_LOOKS = new Set(['paper-tool', 'editorial-ruled', 'soft-satoshi', 'clean', 'ice', 'chapters']);
@@ -137,8 +136,7 @@ export const pickTheme = (request) => {
   if (THEME_IDS.includes(saved)) return { theme: saved, cookie: '' };
   const shared = lookForFliskTheme(/(?:^|;\s*)flisk_theme=([a-z-]+)/.exec(cookies)?.[1]);
   if (shared) return setLook(shared);
-  themeTurn = (themeTurn + 1) % THEME_IDS.length;
-  return setLook(THEME_IDS[themeTurn]);
+  return setLook(DEFAULT_THEME);
 };
 
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });

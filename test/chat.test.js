@@ -937,7 +937,7 @@ describe('composer plus', () => {
   });
 });
 
-// The page has five looks. A new visitor gets the next one in turn, kept in a cookie; a saved look is kept; the switch lists all five.
+// A new visitor gets the Earth look, kept in a cookie; a saved look is kept; the switch lists all six.
 describe('looks', () => {
   const look = (html) => /<html lang="en" data-theme="([a-z]+)"/.exec(html)?.[1];
   test('the look chosen on another Flisk site carries over: link parameter first, then the shared cookie, then a saved chat look', async () => {
@@ -964,16 +964,15 @@ describe('looks', () => {
     }
     expect(html).toContain("html[data-theme=voice] .u::before{content:'You'");
   });
-  test('new visitors get the looks in turn and keep theirs in a cookie', async () => {
-    const seen = [];
-    for (let i = 0; i < 6; i++) {
+  test('a new visitor gets the Earth look and keeps it in a cookie', async () => {
+    for (let i = 0; i < 3; i++) {
       const res = await handle(new Request(`${ORIGIN}/`), env());
       const html = await res.text();
-      const t = look(html);
-      expect(res.headers.get('set-cookie')).toContain(`chat_theme=${t}; Path=/; Max-Age=31536000`);
-      seen.push(t);
+      expect(look(html)).toBe('earth');
+      expect(html).toContain('<canvas id="earth" class="earthc" aria-hidden="true"></canvas>');
+      expect(res.headers.get('set-cookie')).toContain('chat_theme=earth; Path=/; Max-Age=31536000');
     }
-    expect(new Set(seen)).toEqual(new Set(['classic', 'ivory', 'glow', 'focus', 'voice', 'earth']));
+    expect(appPageUi({ theme: 'nope' })).toContain('data-theme="earth"');
   });
   test('a saved look is used and not set again', async () => {
     const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=focus' } }), env());
@@ -988,7 +987,7 @@ describe('looks', () => {
     const classic = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=classic' } }), env())).text();
     expect(classic).toContain('<html lang="en" data-theme="classic">');
     const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=evil"x' } }), env());
-    expect(res.headers.get('set-cookie')).toMatch(/chat_theme=(classic|ivory|glow|focus|voice|earth);/);
+    expect(res.headers.get('set-cookie')).toContain('chat_theme=earth;');
   });
   test('the Earth look draws the globe and the users list, and the CSP lets only three.js and its textures in', async () => {
     const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=earth' } }), env());
