@@ -169,8 +169,10 @@ export function parseAction(text) {
       if (a?.widget && typeof a.widget === 'object') return { type: 'widget', raw: a.widget };
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
-    if (/^\s*\{\s*"(run|write|read|publish|video|system|share|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
   }
+  // An action that starts but never closes (the answer was cut off at the length limit, often a long file with no } in
+  // it) is a bad reply to retry, never an answer to show.
+  if (start >= 0 && /^\s*\{\s*"(run|write|read|publish|video|system|share|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
 
   // If it still looks like a tool call or XML, force a retry.
   if (/DSML|<invoke|<parameter|tool_call|function_call/i.test(String(text))) {
@@ -281,10 +283,11 @@ function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true
     }
     if (!res.ok || (body?.error && !body?.choices)) return explainModelError(body, res.status, chosen);
     const text = body?.choices?.[0]?.message?.content;
-    if (typeof text === 'string' && text.trim()) return { text };
+    const finish = body?.choices?.[0]?.finish_reason;
+    // cut: the answer stopped at the length limit, so an action in it may be missing its end.
+    if (typeof text === 'string' && text.trim()) return finish === 'length' ? { text, cut: true } : { text };
     if (text && typeof text === 'object') return { text: JSON.stringify(text) };
     // Reasoning models sometimes spend the whole answer thinking and write nothing; say so, and let the loop retry.
-    const finish = body?.choices?.[0]?.finish_reason;
     const thought = body?.choices?.[0]?.message?.reasoning;
     const why = finish === 'length' ? ' (it ran out of answer length' + (thought ? ' while thinking' : '') + ')' : finish ? ` (finish reason: ${String(finish).slice(0, 30)})` : '';
     return { error: `the model sent an empty answer${why}`, kind: 'empty' };
@@ -503,7 +506,9 @@ export async function runTask({ task, history = [], github = undefined, origin =
       if (stats.firstAction === null && action.type !== 'bad') stats.firstAction = action.type;
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });
-        messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
+        messages.push({ role: 'user', content: reply.cut
+          ? 'That reply was cut off: it was longer than the answer limit, so the action was lost. Send a shorter action: "write" a smaller file (under about 12 KB) and put the rest in other files (styles in styles.css, scripts in app.js), one "write" at a time.'
+          : 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
         continue;
       }
       // A server was started on the computer but nothing was published: the computer stops with this answer, so the user
