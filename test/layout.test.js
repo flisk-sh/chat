@@ -25,3 +25,12 @@ test('buttons on the accent colour use the on-accent ink, so dark looks are not 
 test('the page script still parses', () => {
   for (const [, s] of page.matchAll(/<script>([\s\S]*?)<\/script>/g)) expect(() => new Function(s)).not.toThrow();
 });
+
+test('Voice is the fourth mode toggle and opens the talk screen; the + menu rows never turn white', () => {
+  expect(page).toContain('data-mode="voice"');
+  expect(page).toContain(">Voice</button></div>");
+  expect(page).toContain("document.querySelectorAll('.md:not([data-mode=voice])')");
+  expect(page).toContain('if(or.hidden)ob.click();');
+  // Voice talk's button is forced to the ink colour everywhere else; inside the + menu it must stay see-through
+  expect(page).toContain('html .plusmenu>button.talkb{background:transparent!important;color:var(--ink)!important');
+});
