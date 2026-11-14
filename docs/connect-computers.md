@@ -14,6 +14,29 @@ Three rules limit what we can do:
 
 The third rule means no option below can honestly be called "zero-knowledge" while fleet does the work. Section 3 says exactly what each option can claim.
 
+## 0. Update 2026-11-14: what the user actually wants
+
+The user does not mind the paste. They mind the whole trip: sign in at the provider, find the key page, press "create key", come back. So polishing the paste (section 5's first idea) is no longer the first PR.
+
+What removes the trip, and what it needs:
+
+| Route | What the user does | What it needs from others |
+|---|---|---|
+| "Allow" button (OAuth) | Press Connect in fleet, press Allow at the provider | The provider agrees: Vercel's beta, Cloudflare (paying users only), maybe Blaxel and Fly |
+| **Connect button + small Chrome extension** | Press Connect in fleet. A provider tab opens, the extension presses "Create key", reads it and fills fleet's form. The user signs in at the provider only if not already | Nobody. Needs the user to be signed in at the provider in Chrome |
+| Terminal command using the provider's own login (`daytona login`, `vercel login`) | Type one command | Nobody, but only for developers |
+| Flisk-provided computers | Nothing | Money, maybe a deal |
+
+Why a web page alone cannot do it: a browser stops one site (fleet) from reading or clicking in another (the provider), and the create-key APIs need the provider's sign-in token, which providers give only to their own site and CLI. Terraform does not help: it needs a key to start.
+
+**New top pick: a "Connect" button on fleet's Providers page, backed by a Chrome extension.** The extension talks to fleet's page with window messages and fills the existing connect form, so fleet's vault, routes and security model do not change. Chat and host link to that page. Providers with OAuth get an "Allow" button instead, once they agree.
+
+Proposed PRs, in order:
+
+1. **Recon, no code.** In the user's signed-in Chrome, read (not change) the key pages of Daytona, E2B and Upstash and write down the exact clicks and page elements. Without this an extension would be guesswork.
+2. **Extension + fleet Connect button for Daytona, E2B, Upstash.** Fleet: one button per supported provider, shown only when the extension announces itself. Extension: one small script per provider.
+3. More providers and the OAuth "Allow" buttons as providers agree.
+
 ## 1. Providers that can connect with one click (no key)
 
 | Provider | One-click route | Works today? | Catch |
