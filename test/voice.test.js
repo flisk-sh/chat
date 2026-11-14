@@ -339,3 +339,21 @@ test('voice: both asks failing, or nothing at all in time, still rejects so the 
   expect(v.made.every((s) => s.closed)).toBe(true);
   await expect(speakStream('  ', '', { open: v.open })).rejects.toThrow('nothing to say');
 });
+
+// The browser voice (used when Ava is slow) must be a lady's voice too: a Mac lists Daniel and Google UK English Male
+// before Samantha, and the old picker took the first "good" name it met.
+test('the browser fallback voice is a lady, never Daniel or a Male voice when a lady is there', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  const cut = (a, b) => page.slice(page.indexOf(a), page.indexOf(b));
+  const lines = [cut('const LADY=', 'const langOf='), cut('const pickVoice=', 'const utter=')];
+  const v = (name, lang, d = false) => ({ name, lang, default: d });
+  const pick = (voices, lang) => new Function('TTS', `${lines.join('\n')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
+  const mac = [v('Albert', 'en-US'), v('Daniel', 'en-GB', true), v('Fred', 'en-US'), v('Google UK English Male', 'en-GB'), v('Karen', 'en-AU'), v('Samantha', 'en-US'), v('Google US English', 'en-US')];
+  expect(pick(mac, 'en').name).toBe('Samantha');
+  expect(pick([v('Daniel', 'en-GB'), v('Google UK English Male', 'en-GB'), v('Google UK English Female', 'en-GB')], 'en').name).toBe('Google UK English Female');
+  expect(pick([v('Microsoft Guy Online (Natural)', 'en-US'), v('Microsoft Ava Online (Natural)', 'en-US')], 'en').name).toBe('Microsoft Ava Online (Natural)');
+  expect(pick([v('Microsoft Ostap Online (Natural)', 'uk-UA'), v('Microsoft Polina Online (Natural)', 'uk-UA')], 'uk').name).toBe('Microsoft Polina Online (Natural)');
+  expect(pick([v('Daniel', 'en-GB')], 'en').name).toBe('Daniel');
+  expect(pick([v('Samantha', 'en-US')], 'de')).toBe(null);
+  expect(page).not.toContain("'Samantha','Ava','Daniel'");
+});
