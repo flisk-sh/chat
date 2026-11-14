@@ -50,7 +50,7 @@ export function intentOf(body) {
 }
 
 // ask(messages) -> { text } | { error }; overLimit() -> bool. Both come from index.js so tests can fake them.
-export async function alexaHandle(request, env, { ask, overLimit, now = Date.now(), origin = '' }) {
+export async function alexaHandle(request, env, { ask, overLimit, now = Date.now(), origin = '', prepare = null }) {
   if (!env.ALEXA_KEY) return Response.json({ error: 'the Alexa skill is not set up on this server' }, { status: 503 });
   const key = new URL(request.url).searchParams.get('key') || '';
   if (!same(key, env.ALEXA_KEY)) return Response.json({ error: 'not allowed' }, { status: 403 });
@@ -62,7 +62,12 @@ export async function alexaHandle(request, env, { ask, overLimit, now = Date.now
   if (!Number.isFinite(at) || Math.abs(now - at) > MAX_AGE_MS) return Response.json({ error: 'request too old' }, { status: 400 });
 
   const it = intentOf(body);
-  const say = async (text, o = {}) => Response.json(reply(text, { ...o, voice: origin ? await voiceUrl(origin, text, env.ALEXA_KEY) : '' }));
+  // The audio tag goes in only when Ava has already made the file (prepare), so Alexa never meets a slow or failing link.
+  const say = async (text, o = {}) => {
+    let voice = origin ? await voiceUrl(origin, text, env.ALEXA_KEY) : '';
+    if (voice && prepare && !(await prepare(text, voice).catch(() => false))) voice = '';
+    return Response.json(reply(text, { ...o, voice }));
+  };
   if (it.kind === 'end') return Response.json({ version: '1.0', response: {} });
   if (it.kind === 'stop') return say('Okay. Talk soon.', { end: true });
   if (it.kind === 'open') return say('Flisk Oracle here. Ask me anything.', { reprompt: 'Go ahead, ask me anything.' });

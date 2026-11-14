@@ -5,7 +5,7 @@ import { intentOf } from '../src/alexa.js';
 const ORIGIN = 'https://chat.test';
 const memCache = () => { const m = new Map(); return { match: async (k) => m.get(String(k.url || k))?.clone(), put: async (k, r) => { m.set(String(k.url || k), r); } }; };
 const INFERENCE = { fetch: async () => Response.json({ choices: [{ message: { content: 'It is sunny & warm.' } }] }) };
-const env = (more = {}) => ({ PUBLIC_ORIGIN: ORIGIN, SESSION_SECRET: 's', LIMIT_CACHE: memCache(), INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', ALEXA_KEY: 'k'.repeat(24), ALEXA_SKILL_ID: 'amzn1.ask.skill.test', ...more });
+const env = (more = {}) => ({ PUBLIC_ORIGIN: ORIGIN, SESSION_SECRET: 's', LIMIT_CACHE: memCache(), VOICE_CACHE: memCache(), SPEAK: async () => new Response(new Uint8Array(900).fill(1)).body, INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', ALEXA_KEY: 'k'.repeat(24), ALEXA_SKILL_ID: 'amzn1.ask.skill.test', ...more });
 const req = (request, key = 'k'.repeat(24), at = new Date().toISOString()) => new Request(`${ORIGIN}/alexa?key=${key}`, { method: 'POST', body: JSON.stringify({ session: { application: { applicationId: 'amzn1.ask.skill.test' }, attributes: {} }, request: { timestamp: at, ...request } }) });
 const ask = (query, e = env(), key, at) => handle(req({ type: 'IntentRequest', intent: { name: 'AskIntent', slots: { query: { value: query } } } }, key, at), e, { fetchImpl: async () => Response.json({}) });
 
@@ -56,9 +56,23 @@ test('the answer is read by Ava through a signed mp3 URL, with Alexa speaking th
   expect((await handle(new Request(src), env({ SPEAK: e.SPEAK, ALEXA_KEY: '' }), { fetchImpl: async () => Response.json({}) })).status).toBe(403);
 });
 
-test('a voice that sends no audio gives 502, so Alexa falls back to its own voice', async () => {
-  const e = env({ SPEAK: async () => new Response(new Uint8Array(10)).body });
-  const j = await (await ask('weather', e)).json();
-  const src = j.response.outputSpeech.ssml.match(/src="([^"]+)"/)[1].replace(/&amp;/g, '&');
-  expect((await handle(new Request(src), e, { fetchImpl: async () => Response.json({}) })).status).toBe(502);
+test('a voice that fails or sends no audio leaves the audio tag out, so Alexa reads the text and never meets a bad link', async () => {
+  for (const SPEAK of [async () => new Response(new Uint8Array(10)).body, async () => { throw new Error('the voice service took too long'); }]) {
+    const j = await (await ask('weather', env({ SPEAK }))).json();
+    expect(j.response.outputSpeech.ssml).toBe('<speak>It is sunny &amp; warm.</speak>');
+  }
+  const src = (await (await ask('weather')).json()).response.outputSpeech.ssml.match(/src="([^"]+)"/)[1].replace(/&amp;/g, '&');
+  // a link whose file was never made is a 502 (only reachable by a stale link)
+  expect((await handle(new Request(src), env({ SPEAK: async () => new Response(new Uint8Array(10)).body }), { fetchImpl: async () => Response.json({}) })).status).toBe(502);
+});
+
+test('the file made while answering is what Alexa fetches next, with no second trip to the voice', async () => {
+  let calls = 0;
+  const e = env({ SPEAK: async () => { calls++; return new Response(new Uint8Array(900).fill(2)).body; } });
+  const src = (await (await ask('weather', e)).json()).response.outputSpeech.ssml.match(/src="([^"]+)"/)[1].replace(/&amp;/g, '&');
+  expect(calls).toBe(1);
+  const ok = await handle(new Request(src), e, { fetchImpl: async () => Response.json({}) });
+  expect(ok.status).toBe(200);
+  expect((await ok.arrayBuffer()).byteLength).toBe(900);
+  expect(calls).toBe(1);
 });

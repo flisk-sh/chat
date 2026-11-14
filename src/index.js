@@ -34,6 +34,14 @@ export const TALK_PER_DAY = 100;
 export const SPEAK_PER_DAY = 2000;
 // MeloTTS is robotic next to Ava, so Ava gets this long to start before the backup is asked (it was 0.8 s, and in a slow
 // spell of Microsoft's that meant Melo spoke every answer). Melo still covers a longer stall.
+const alexaCache = (env) => env.VOICE_CACHE || (typeof caches !== 'undefined' && caches.default) || null;
+const alexaAudio = (bytes) => new Response(bytes, { headers: { 'content-type': 'audio/mpeg', 'content-length': String(bytes.length), 'cache-control': 'public, max-age=86400' } });
+async function alexaVoiceBytes(env, text) {
+  const stream = await (env.SPEAK || speakStream)(text, '', { backup: null, hedgeMs: 1500, firstMs: 3500 });
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  if (bytes.length < 500) throw new Error('the voice sent no audio');
+  return bytes;
+}
 export const AVA_HEAD_START_MS = 3000; // answers read aloud by the Ava voice, per login
 export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
 - Answer in one or two short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
@@ -425,19 +433,24 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const text = String(url.searchParams.get('t') || '');
     const sig = String(url.searchParams.get('s') || '');
     if (!env.ALEXA_KEY || !text || text.length > MAX_VOICE || sig !== (await alexaSign(text, env.ALEXA_KEY))) return json(403, { error: 'not allowed' });
-    try {
-      const bytes = await (async () => {
-        const stream = await (env.SPEAK || speakStream)(text, '', { backup: null, hedgeMs: AVA_HEAD_START_MS, firstMs: 4000 });
-        return new Uint8Array(await new Response(stream).arrayBuffer());
-      })();
-      if (bytes.length < 500) return json(502, { error: 'the voice sent no audio' });
-      return new Response(bytes, { headers: { 'content-type': 'audio/mpeg', 'content-length': String(bytes.length), 'cache-control': 'public, max-age=86400' } });
-    } catch (e) { return json(502, { error: String(e?.message || e).slice(0, 160) }); }
+    const hit = await alexaCache(env)?.match(new Request(url.toString())).catch(() => null);
+    if (hit) return hit;
+    const bytes = await alexaVoiceBytes(env, text).catch(() => null);
+    if (!bytes) return json(502, { error: 'the voice sent no audio' });
+    return alexaAudio(bytes);
   }
   if (request.method === 'POST' && path === '/alexa') {
     const chosen = resolveModel({ ai: 'wolf' });
     return alexaHandle(request, env, {
       origin,
+      // Make Ava's file now and keep it for the fetch Alexa does next; false means Alexa reads the text itself.
+      prepare: async (text, voice) => {
+        const cache = alexaCache(env);
+        if (!cache) return false;
+        const bytes = await alexaVoiceBytes(env, text);
+        await cache.put(new Request(voice), alexaAudio(bytes));
+        return true;
+      },
       overLimit: () => overDailyLimit('alexa-home', { cache: env.LIMIT_CACHE, limit: ALEXA_PER_DAY, scope: 'alexa-limit' }),
       ask: async (messages, heard) => {
         const note = await weatherNote(heard, fetchImpl, placeFrom(request.cf));
