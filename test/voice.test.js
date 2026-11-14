@@ -148,7 +148,7 @@ test('voice talk starts a build when asked, from the model JSON or from the word
   expect(page).toContain('form.requestSubmit()');
 });
 
-import { ssml, secMsGec, VOICE } from '../src/tts.js';
+import { ssml, secMsGec, speakStream, VOICE } from '../src/tts.js';
 
 test('the voice request uses Ava Multilingual, the locale heard, and escapes the text', () => {
   const x = ssml('Tom & <Jerry>', 'uk');
@@ -169,7 +169,7 @@ test('the connection token is the v2 form and changes every 5 minutes', async ()
 
 test('/voice streams mp3 for a signed-in visitor on chat itself, and says why when the voice fails', async () => {
   const calls = [];
-  const e = env({ SPEAK: async (t, l) => { calls.push([t, l]); if (t === 'boom') throw new Error('voice down'); return new Response(new Uint8Array(900).fill(7)).body; } });
+  const e = env({ SPEAK: async (t, l, o) => { calls.push([t, l]); if (t === 'boom') throw new Error('voice down'); o.info.tries = 2; return new Response(new Uint8Array(900).fill(7)).body; } });
   const get = (q, cookie, site = 'same-origin') => handle(new Request(`${ORIGIN}/voice?${q}`, { headers: { cookie, 'sec-fetch-site': site } }), e, { fetchImpl: async () => Response.json({}) });
   expect((await get('t=hi', '')).status).toBe(401);
   const cookie = (await makeSession(e, 'ann')).split(';')[0];
@@ -177,6 +177,7 @@ test('/voice streams mp3 for a signed-in visitor on chat itself, and says why wh
   const ok = await get('l=uk&t=' + encodeURIComponent('Привіт'), cookie);
   expect(ok.status).toBe(200);
   expect(ok.headers.get('content-type')).toBe('audio/mpeg');
+  expect(ok.headers.get('server-timing')).toMatch(/^voice;dur=\d+;desc="2 tries"$/);
   expect((await ok.arrayBuffer()).byteLength).toBe(900);
   expect(calls[0]).toEqual(['Привіт', 'uk']);
   const bad = await get('t=boom', cookie);
@@ -275,4 +276,66 @@ test('voice talk never takes back live weather, and the talk circle is an Earth 
   expect(page).toContain('earth_day_4096.jpg');
   expect(page).toContain('{"lat":51,"lng":0}');
   expect(page).toContain("fetch('/api/talk/warm'");
+});
+
+// A stand-in for Microsoft's voice socket: 'audioAt' ms after the SSML it sends one audio frame and the turn end;
+// null never answers, 'fail' closes at once with nothing.
+function fakeVoice(plan) {
+  const made = [];
+  const open = async () => {
+    const how = plan[made.length];
+    const ls = {}, sock = { closed: false, sent: 0 };
+    sock.addEventListener = (k, f) => { (ls[k] ||= []).push(f); };
+    const fire = (k, e = {}) => (ls[k] || []).forEach((f) => f(e));
+    sock.close = () => { if (!sock.closed) { sock.closed = true; fire('close'); } };
+    sock.send = () => {
+      if (++sock.sent < 2) return;
+      if (how === 'fail') return setTimeout(() => sock.close(), 5);
+      if (how == null) return;
+      setTimeout(() => {
+        if (sock.closed) return;
+        const head = new TextEncoder().encode('Path:audio\r\n');
+        const buf = new Uint8Array(2 + head.length + 3);
+        new DataView(buf.buffer).setUint16(0, head.length);
+        buf.set(head, 2); buf.set([made.indexOf(sock) + 1, 9, 9], 2 + head.length);
+        fire('message', { data: buf.buffer });
+        setTimeout(() => fire('message', { data: 'Path:turn.end' }), 5);
+      }, how);
+    };
+    made.push(sock);
+    return sock;
+  };
+  return { open, made };
+}
+const firstByte = async (stream) => new Uint8Array(await new Response(stream).arrayBuffer())[0];
+
+test('voice: a fast first ask is streamed alone, with no second ask', async () => {
+  const v = fakeVoice([10]); const info = {};
+  expect(await firstByte(await speakStream('hi', '', { open: v.open, hedgeMs: 200, info }))).toBe(1);
+  expect(v.made.length).toBe(1);
+  expect(info.tries).toBe(1);
+});
+
+test('voice: when the first ask stalls, a second ask is made and the one that speaks first wins', async () => {
+  const v = fakeVoice([null, 10]); const info = {};
+  const t0 = Date.now();
+  expect(await firstByte(await speakStream('hi', '', { open: v.open, hedgeMs: 50, firstMs: 2000, info }))).toBe(2);
+  expect(Date.now() - t0).toBeLessThan(1000);
+  expect(info.tries).toBe(2);
+  expect(v.made[0].closed).toBe(true); // the stalled one is given up
+});
+
+test('voice: a first ask that fails is asked again at once, without waiting for the hedge', async () => {
+  const v = fakeVoice(['fail', 10]);
+  const t0 = Date.now();
+  expect(await firstByte(await speakStream('hi', '', { open: v.open, hedgeMs: 5000, firstMs: 3000 }))).toBe(2);
+  expect(Date.now() - t0).toBeLessThan(1000);
+});
+
+test('voice: both asks failing, or nothing at all in time, still rejects so the page can fall back', async () => {
+  await expect(speakStream('hi', '', { open: fakeVoice(['fail', 'fail']).open, hedgeMs: 20 })).rejects.toThrow('sent no audio');
+  const v = fakeVoice([null, null]);
+  await expect(speakStream('hi', '', { open: v.open, hedgeMs: 20, firstMs: 100 })).rejects.toThrow('took too long');
+  expect(v.made.every((s) => s.closed)).toBe(true);
+  await expect(speakStream('  ', '', { open: v.open })).rejects.toThrow('nothing to say');
 });

@@ -52,46 +52,83 @@ async function openSocket(url) {
   return ws;
 }
 
-// Text -> a stream of mp3 bytes, sent on as Microsoft sends them (it sometimes paces audio at speaking speed, so
-// waiting for the whole file would add seconds). Resolves once the first audio arrives, so the caller can still fall
-// back to another voice when nothing comes; rejects on any failure before that.
-export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 60000, open = openSocket } = {}) {
+// One ask on its own connection: resolves with a stream of mp3 bytes on the first audio, sent on as Microsoft sends
+// them (it sometimes paces audio at speaking speed, so waiting for the whole file would add seconds); rejects when the
+// connection ends with no audio. close() gives it up, even while the connection is still opening.
+function ask(words, lang, open, totalMs) {
+  let ws = null, gone = false;
+  const close = () => { gone = true; try { ws?.close(); } catch {} };
+  const p = (async () => {
+    const sock = await open(`${WSS}?TrustedClientToken=${TOKEN}&Sec-MS-GEC=${await secMsGec()}&Sec-MS-GEC-Version=2-143.0.3650.96&ConnectionId=${uuid()}`);
+    ws = sock;
+    if (gone) { try { sock.close(); } catch {} throw new Error('given up'); }
+    const { readable, writable } = new TransformStream();
+    const out = writable.getWriter();
+    let chain = Promise.resolve(), started = false, finished = false;
+    return await new Promise((resolve, reject) => {
+      const total = setTimeout(() => end(), totalMs);
+      const end = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(total); try { sock.close(); } catch {}
+        // Frames still being read finish first; only then is it clear whether any audio came.
+        chain.then(() => out.close()).catch(() => {}).then(() => { if (!started) reject(new Error('the voice service sent no audio')); });
+      };
+      sock.addEventListener('message', (e) => {
+        if (typeof e.data === 'string') { if (e.data.includes('Path:turn.end')) end(); return; }
+        // Binary frame (a Blob in Workers, an ArrayBuffer in Bun): 2-byte header length, the header, then mp3 bytes.
+        const got = typeof e.data?.arrayBuffer === 'function' ? e.data.arrayBuffer() : Promise.resolve(e.data instanceof ArrayBuffer ? e.data : e.data.buffer);
+        chain = chain.then(async () => {
+          const buf = await got;
+          const headLen = new DataView(buf).getUint16(0);
+          if (!new TextDecoder().decode(new Uint8Array(buf, 2, headLen)).includes('Path:audio')) return;
+          const audio = new Uint8Array(buf, 2 + headLen);
+          if (!audio.length) return;
+          out.write(audio).catch(() => {}); // not awaited: the reader only starts once the stream is handed back
+          if (!started) { started = true; resolve(readable); }
+        });
+      });
+      sock.addEventListener('close', end);
+      sock.addEventListener('error', end);
+      sock.send(`X-Timestamp:${stamp()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+      sock.send(`X-RequestId:${uuid()}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${stamp()}Z\r\nPath:ssml\r\n\r\n${ssml(words, lang)}`);
+    });
+  })();
+  p.catch(() => {});
+  return { p, close };
+}
+
+// Text -> a stream of mp3 bytes. Resolves once the first audio arrives, so the caller can still fall back to another
+// voice when nothing comes; rejects on any failure before that.
+// Hedged: from Cloudflare, Microsoft now and then holds the first audio of a request for 2-8 s (or never sends it),
+// while a second request made at the same moment starts in 0.2 s. So when no audio has come 'hedgeMs' after asking,
+// it asks again on a new connection (at once when the first fails), and whichever speaks first is streamed; the other
+// is closed. 'info' gets how many asks it took.
+export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 60000, hedgeMs = 800, open = openSocket, info = {} } = {}) {
   const words = String(text || '').trim();
   if (!words) throw new Error('nothing to say');
-  const url = `${WSS}?TrustedClientToken=${TOKEN}&Sec-MS-GEC=${await secMsGec()}&Sec-MS-GEC-Version=2-143.0.3650.96&ConnectionId=${uuid()}`;
-  const ws = await open(url);
-  const { readable, writable } = new TransformStream();
-  const out = writable.getWriter();
-  let chain = Promise.resolve(), started = false, finished = false;
-  const close = () => { try { ws.close(); } catch {} };
+  const asks = [];
   return new Promise((resolve, reject) => {
-    const first = setTimeout(() => { if (!started) { finished = true; close(); reject(new Error('the voice service took too long')); } }, firstMs);
-    const total = setTimeout(() => end(), totalMs);
-    const end = () => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(first); clearTimeout(total); close();
-      // Frames still being read finish first; only then is it clear whether any audio came.
-      chain.then(() => out.close()).catch(() => {}).then(() => { if (!started) reject(new Error('the voice service sent no audio')); });
+    let done = false, failed = 0, last = null, hedge = 0;
+    const finish = (err, stream, won) => {
+      if (done) return;
+      done = true;
+      clearTimeout(first); clearTimeout(hedge);
+      info.tries = asks.length;
+      for (const a of asks) if (a !== won) a.close();
+      if (err) reject(err); else resolve(stream);
     };
-    ws.addEventListener('message', (e) => {
-      if (typeof e.data === 'string') { if (e.data.includes('Path:turn.end')) end(); return; }
-      // Binary frame (a Blob in Workers, an ArrayBuffer in Bun): 2-byte header length, the header, then mp3 bytes.
-      const got = typeof e.data?.arrayBuffer === 'function' ? e.data.arrayBuffer() : Promise.resolve(e.data instanceof ArrayBuffer ? e.data : e.data.buffer);
-      chain = chain.then(async () => {
-        const buf = await got;
-        const headLen = new DataView(buf).getUint16(0);
-        if (!new TextDecoder().decode(new Uint8Array(buf, 2, headLen)).includes('Path:audio')) return;
-        const audio = new Uint8Array(buf, 2 + headLen);
-        if (!audio.length) return;
-        out.write(audio).catch(() => {}); // not awaited: the reader only starts once the stream is handed back
-        if (!started) { started = true; clearTimeout(first); resolve(readable); }
+    const first = setTimeout(() => finish(new Error('the voice service took too long')), firstMs);
+    const start = () => {
+      const a = ask(words, lang, open, totalMs);
+      asks.push(a);
+      a.p.then((stream) => finish(null, stream, a), (e) => {
+        last = e; failed++;
+        if (asks.length < 2 && hedgeMs) { clearTimeout(hedge); start(); } else if (failed === asks.length) finish(last);
       });
-    });
-    ws.addEventListener('close', end);
-    ws.addEventListener('error', end);
-    ws.send(`X-Timestamp:${stamp()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
-    ws.send(`X-RequestId:${uuid()}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${stamp()}Z\r\nPath:ssml\r\n\r\n${ssml(words, lang)}`);
+    };
+    start();
+    if (hedgeMs) hedge = setTimeout(() => { if (!done && asks.length < 2) start(); }, hedgeMs);
   });
 }
 
