@@ -364,7 +364,7 @@ test('the page reads its models from inference /v1/catalog through the binding',
   expect(models.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'new-one']);
   const page = appPageUi({ login: 'ann', connected: [], models });
   expect(page).toContain('"id":"new-one"');
-  expect(page.replace('<script src="https://flisk.si/assets/bar.js" defer></script>', '').split('</script>').length).toBe(2);
+  expect(page.replace('<script src="https://flisk.si/assets/bar.js" defer></script>', '').replace('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>', '').split('</script>').length).toBe(2);
   expect(await loadCatalog({}, 2e13)).toBe(DEFAULT_MODELS);
 });
 
@@ -730,6 +730,17 @@ test('pages load the shared Flisk bar and the CSP allows it', async () => {
   const csp = res.headers.get('content-security-policy');
   expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.si/);
   expect(csp).toMatch(/img-src [^;]*https:\/\/flisk\.si/);
+});
+
+// Flisk Analytics: the script sits in <head>, and the CSP lets it load and lets its beacon reach the analytics app.
+test('pages load Flisk Analytics and the CSP allows its script and beacon', async () => {
+  const res = await handle(new Request(`${ORIGIN}/`), env());
+  const html = await res.text();
+  const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
+  expect(head).toContain('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>');
+  const csp = res.headers.get('content-security-policy');
+  expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.sh/);
+  expect(csp).toMatch(/connect-src [^;]*https:\/\/analytics\.flisk\.si/);
 });
 
 describe('the bar on a published page', () => {
