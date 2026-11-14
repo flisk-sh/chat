@@ -1022,7 +1022,7 @@ describe('looks', () => {
     expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.jsdelivr\.net\/gh\/mrdoob\/three\.js@r181\/examples\/textures\/planets\//);
     expect(csp).toMatch(/img-src [^;]*https:\/\/unpkg\.com\/three-globe@2\.45\.6\/example\//);
     expect(csp).not.toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/?( |;)/);
-    expect(csp).not.toContain('unsafe-eval');
+    expect(csp).not.toContain("'unsafe-eval'");
   });
   test('the globe script runs on its own: it has the user list and the three.js address built in', () => {
     expect(EARTH_JS).not.toContain('</script');

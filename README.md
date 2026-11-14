@@ -5,6 +5,7 @@ Ask for a task or a website. A free model plans it, a real computer from [fleet]
 - Sign in with GitHub, nothing else. No keys to create.
 - The model is [Flisk Inference](https://inference.flisk.si) (`flisk-wolf-chat`, free).
 - Computers come from your own sandbox account (Daytona, Upstash Box, E2B, Isorun): paste one key the first time a task needs a computer. It is stored encrypted in fleet.
+- With no sandbox account connected, a task runs on the **browser computer**: a small Linux inside the visitor's own tab (fleet's `/browserpod/`, WebAssembly). No key, no cost. It has busybox `sh` only: no internet, Python, Node or Flisk, and no public link for a port, so it fits "make a website" and file tasks. The page opens a WebSocket to `/api/run`; chat thinks, the tab runs each step (`src/browserpod.js`). `BROWSER_POD_URL` moves it, and an empty value turns it off. Try it locally with no keys: `bun scripts/dev-browser-pod.mjs <path to fleet>/web`.
 - "Make a website": the model writes one `index.html`, chat stores it and serves it at `/s/<id>` in a sandbox (no cookies, noindex, 7 days, 5 per person, 200 KB).
 - 20 tasks a day per person.
 

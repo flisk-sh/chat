@@ -8,6 +8,7 @@ import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
+import { runOverSocket } from './browserpod.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { placeFrom, warmWeather, weatherNote } from './weather.js';
@@ -143,6 +144,17 @@ export const pickTheme = (request) => {
   return setLook(DEFAULT_THEME);
 };
 
+// Where the browser computer's files are served from (fleet's /browserpod/). Empty string in BROWSER_POD_URL turns it off.
+export const podBase = (env) => (env.BROWSER_POD_URL === '' ? '' : (env.BROWSER_POD_URL || `${(env.FLEET_URL || 'https://fleet.flisk.si').replace(/\/$/, '')}/browserpod/`).replace(/\/?$/, '/'));
+// The chat page may load the browser computer (a script, a WebAssembly file and a Linux image) from that one folder, and
+// open the task's WebSocket back to chat itself. 'wasm-unsafe-eval' allows WebAssembly only, never eval of text.
+// The emulator starts one worker from a blob it builds itself, so worker-src allows blob: and nothing else.
+export function cspWithPod(pod, origin) {
+  if (!pod) return SECURITY['content-security-policy'];
+  const from = new URL(pod).href;
+  const ws = origin.replace(/^http/, 'ws');
+  return SECURITY['content-security-policy'].replace("script-src 'unsafe-inline'", `script-src 'unsafe-inline' 'wasm-unsafe-eval' ${from}`).replace("connect-src 'self'", `connect-src 'self' ${ws} ${from}`) + '; worker-src blob:';
+}
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
 const redirect = (location, extra = {}) => new Response(null, { status: 303, headers: { location, ...extra } });
@@ -310,7 +322,7 @@ export async function handle(request, env = {}, opts = {}) {
   return handleRequest(request, env, opts);
 }
 
-async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil = null } = {}) {
+async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil = null, socketPair = null } = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const origin = env.PUBLIC_ORIGIN || url.origin;
@@ -400,7 +412,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     // The talk circle's Earth turns to the visitor's side of the world (whole degrees only).
     const spot = placeFrom(request.cf);
     const here = spot ? { lat: Math.round(spot.latitude), lng: Math.round(spot.longitude) } : null;
-    const page = (opts) => html(appPage({ ...opts, models, theme, here }));
+    const pod = podBase(env);
+    const page = (opts) => html(appPage({ ...opts, models, theme, here, pod }), 200, { 'content-security-policy': cspWithPod(pod, origin) });
     if (!session) {
       if (!env.SESSION_SECRET) return withLook(page({ login: null, connected: [] }));
       const login = newAnonLogin();
@@ -449,6 +462,31 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     } catch (e) {
       return json(502, { error: String(e?.message || e).slice(0, 160) });
     }
+  }
+
+  // A task on the computer in the visitor's own browser (browserpod.js): the page opens a WebSocket, sends the task, and
+  // answers the computer calls. Same sign-in, same-origin rule, daily cap and model choice as POST /api/run.
+  if (path === '/api/run' && (request.headers.get('upgrade') || '').toLowerCase() === 'websocket') {
+    if (!session) return json(401, { error: 'sign in first' });
+    if (request.headers.get('origin') !== origin) return json(403, { error: 'this only works from chat itself' });
+    if (!podBase(env)) return json(404, { error: 'the browser computer is turned off here' });
+    const { login } = session;
+    // socketPair is for tests: Bun has no WebSocketPair and cannot build a 101 response.
+    const [client, server] = socketPair ? socketPair() : Object.values(new WebSocketPair());
+    server.accept?.();
+    const gate = async (body) => {
+      const chosen = resolveModel(body.ai);
+      if (chosen.error) return { refuse: { status: 400, error: chosen.error, kind: chosen.kind } };
+      if (chosen.free && (await overDailyLimit(await who(login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY, scope: anon ? 'chat-anon' : 'chat-limit' }))) {
+        const now = new Date();
+        const resetsIn = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
+        return { refuse: { status: 429, error: `That's your ${anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY} free tasks for today`, limit: anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY, resetsIn, anon } };
+      }
+      return { model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen) };
+    };
+    const job = runOverSocket(server, { gate, origin, fetchImpl, publish: (content) => publishSite(env, login, content, origin), saveVideo: async () => ({ error: 'a video needs a cloud computer' }) });
+    if (waitUntil) waitUntil(job);
+    return socketPair ? json(200, { socket: true }) : new Response(null, { status: 101, webSocket: client });
   }
 
   if (path.startsWith('/api/')) {
