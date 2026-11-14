@@ -194,6 +194,7 @@ html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.
 .oracle.listening .oring{animation:oring 1.6s ease-out infinite}.oracle.thinking .ocore{animation:othink 1.1s ease-in-out infinite;filter:hue-rotate(40deg)}
 .oracle.speaking .ocore{animation:ospeak .7s ease-in-out infinite alternate}.oracle.idle .ocore{filter:grayscale(.6) brightness(.8)}
 @keyframes oring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}@keyframes othink{50%{transform:scale(.88)}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.12)}}
+.osens{display:flex;align-items:center;gap:10px;font-size:12px;color:#9fb0a3}.osens input{width:170px;accent-color:#3fa765;cursor:pointer}
 .ostate{margin:0;font-size:15px;color:#cfe0d3;min-height:22px}.ocap{max-width:600px;width:100%;text-align:center;min-height:90px}
 .oyou{margin:0 0 10px;color:#9fb0a3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
 .ohear{margin-top:14px;padding:10px 18px;border-radius:var(--radius);border:1px solid #9fb0a3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
@@ -863,31 +864,67 @@ const oracle=$('oracle'),orb=$('orb'),oState=$('ostate'),oYou=$('oyou'),oSay=$('
 let oLang='',oOn=false,oStream=null,oCtx=null,oRec=null,oStop=null,oTurns=[],oSpeaking=false;
 const oSet=(st,msg)=>{oracle.className='oracle '+st;oState.textContent=msg;};
 const oHear=$('ohear');
+// Who it hears, 0 to 100 (kept per browser). 0, the default, is "only me": only the loudest, closest voice counts as
+// talking, so a TV, a fan or people across the room never start or stretch a turn. Sliding right lowers the bar and the
+// room is heard too. The bar is the highest of three: a fixed level, a few times the room's own hum (measured while
+// quiet), and a share of your own loudest moments (a voice farther away than yours stays under it).
+const oSensEl=$('osens');let oSens=Math.max(0,Math.min(100,Number(lsGet('chat_osens'))||0));oSensEl.value=oSens;
+oSensEl.oninput=()=>{oSens=Number(oSensEl.value)||0;lsSet('chat_osens',oSens?String(oSens):'');};
+const mix=(a,b,k)=>a+(b-a)*k;
+const voiceBar=(floor,peak)=>{const k=oSens/100;return Math.max(mix(0.045,0.008,k),floor*mix(4,1.5,k),peak*mix(0.4,0.1,k));};
 const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;oHear.hidden=true;try{await say(t,hint,{budget:3000,onSilent:(words,lang)=>{oHear.hidden=false;oHear.onclick=()=>{oHear.hidden=true;stopTalk();AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(words.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{});};}});}finally{oSpeaking=false;}};
 // Record one utterance: starts on speech, stops after 1 s of quiet (1.5 s after a short opening like "Hi!", so a greeting
 // and its question stay one turn), or 30 s; gives up after 9 s of silence.
-const hearOne=()=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+// Instant answers (the Instagram trick: the photo uploads while you still type the caption). At a short pause the words
+// so far already go up to /api/talk; talking again drops that draft, and when the pause becomes the end of the turn its
+// answer is already on the way. 'send' starts one such request; the early one comes back as 'early'.
+const EARLY=380;
+const hearOne=(send)=>new Promise((done)=>{const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
   const chunks=[];const r=type?new MediaRecorder(oStream,{mimeType:type}):new MediaRecorder(oStream);oRec=r;
   const an=oCtx.createAnalyser();an.fftSize=1024;const src=oCtx.createMediaStreamSource(oStream);src.connect(an);const buf=new Float32Array(an.fftSize);
-  let spoke=false,quiet=0,talked=0,t0=Date.now(),last=Date.now(),raf=0;
+  let floor=0.005,peak=0,spoke=false,quiet=0,talked=0,t0=Date.now(),last=Date.now(),raf=0,spec=null,want=false;
+  const mk=()=>new Blob(chunks,{type:r.mimeType||type||'audio/webm'});
+  const drop=()=>{if(spec){try{spec.ctrl.abort();}catch(e){}spec=null;}};
   const tick=()=>{an.getFloatTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++)sum+=buf[i]*buf[i];const rms=Math.sqrt(sum/buf.length),now=Date.now(),dt=now-last;last=now;
     orb.style.setProperty('--lv',Math.min(1,rms*12).toFixed(3));
-    if(rms>0.02){spoke=true;quiet=0;talked+=dt;}else if(spoke)quiet+=dt;
+    const loud=rms>voiceBar(floor,peak);if(loud)peak=Math.max(rms,peak);else{floor=floor*0.95+rms*0.05;peak*=0.997;}
+    if(loud){spoke=true;quiet=0;talked+=dt;drop();}else if(spoke)quiet+=dt;
+    if(send&&spoke&&!spec&&!want&&quiet>EARLY&&r.state==='recording'){want=true;try{r.requestData();}catch(e){want=false;}}
     if((spoke&&quiet>(talked<2000?1100:750))||now-t0>30000||(!spoke&&now-t0>9000)){if(r.state!=='inactive')r.stop();}};
   oStop=()=>{if(r.state!=='inactive')r.stop();};
-  r.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  r.onstop=()=>{clearInterval(raf);try{src.disconnect();}catch(e){}orb.style.setProperty('--lv',0);oRec=null;oStop=null;done(spoke?new Blob(chunks,{type:r.mimeType||type||'audio/webm'}):null);};
+  r.ondataavailable=(e)=>{if(e.data&&e.data.size)chunks.push(e.data);if(want){want=false;if(quiet>0&&r.state==='recording')spec=send(mk());}};
+  r.onstop=()=>{clearInterval(raf);try{src.disconnect();}catch(e){}orb.style.setProperty('--lv',0);oRec=null;oStop=null;if(!spoke)drop();done(spoke?{blob:mk(),early:spec}:null);};
   r.start();raf=setInterval(tick,60);});
+// The moment a turn ends, a short "Mm-hm" in your language answers at once, while the real answer is made. The clips
+// are fetched once when talk opens (Ava's voice), so playing one never waits on the network; until they arrive, a
+// soft two-note chime answers instead.
+const ACKS={en:['Mm-hm.','Okay.','Got it.','Right.'],uk:['Ага.','Так.','Зрозуміло.'],ru:['Ага.','Так.','Понятно.'],es:['Vale.','Ajá.','Entendido.'],de:['Okay.','Verstehe.','Mhm.'],fr:['D’accord.','Je vois.','Hm hm.'],it:['Va bene.','Capito.'],pt:['Certo.','Entendi.'],pl:['Dobrze.','Jasne.']};
+const ackClips={};let ackN=0;
+const ackLang=()=>{const l=String(oLang||navigator.language||'en').slice(0,2).toLowerCase();return ACKS[l]?l:'en';};
+function ackLoad(){const l=ackLang();if(ackClips[l]||!window.__SIGNED__)return;const got=ackClips[l]=[];
+  ACKS[l].forEach((w)=>fetch('/voice?l='+l+'&t='+encodeURIComponent(w)).then(r=>r.ok?r.blob():null).then(b=>{if(b&&b.size>300)got.push(URL.createObjectURL(b));}).catch(()=>{}));}
+function chime(){try{const t=oCtx.currentTime;[660,880].forEach((f,i)=>{const o=oCtx.createOscillator(),g=oCtx.createGain();o.frequency.value=f;g.gain.setValueAtTime(0.0001,t+i*0.09);g.gain.exponentialRampToValueAtTime(0.12,t+i*0.09+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.09+0.16);o.connect(g);g.connect(oCtx.destination);o.start(t+i*0.09);o.stop(t+i*0.09+0.18);});}catch(e){}}
+// Plays the acknowledgement; resolves when it has finished (at most 1.5 s), so the answer never talks over it.
+const ack=()=>new Promise((ok)=>{const list=ackClips[ackLang()]||[];if(!list.length||!oCtx){chime();setTimeout(ok,250);return;}
+  let fin=false;const end=()=>{if(fin)return;fin=true;AUD.onended=AUD.onerror=null;clearTimeout(t);ok();};const t=setTimeout(end,1500);
+  AUD.onended=AUD.onerror=end;AUD.src=list[ackN++%list.length];const p=AUD.play();if(p)p.catch(()=>{chime();end();});});
 const LNAME={en:'English',uk:'Ukrainian',ru:'Russian',es:'Spanish',de:'German',fr:'French',it:'Italian',pt:'Portuguese',pl:'Polish',ja:'Japanese',ko:'Korean',zh:'Chinese',ar:'Arabic',he:'Hebrew',hi:'Hindi',tr:'Turkish',nl:'Dutch',el:'Greek'};
+// One request: the recording goes up, the words you said and the spoken answer come back, with the language heard.
+const talkSend=(blob)=>{const ctrl=new AbortController(),hist=oTurns.slice();
+  const p=b64(blob).then(audio=>fetch('/api/talk',{method:'POST',signal:ctrl.signal,headers:{'content-type':'application/json'},body:JSON.stringify({audio,type:blob.type,lang:oLang,history:hist,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})}))
+    .then(async res=>({status:res.status,ok:res.ok,b:await res.json().catch(()=>({}))}));p.catch(()=>{});return {ctrl,p};};
 async function oLoop(){
   while(oOn){
-    oSet('listening','Listening…');const blob=await hearOne();if(!oOn)return;
-    if(!blob){oSet('idle','Tap the circle when you want to talk.');return;}
-    // One request: the recording goes up, the words you said and the spoken answer come back, with the language heard.
-    oSet('thinking','Thinking…');let b;
-    try{const res=await fetch('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({audio:await b64(blob),type:blob.type,lang:oLang,history:oTurns,ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})});
-      b=await res.json().catch(()=>({}));if(res.status===401){oClose();signin.hidden=false;signin.scrollIntoView({block:'center'});return;}if(!res.ok)throw new Error(b.error||('Voice talk answered '+res.status));}
+    oSet('listening','Listening…');ackLoad();const got=await hearOne(talkSend);if(!oOn){if(got&&got.early)got.early.ctrl.abort();return;}
+    if(!got){oSet('idle','Tap the circle when you want to talk.');return;}
+    // Answer at once: the acknowledgement plays while the reply (often already asked for at the first pause) arrives.
+    oSet('thinking','Mm-hm…');const acked=ack();let b;
+    // The early draft is used when it heard words; a draft that failed or heard nothing is sent again in full.
+    const redo=()=>talkSend(got.blob).p;
+    try{const r=await (got.early?got.early.p.then(x=>(x.ok&&String(x.b.heard||'').trim())||x.status===401||x.status===429?x:redo(),redo):redo());
+      b=r.b;if(r.status===401){oClose();signin.hidden=false;signin.scrollIntoView({block:'center'});return;}if(!r.ok)throw new Error(b.error||('Voice talk answered '+r.status));}
     catch(e){oSet('idle',String(e.message||e));return;}
+    await acked;
     if(!oOn)return;const said=String(b.heard||'').trim(),reply=String(b.text||'').trim();
     if(!said){oSet('idle','I did not catch that. Tap the circle and try again.');return;}
     if(b.lang)oLang=b.lang;oYou.textContent=said;oSay.textContent=reply;oTurns.push({role:'user',content:said},{role:'assistant',content:reply});const toBuild=String(b.build||'').trim();
@@ -1185,6 +1222,7 @@ ${earthUsers(esc)}
 <button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"></span></button>
 <p id="ostate" class="ostate" aria-live="polite">Starting…</p>
 <div class="ocap"><p id="oyou" class="oyou"></p><p id="osay" class="osay"></p><button type="button" id="ohear" class="ohear" hidden>Tap to hear the answer</button></div>
+<label class="osens" title="How much it hears. 0 = only your own loud, close voice; slide right to also catch quieter voices farther away in the room"><span>Only me</span><input id="osens" type="range" min="0" max="100" step="5" value="0" aria-label="Who it hears: 0 only me, 100 the whole room"><span>Whole room</span></label>
 <button type="button" id="oend" class="oend" aria-label="End voice talk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
