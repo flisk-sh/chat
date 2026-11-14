@@ -1,0 +1,18 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "flisk",
+      "intents": [
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        {
+          "name": "AskIntent",
+          "slots": [{ "name": "query", "type": "AMAZON.SearchQuery" }],
+          "samples": ["ask {query}", "tell me {query}", "tell me about {query}", "what is {query}", "what are {query}", "what's {query}", "how {query}", "why {query}", "who {query}", "when {query}", "where {query}", "can you {query}", "i want to know {query}", "search for {query}", "build {query}", "make {query}"]
+        }
+      ]
+    }
+  }
+}
