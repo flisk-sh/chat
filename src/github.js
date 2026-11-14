@@ -35,7 +35,7 @@ export function scrub(text, token) {
 // What the model is told about GitHub for this task.
 export function githubNote(github, origin) {
   if (github?.token && canPush(github.scope)) {
-    return `\n\nGITHUB: the user's GitHub account @${github.login} is signed in on the computer. git clone/push to github.com and gh (gh issue view, gh repo fork --clone, gh pr create) work as them, for public repos (start each such command with export PATH=$HOME/.local/bin:$PATH;). For "fix this issue / open a PR": gh issue view <url>, then gh repo fork <owner/repo> --clone --default-branch-only (skip the fork when @${github.login} can push to the repo), git checkout -b <branch>, change the files with "write", git commit -am, git push -u origin <branch>, gh pr create --repo <owner/repo> --head ${github.login}:<branch> --title ... --body ...; then "say" the PR link first. Never print the token or ~/.config/gh. The computer is a small sandbox without Docker: say plainly what you could not run there.`;
+    return `\n\nGITHUB: the user's GitHub account @${github.login} is signed in on the computer. git clone/push to github.com and gh (gh issue view, gh repo fork --clone, gh pr create) work as them, for public repos (start each such command with export PATH=$HOME/.local/bin:$PATH;). For "fix this issue / open a PR": gh issue view <url>, then gh repo fork <owner/repo> --clone --default-branch-only (skip the fork when @${github.login} can push to the repo), git checkout -b <branch>, change the files with "write", git commit -am, git push -u origin <branch>, gh pr create --repo <owner/repo> --head ${github.login}:<branch> --title ... --body ...; then "say" the PR link first. Never print the token or ~/.config/flisk-gh. ONE command per action, and read each output before the next: do not chain fork, commit, push and PR into one command, and never echo a link you have not seen; the PR link is the last line gh pr create prints. The computer is a small sandbox without Docker: say plainly what you could not run there.`;
   }
   if (github?.login) {
     return `\n\nGITHUB: @${github.login} signed in before chat could act on GitHub, so pushing and opening PRs do not work yet. Reading public repos and issues with curl https://api.github.com/... works. If the task needs a push or a PR, do the rest, then tell the user in one sentence to allow it once at ${origin}/auth/start?again=1 and ask again.`;
@@ -51,15 +51,19 @@ export async function setupGithub({ computer, podId, github }) {
   const w = await computer.write(podId, tokenFile, github.token);
   if (w.error) return { error: w.error };
   const login = String(github.login).replace(/[^A-Za-z0-9-]/g, '');
+  // gh refuses `auth login --with-token` for a token without the repo, read:org scopes (public_repo is narrower), so gh gets
+  // the token through GH_TOKEN, which it accepts as is: a wrapper script reads it from a 600 file in the home folder.
+  // Plain git gets it from ~/.git-credentials.
   const cmd = [
-    'set +e; mkdir -p "$HOME/.local/bin"; export PATH="$HOME/.local/bin:$PATH"',
-    `if ! command -v gh >/dev/null 2>&1; then a=$(uname -m); case "$a" in aarch64|arm64) a=arm64;; *) a=amd64;; esac; curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_$a.tar.gz" | tar xz -C /tmp && cp /tmp/gh_${GH_VERSION}_linux_$a/bin/gh "$HOME/.local/bin/gh"; fi`,
-    `gh auth login --with-token < ${tokenFile} >/dev/null 2>&1; gh auth setup-git >/dev/null 2>&1`,
+    'set +e; mkdir -p "$HOME/.local/bin" "$HOME/.config/flisk-gh"; export PATH="$HOME/.local/bin:$PATH"',
+    `REAL=$(command -v gh); if [ -z "$REAL" ]; then a=$(uname -m); case "$a" in aarch64|arm64) a=arm64;; *) a=amd64;; esac; curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_$a.tar.gz" | tar xz -C /tmp && cp /tmp/gh_${GH_VERSION}_linux_$a/bin/gh "$HOME/.local/bin/gh-real" && REAL="$HOME/.local/bin/gh-real"; fi`,
+    `mv ${tokenFile} "$HOME/.config/flisk-gh/token"; chmod 600 "$HOME/.config/flisk-gh/token"`,
+    `printf '#!/bin/sh\nGH_TOKEN="$(cat "$HOME/.config/flisk-gh/token")" exec %s "$@"\n' "$REAL" > "$HOME/.local/bin/gh"; chmod +x "$HOME/.local/bin/gh"`,
+    `printf 'https://%s:%s@github.com\n' "${login}" "$(cat "$HOME/.config/flisk-gh/token")" > "$HOME/.git-credentials"; chmod 600 "$HOME/.git-credentials"; git config --global credential.helper store`,
     `git config --global user.name "${login}"; git config --global user.email "${login}@users.noreply.github.com"`,
-    `ln -sf "$HOME/.local/bin/gh" /usr/local/bin/gh 2>/dev/null; rm -f ${tokenFile}`,
-    'gh auth status 2>&1 | grep -q "Logged in" && echo GH_OK || echo GH_FAIL',
+    `[ "$(gh api user -q .login 2>/dev/null)" = "${login}" ] && echo GH_OK || echo GH_FAIL`,
   ].join('\n');
   const r = await computer.run(podId, cmd);
   if (r.error) return { error: r.error };
-  return /GH_OK/.test(r.data?.stdout || '') ? { ok: true } : { error: 'gh could not sign in on this computer' };
+  return /GH_OK/.test(r.data?.stdout || '') ? { ok: true } : { error: 'gh could not reach GitHub as the user on this computer' };
 }
