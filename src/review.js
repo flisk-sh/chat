@@ -162,6 +162,15 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   return { posted: true, verdict: review.verdict, comments: comments.length, run };
 }
 
+// A review that failed or never answered goes to the private Discord channel (env.DISCORD_ERRORS_WEBHOOK). Never throws.
+export async function alertReview(env, { repo, pr, sender, auto, why }, fetchImpl = fetch) {
+  const url = env.DISCORD_ERRORS_WEBHOOK;
+  if (!url || !why) return;
+  const link = repo && pr ? `https://github.com/${repo}/pull/${pr}` : repo || 'unknown pull request';
+  const text = `**Chat review failed: ${String(why).slice(0, 300)}**\n${link} · ${auto ? 'automatic review' : `asked by @${sender || 'unknown'}`}`;
+  await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900), allowed_mentions: { parse: [] } }) }).catch(() => {});
+}
+
 // The webhook: checked, answered at once, and the review runs after the answer.
 export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil = null, overLimit } = {}) {
   const body = await request.text();
@@ -176,8 +185,14 @@ export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil
     if (!row) return new Response('ignored', { status: 202 });
     ev = { repository: ev.repository, installation: ev.installation, issue: { number: ev.pull_request.number }, comment: { id: 0, user: { login: row.login } }, auto: true };
   } else if (ev.action !== 'created' || !ev.issue?.pull_request || ev.issue.state !== 'open' || ev.comment?.user?.type === 'Bot' || !TRIGGER.test(ev.comment?.body || '') || !ev.installation?.id) return new Response('ignored', { status: 202 });
-  if (!env.GITHUB_APP_KEY || !env.GITHUB_APP_ID) return new Response('not set up', { status: 503 });
-  const job = reviewPullRequest(env, ev, { fetchImpl, overLimit }).then((r) => console.log('review', JSON.stringify(r))).catch((e) => console.log('review failed', String(e?.message || e).slice(0, 300)));
+  const info = { repo: ev.repository?.full_name, pr: ev.issue?.number, sender: ev.comment?.user?.login, auto: !!ev.auto };
+  if (!env.GITHUB_APP_KEY || !env.GITHUB_APP_ID) {
+    if (waitUntil) waitUntil(alertReview(env, { ...info, why: 'the GitHub App key or id is not set' }, fetchImpl)); else await alertReview(env, { ...info, why: 'the GitHub App key or id is not set' }, fetchImpl);
+    return new Response('not set up', { status: 503 });
+  }
+  const job = reviewPullRequest(env, ev, { fetchImpl, overLimit })
+    .then((r) => { console.log('review', JSON.stringify(r)); return r?.error ? alertReview(env, { ...info, why: r.error }, fetchImpl) : null; })
+    .catch((e) => { const why = `crashed: ${String(e?.message || e).slice(0, 250)}`; console.log('review failed', why); return alertReview(env, { ...info, why }, fetchImpl); });
   if (waitUntil) waitUntil(job);
   else await job;
   return new Response('reviewing', { status: 202 });

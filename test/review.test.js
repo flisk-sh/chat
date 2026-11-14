@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 import { loadSettings, saveSettings } from '../src/keys.js';
-import { cleanComments, diffLines, parseReview, verifySignature } from '../src/review.js';
+import { alertReview, cleanComments, diffLines, parseReview, verifySignature } from '../src/review.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -272,5 +272,23 @@ describe('saved key', () => {
     expect(await verifySignature('s', 'b', '')).toBe(false);
     expect(await verifySignature('s', 'b', await sign('s', 'b'))).toBe(true);
     expect(await verifySignature('s', 'b2', await sign('s', 'b'))).toBe(false);
+  });
+});
+
+describe('review failure alerts', () => {
+  test('a failed review posts to the Discord channel with the pull request link', async () => {
+    const sent = [];
+    const f = async (url, init) => { sent.push({ url, body: JSON.parse(init.body) }); return new Response('', { status: 204 }); };
+    await alertReview({ DISCORD_ERRORS_WEBHOOK: 'https://discord.test/hook' }, { repo: 'o/r', pr: 5, sender: 'odykyi', why: 'crashed: boom' }, f);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].body.content).toContain('crashed: boom');
+    expect(sent[0].body.content).toContain('https://github.com/o/r/pull/5');
+    expect(sent[0].body.allowed_mentions).toEqual({ parse: [] });
+  });
+  test('no webhook or no problem sends nothing and never throws', async () => {
+    const f = async () => { throw new Error('should not be called'); };
+    await alertReview({}, { why: 'x' }, f);
+    await alertReview({ DISCORD_ERRORS_WEBHOOK: 'https://d.test' }, {}, f);
+    await alertReview({ DISCORD_ERRORS_WEBHOOK: 'https://d.test' }, { why: 'x' }, async () => { throw new Error('down'); });
   });
 });
