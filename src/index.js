@@ -258,6 +258,28 @@ export const freeModelOpts = (env, login = '', anon = false) => ({
 
 const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
+// Build analytics: one row per finished task (no login, no key), so a weak result can be traced to its cause.
+export async function recordRun(env, { task, ai, free, anon, result }) {
+  if (!env.DB) return;
+  const st = result.stats || {};
+  await env.DB.prepare('INSERT INTO task_runs (created, who, task, ai, free, provider, steps, errors, bad_json, empty, provider_retries, big, system, first_action, shared, copy, links, ms, error, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(new Date().toISOString(), anon ? 'anon' : 'user', String(task).slice(0, 300), String(ai || '').slice(0, 80), free ? 1 : 0, result.provider || null, result.steps.length, st.errors || 0, st.bad || 0, st.empty || 0, st.provider || 0, st.big ? 1 : 0, st.system ? 1 : 0, st.firstAction || null, st.shared ? 1 : 0, st.copy ? 1 : 0, result.links.length, result.ms || 0, result.error ? String(result.error).slice(0, 200) : null, result.answer ? String(result.answer).slice(0, 400) : null)
+    .run();
+}
+
+// GET /api/admin/runs?days=7 with Authorization: Bearer <ADMIN_KEY>: totals and the 30 newest tasks.
+async function adminRuns(request, env) {
+  const key = env.ADMIN_KEY || '';
+  const given = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
+  if (!key || given !== key) return json(404, { error: 'not found' });
+  const days = Math.min(90, Math.max(1, Number(new URL(request.url).searchParams.get('days')) || 7));
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const totals = await env.DB.prepare('SELECT COUNT(*) AS tasks, SUM(error IS NOT NULL) AS failed, SUM(shared) AS live_links, SUM(copy) AS copies, SUM(big) AS big_apps, SUM(big AND system) AS big_built_by_system, SUM(big AND NOT system) AS big_skipped_system, SUM(bad_json) AS bad_json, SUM(provider_retries) AS provider_retries, ROUND(AVG(steps), 1) AS avg_steps, ROUND(AVG(ms) / 1000.0, 1) AS avg_seconds FROM task_runs WHERE created >= ?').bind(since).first();
+  const byAi = await env.DB.prepare('SELECT ai, COUNT(*) AS tasks, SUM(error IS NOT NULL) AS failed, SUM(shared) AS live_links, SUM(big AND system) AS big_built_by_system, SUM(big) AS big_apps FROM task_runs WHERE created >= ? GROUP BY ai ORDER BY tasks DESC').bind(since).all();
+  const recent = await env.DB.prepare('SELECT created, who, task, ai, provider, steps, errors, bad_json, big, system, first_action, shared, copy, ms, error, answer FROM task_runs WHERE created >= ? ORDER BY id DESC LIMIT 30').bind(since).all();
+  return json(200, { days, totals, byAi: byAi.results, recent: recent.results });
+}
+
 // A site a task made: stored as one HTML file, linked by an unguessable id, kept 7 days, the oldest dropped over 5.
 export async function publishSite(env, login, content, origin) {
   const bytes = new TextEncoder().encode(String(content)).length;
@@ -447,6 +469,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     });
   }
 
+  if (request.method === 'GET' && path === '/api/admin/runs') return adminRuns(request, env);
   if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil });
 
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
@@ -694,7 +717,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const github = anon ? null : { login, ...((await loadGithubToken(env, login).catch(() => null)) || {}) };
       const m = answeredModel(modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)));
       const job = runTask({ task, history: body.history, github, origin, model: m.ask, maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer: fleet, track: podTracker(env, login, fleet), fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
-        .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
+        .then(async (r) => {
+          await recordRun(env, { task, ai: modelLabel(chosen), free: !!chosen.free, anon, result: r }).catch(() => {});
+          emit({ type: 'done', ms: r.ms, error: r.error });
+        })
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
         .finally(async () => {
           if (chosen.free && !m.answered()) await refundDailyLimit(await who(login), { cache: env.LIMIT_CACHE, scope: anon ? 'chat-anon' : 'chat-limit' });

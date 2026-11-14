@@ -61,3 +61,30 @@ CREATE TABLE IF NOT EXISTS github_tokens (
   scope TEXT NOT NULL,
   updated TEXT NOT NULL
 );
+
+-- One row per task, for build analytics: what was asked, which AI and computer, what the model did, and how it ended.
+-- Read it with: bunx wrangler@4 d1 execute flisk-chat --remote --command "SELECT ..." or GET /api/admin/runs (ADMIN_KEY).
+CREATE TABLE IF NOT EXISTS task_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created TEXT NOT NULL,
+  who TEXT NOT NULL,            -- 'anon' or 'user' (never the login)
+  task TEXT NOT NULL,           -- first 300 characters
+  ai TEXT NOT NULL,             -- the model label
+  free INTEGER NOT NULL,
+  provider TEXT,
+  steps INTEGER NOT NULL,
+  errors INTEGER NOT NULL,      -- steps that failed (an error or a non-zero exit code)
+  bad_json INTEGER NOT NULL,
+  empty INTEGER NOT NULL,
+  provider_retries INTEGER NOT NULL,
+  big INTEGER NOT NULL,         -- the task looked like a bigger app (CRM, ERP, ...)
+  system INTEGER NOT NULL,      -- the "system" action built it
+  first_action TEXT,
+  shared INTEGER NOT NULL,      -- a live link to the running app was made
+  copy INTEGER NOT NULL,        -- a one-file copy was published
+  links INTEGER NOT NULL,
+  ms INTEGER NOT NULL,
+  error TEXT,
+  answer TEXT                   -- first 400 characters
+);
+CREATE INDEX IF NOT EXISTS task_runs_created ON task_runs (created);
