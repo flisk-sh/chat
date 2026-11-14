@@ -108,7 +108,8 @@ function earthClient(U, SRC, G, TG) {
     const spin = new T.Group();
     earth.add(spin);
     spin.rotation.order = 'XYZ';
-    spin.rotation.y = Math.PI / 2 - ((-80 + 180) * Math.PI) / 180;
+    // Start with Europe (about 10°E) facing the camera, then turn slowly.
+    spin.rotation.y = Math.PI / 2 - ((10 + 180) * Math.PI) / 180;
     spin.rotation.x = (30 * Math.PI) / 180;
     const VS = 'varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}';
     const OUT = '\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}';
