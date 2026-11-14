@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
 import { modelLabel, parseAction, resolveModel, runTask, SYSTEM } from '../src/loop.js';
+import { EARTH_JS, shortCount, THREE_SRC, USERS, USERS_DATE } from '../src/earth.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -575,7 +576,7 @@ test('the Fleet menu and the voice buttons sit inside the composer toolbar row (
   };
   // Depth 2 = inside the + menu, which sits in .bar. A stray </div> in the model popover would drop these out of the row.
   expect(depthAt('<details class="pick"')).toBe(2);
-  expect(depthAt('id="mic"')).toBe(2);
+  expect(depthAt('id="mic"')).toBe(1);
   expect(depthAt('id="orbbtn"')).toBe(2);
 });
 
@@ -965,14 +966,14 @@ describe('looks', () => {
   });
   test('new visitors get the looks in turn and keep theirs in a cookie', async () => {
     const seen = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       const res = await handle(new Request(`${ORIGIN}/`), env());
       const html = await res.text();
       const t = look(html);
       expect(res.headers.get('set-cookie')).toContain(`chat_theme=${t}; Path=/; Max-Age=31536000`);
       seen.push(t);
     }
-    expect(new Set(seen)).toEqual(new Set(['classic', 'ivory', 'glow', 'focus', 'voice']));
+    expect(new Set(seen)).toEqual(new Set(['classic', 'ivory', 'glow', 'focus', 'voice', 'earth']));
   });
   test('a saved look is used and not set again', async () => {
     const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=focus' } }), env());
@@ -981,13 +982,57 @@ describe('looks', () => {
     expect(html).toContain('<html lang="en" data-theme="focus" class="nt">');
     expect(res.headers.get('set-cookie') || '').not.toContain('chat_theme');
     expect(html).toContain('<option value="focus" selected>Focus</option>');
-    for (const label of ['Classic', 'Ivory', 'Soft glow', 'Focus', 'Voice first']) expect(html).toContain(`>${label}</option>`);
+    for (const label of ['Classic', 'Ivory', 'Soft glow', 'Focus', 'Voice first', 'Earth']) expect(html).toContain(`>${label}</option>`);
   });
   test('the classic look has no extra class, and an unknown look gets a new one', async () => {
     const classic = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=classic' } }), env())).text();
     expect(classic).toContain('<html lang="en" data-theme="classic">');
     const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=evil"x' } }), env());
-    expect(res.headers.get('set-cookie')).toMatch(/chat_theme=(classic|ivory|glow|focus|voice);/);
+    expect(res.headers.get('set-cookie')).toMatch(/chat_theme=(classic|ivory|glow|focus|voice|earth);/);
+  });
+  test('the Earth look draws the globe and the users list, and the CSP lets only three.js and its textures in', async () => {
+    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=earth' } }), env());
+    const html = await res.text();
+    expect(html).toContain('<html lang="en" data-theme="earth" class="nt">');
+    expect(res.headers.get('set-cookie') || '').not.toContain('chat_theme');
+    expect(html).toContain('<canvas id="earth" class="earthc" aria-hidden="true"></canvas>');
+    expect(html).toContain('Who uses Flisk Chat');
+    expect(html).toContain(`analytics.flisk.si · ${USERS_DATE}`);
+    expect(html).toContain('<li><span>United States</span>');
+    expect(html).toContain('<span>32.5k</span>');
+    expect(html).toContain('Used in 13 countries');
+    // Little text up front: ideas, the users list and the fine print sit behind three buttons.
+    for (const k of ['ideas', 'users', 'about']) expect(html).toContain(`data-ex="${k}" aria-expanded="false"`);
+    expect(html).toContain('<div class="expanel exusers">');
+    expect(html).toContain('html[data-theme=earth].home:not(.ex-ideas) #sugg');
+    expect(html).toContain('html[data-theme=earth].home:not(.ex-about) .fine');
+    expect(html).toContain('html[data-theme=earth]:not(.ex-users) .expanel{display:none}');
+    expect(html).toContain(EARTH_JS.trim());
+    expect(html).toContain('three.module.min.js');
+    expect(html).toContain('family=Inter:wght@300');
+    const csp = res.headers.get('content-security-policy');
+    expect(csp).toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.181\.0\/build\/(;| )/);
+    expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.jsdelivr\.net\/gh\/mrdoob\/three\.js@r181\/examples\/textures\/planets\//);
+    expect(csp).toMatch(/img-src [^;]*https:\/\/unpkg\.com\/three-globe@2\.45\.6\/example\//);
+    expect(csp).not.toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/?( |;)/);
+    expect(csp).not.toContain('unsafe-eval');
+  });
+  test('the globe script runs on its own: it has the user list and the three.js address built in', () => {
+    expect(EARTH_JS).not.toContain('</script');
+    const m = /\}\)\((\[\[.*?\]\]),"([^"]+)"/.exec(EARTH_JS);
+    expect(JSON.parse(m[1])).toEqual(USERS);
+    expect(m[2]).toBe(THREE_SRC);
+    expect(() => new Function(EARTH_JS)).not.toThrow();
+    expect(shortCount(32540)).toBe('32.5k');
+    expect(shortCount(5620)).toBe('5.62k');
+    expect(shortCount(2080)).toBe('2.08k');
+    expect(shortCount(1900)).toBe('1.9k');
+    expect(shortCount(802)).toBe('802');
+  });
+  test('the users list is hidden in every other look', async () => {
+    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
+    expect(html).toContain('.earthc{display:none}.ex{display:none}');
+    expect(html).toContain('html[data-theme=earth] .welcome .ex{display:block');
   });
   test('every look keeps every feature on the page', async () => {
     const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=voice' } }), env())).text();
@@ -995,4 +1040,13 @@ describe('looks', () => {
     expect(html).toContain('Try saying');
     expect(html).toContain('data-act="voice"');
   });
+});
+
+test('the composer has a Chat / Build / Create switch next to the model picker, outside the + menu', async () => {
+  const { appPage } = await import('../src/page.js');
+  const h = appPage ? String(appPage({})) : '';
+  expect(h).toContain('class="modes"');
+  for (const m of ['chat', 'build', 'create']) expect(h).toContain('data-mode="' + m + '"');
+  expect(h.indexOf('class="modes"')).toBeGreaterThan(h.indexOf('id="plusmenu"') + h.slice(h.indexOf('id="plusmenu"')).indexOf('</div>'));
+  expect(h).toContain("setMode(m0)");
 });

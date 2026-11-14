@@ -1,4 +1,5 @@
 import { icon } from './icons.js';
+import { EARTH_JS, earthUsers } from './earth.js';
 import { LOGOS } from './logos.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -171,6 +172,7 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.rcol .rc{display:none!important}
 .bar{position:relative}.plusmenu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:30;width:min(300px,calc(100vw - 32px));display:flex;flex-direction:column;align-items:stretch;gap:2px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 24px 60px -24px rgba(27,27,24,.45);padding:6px;}
 .plusmenu>.chip,.plusmenu>.attach,.plusmenu .mp>.chip,.plusmenu details.pick>summary{width:100%;justify-content:flex-start;border-color:transparent;background:transparent;padding:8px 10px;text-align:left}.plusmenu>.chip:hover,.plusmenu>.attach:hover,.plusmenu .mp>.chip:hover,.plusmenu details.pick>summary:hover{background:var(--line)}
+.modes{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius);margin-left:6px;overflow:hidden}.md{background:transparent;border:0;padding:5px 11px;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer;color:var(--muted,inherit)}.md[aria-checked=true]{background:var(--ink,#1b1b18);color:var(--bg,#fff)}.grow{flex:1}
 .plusmenu .mp,.plusmenu details.pick{width:100%}.plusmenu .chev{margin-left:auto}
 .plusmenu .cats{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line2)}.plusmenu .cat{border-color:transparent;background:transparent;width:100%;padding:4px 10px 4px 4px}.plusmenu .cat:hover{transform:none;background:var(--line)}
 .plusmenu #orbbtn::after{content:"Voice talk";margin-left:8px;font-size:14px}.plusmenu #voice::after{content:"Read answers aloud";margin-left:8px;font-size:14px}.plusmenu #mic::after{content:"Speak your task";margin-left:8px;font-size:14px}.plusmenu .attach::after{content:"Attach files";margin-left:8px;font-size:14px}
@@ -314,6 +316,43 @@ html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap
 .fc .sidesec{border-top:0;padding:0}.fc .histwrap{max-height:220px;margin:0}.fc .sugg{margin:0}.fc .sugg button{font-size:14px;padding:9px 2px}
 .frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
 .frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
+/* Earth: black, a photoreal globe with a light on each country people use Flisk Chat from, thin rules, light Inter. */
+html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:300;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--sans:'Inter',Geist,system-ui,sans-serif}
+.earthc{display:none}.ex{display:none}
+html[data-theme=earth].home .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
+html[data-theme=earth].home.earthon .earthc{opacity:1}
+html[data-theme=earth] .app{position:relative;z-index:1}
+html[data-theme=earth].home .main,html[data-theme=earth].home .scroll,html[data-theme=earth].home .top{background:transparent}
+html[data-theme=earth] .dock{background:linear-gradient(to bottom,rgba(0,0,0,0),var(--bg) 18px)}
+html[data-theme=earth].home .dock{background:transparent}
+html[data-theme=earth] .welcome{text-align:left}
+html[data-theme=earth] .welcome h1{font:var(--flisk-heading-weight) clamp(38px,5.4vw,64px)/1.04 var(--flisk-font-heading);letter-spacing:-.035em;max-width:13ch}
+html[data-theme=earth] .welcome .sub{color:var(--dim);max-width:46ch;margin-left:0}
+html[data-theme=earth] .newchat,html[data-theme=earth] .send{color:var(--flisk-on-accent)}
+@media (min-width:861px){html[data-theme=earth].home .col{margin-left:max(24px,5vw);max-width:660px}}
+html[data-theme=earth] .tpill{display:inline-flex;background:transparent;border-color:var(--line);text-transform:uppercase;letter-spacing:.14em;font-size:10px;white-space:nowrap;max-width:100%}
+html[data-theme=earth] .tpill em{letter-spacing:.14em;white-space:nowrap}
+@media (max-width:860px){html[data-theme=earth] .tpill,html[data-theme=earth] .tpill em{white-space:normal}}
+html[data-theme=earth] .cats{justify-content:flex-start}
+html[data-theme=earth] .cat{background:rgba(0,0,0,.55);border-color:var(--line2);color:var(--ink)}
+html[data-theme=earth] .composer{background:rgba(11,11,13,.82);backdrop-filter:blur(10px);box-shadow:none}
+html[data-theme=earth] #hist li:hover,html[data-theme=earth] #hist li.cur{background:rgba(255,255,255,.07)}
+html[data-theme=earth] .frail a:hover,html[data-theme=earth] .frail button:hover{background:rgba(255,255,255,.07)}
+html[data-theme=earth] .welcome .ex{display:block;margin:24px 0 0}html[data-theme=earth] .expanel{max-width:420px}
+html[data-theme=earth].home:not(.ex-about) .tpill,html[data-theme=earth].home:not(.ex-about) .welcome .sub,html[data-theme=earth].home:not(.ex-about) .fine,html[data-theme=earth].home:not(.ex-ideas) #sugg,html[data-theme=earth]:not(.ex-users) .expanel{display:none}
+.excta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.excta button{border:1px solid var(--line);background:transparent;color:var(--ink);padding:9px 14px;font:400 11px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius)}
+.excta button:hover,.excta button[aria-expanded=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.exfoot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 22px;font:400 11px/1.4 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
+.exfoot i{width:4px;height:4px;border-radius:50%;background:var(--dim)}
+.ex h5{margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line);font:400 11px/1.5 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ink)}
+.ex h5 small{display:block;letter-spacing:.08em;text-transform:none;color:var(--soft);font-size:11px}
+.exlist{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.exlist li{display:grid;grid-template-columns:120px 1fr 44px;align-items:center;gap:12px;font-size:13px;color:var(--dim)}
+.exlist li span:last-child{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.exlist b{height:2px;background:var(--line)}.exlist b i{display:block;height:100%;background:var(--ink)}
+@media (max-width:860px){html[data-theme=earth] .welcome h1{font-size:40px}html[data-theme=earth] .welcome .ex{max-width:none}html[data-theme=earth].home .scroll{padding-bottom:42vh}html[data-theme=earth].home .col{text-shadow:0 1px 3px #000,0 0 14px #000}html[data-theme=earth].home .fine,html[data-theme=earth].home .sugg button{background:rgba(0,0,0,.6)}}
+@media (prefers-reduced-motion:reduce){html[data-theme=earth].home .earthc{transition:none}}
 /* Voice first: a big talk circle in the middle, computers and things to say on the right. */
 html[data-theme=voice]{--flisk-bg:#F3F6FB;--flisk-surface:#fff;--flisk-raised:#F3F6FB;--flisk-ink:#1E2A4A;--flisk-muted:#5A6785;--flisk-line:#E3E8F2;--flisk-accent:#1E2A4A;--flisk-accent-ink:#111A33;--flisk-on-accent:#fff;--flisk-hero-bg:#F3F6FB;--flisk-hero-ink:#1E2A4A;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:700;--flisk-radius:14px;--flisk-radius-control:14px;--flisk-radius-button:14px;--flisk-shadow:0 14px 40px -22px rgba(20,30,60,.35);--line2:#DCE3F0;--soft:#8A95AE;--tint:#E4ECFF}
 html[data-theme=voice] .h-def{display:none}html[data-theme=voice] .h-voice{display:inline}
@@ -369,7 +408,7 @@ html[data-theme=voice] .composer .bar #orbbtn{background:var(--flisk-accent);col
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
 `;
 
-const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Geist+Mono:wght@400;500;600&display=swap">';
+const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
 const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, no sign-in needed.';
@@ -389,7 +428,7 @@ export const messagePage = (title, text) =>
 
 // Where a person manages the AI behind their pull request reviews (@flisk-chat review). The key is never shown again.
 // The looks a person can pick under the box. A new visitor gets the next one in turn (see index.js), kept in the chat_theme cookie.
-export const THEMES = [['classic', 'Classic'], ['ivory', 'Ivory'], ['glow', 'Soft glow'], ['focus', 'Focus'], ['voice', 'Voice first']];
+export const THEMES = [['classic', 'Classic'], ['ivory', 'Ivory'], ['glow', 'Soft glow'], ['focus', 'Focus'], ['voice', 'Voice first'], ['earth', 'Earth']];
 export const THEME_IDS = THEMES.map(([id]) => id);
 
 export const GITHUB_APP_URL = 'https://github.com/apps/flisk-chat';
@@ -533,11 +572,11 @@ const userMsg=(t)=>add(node('div','u',t));
 const asstMsg=(t)=>{const d=node('div','a');md(d,t);return add(d);};
 const errMsg=(t)=>add(node('div','err',t));
 const chatting=(on)=>{welcome.classList.toggle('gone',on);layout();};
-const ROOT=document.documentElement,TH=['classic','ivory','glow','focus','voice'],marks=new Map();
+const ROOT=document.documentElement,TH=['classic','ivory','glow','focus','voice','earth'],marks=new Map();
 const MV={fine:document.querySelector('.fine'),search:document.querySelector('.side .search'),hw:document.querySelector('.side .histwrap'),secs:[...document.querySelectorAll('.side .sidesec')]};
 const park=(el,to)=>{if(!el||!to)return;if(!marks.has(el)){const m=document.createComment('');el.parentNode.insertBefore(m,el);marks.set(el,m);}if(el.parentNode!==to)to.appendChild(el);};
 const unpark=(el)=>{const m=marks.get(el);if(m&&el.previousSibling!==m)m.parentNode.insertBefore(el,m.nextSibling);};
-function layout(){const t=ROOT.dataset.theme||'classic',home=!welcome.classList.contains('gone');
+function layout(){const t=ROOT.dataset.theme||'classic',home=!welcome.classList.contains('gone');ROOT.classList.toggle('home',home);
   if(t!=='classic'&&home){park(form,$('slot'));park(MV.fine,$('slot'));}else{unpark(form);unpark(MV.fine);}
   if(t==='focus'&&matchMedia('(min-width:861px)').matches){park($('sugg'),$('ftry'));park(MV.search,$('frecent'));park(MV.hw,$('frecent'));MV.secs.forEach(s=>park(s,$('fright')));}
   else{[$('sugg'),MV.search,MV.hw].concat(MV.secs).forEach(unpark);}}
@@ -677,6 +716,9 @@ const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$
 const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);
 const syncSb=()=>{const p=picked();auto.checked=!p.length;sum.textContent=p.length?p.map(x=>document.querySelector('input[value='+x+']').dataset.label).join(', '):'Fleet: cheapest first';};
 auto.onchange=()=>{if(auto.checked)opts.forEach(o=>o.checked=false);syncSb();};opts.forEach(o=>o.onchange=syncSb);syncSb();
+{const MODE={chat:['answer','Ask anything or describe what to make'],build:['website','Describe the website, app or system to build'],create:['video','Describe the video to make']};const mb=document.querySelectorAll('.md');
+const setMode=(m)=>{mb.forEach(b=>b.setAttribute('aria-checked',String(b.dataset.mode===m)));const t=document.getElementById('task');if(t)t.placeholder=MODE[m][1];if(typeof showCat==='function')showCat(MODE[m][0]);try{localStorage.setItem('chat_mode',m)}catch(e){}};
+mb.forEach(b=>b.onclick=()=>setMode(b.dataset.mode));let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MODE[m0])m0='chat';setMode(m0);}
 {const pb=document.getElementById('plus'),pm=document.getElementById('plusmenu'),cats=document.querySelector('.cats');
 if(pm&&cats)pm.prepend(cats);
 const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));};
@@ -1074,7 +1116,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
     .join('')}`;
   return shell(
     'Flisk Chat',
-    `<div class="app">
+    `<canvas id="earth" class="earthc" aria-hidden="true"></canvas><div class="app">
 <nav class="thx frail" aria-label="Menu"><a class="fl" href="/" aria-label="Chat home">${icon('chat', 30)}</a><button type="button" data-act="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New</button><button type="button" data-act="hist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Computers</a><button type="button" data-act="voice"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>Voice</button>${login && !anon ? `<a href="/reviews"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</a><a class="end" href="/auth/signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>` : `<a class="end" href="/auth/start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>Sign in</a>`}</nav>
 <aside id="side" class="side" aria-label="Chats">
 <div class="brand">${LOGO}<button type="button" id="sideclose" class="iconbtn only-m" aria-label="Close the menu">×</button></div>
@@ -1093,6 +1135,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div id="slot" class="slot"></div>
 <div class="cats">${CATS.map((c) => `<button type="button" class="cat" data-cat="${c.id}" aria-pressed="false">${icon(c.id, 26)}${esc(c.label)}</button>`).join('')}</div>
 <ul class="sugg" id="sugg"></ul>
+${earthUsers(esc)}
 <div class="thx fcards"><div class="fc"><h5>Try one</h5><div id="ftry"></div><h5>Recent</h5><div id="frecent"></div></div><div class="fc" id="fright"></div></div></section>
 <div id="talk" aria-live="polite"></div>
 <div id="setup" hidden><div class="cards">${cards}</div><p class="note">Your key is stored encrypted in fleet and only starts your computers. Free credit comes from the provider, not from us.</p></div>
@@ -1103,15 +1146,14 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div class="bar">
 <button type="button" id="plus" class="chip ico" aria-expanded="false" aria-controls="ask" title="More: model, computers, voice, attach" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 <div id="plusmenu" class="plusmenu" role="menu" aria-label="More options"><button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
-<div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
-<div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
-<div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
-<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><button type="button" id="byor" class="byor" hidden>No key? Log in with OpenRouter, free</button><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div><label class="byrev"><input type="checkbox" id="byrev"> Also use this AI for PR reviews (the key is then stored encrypted on our server; change it in Settings)</label></div></div></div></div>
 <details class="pick"><summary class="chip" title="Computers" aria-label="Computers">${icon('fleet', 22)}<span id="sbsum">Fleet: cheapest first</span><i class="chev"></i></summary><div class="menu">${menu}</div></details>
-<button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
 <button type="button" id="voice" class="chip ico" aria-pressed="false" title="Read answers aloud" aria-label="Read answers aloud"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg></button>
 <button type="button" id="orbbtn" class="chip ico talkb" title="Voice talk: just talk, it answers out loud" aria-label="Start voice talk"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></button>
 </div>
+<div class="modes" role="radiogroup" aria-label="Mode"><button type="button" class="md" data-mode="chat" role="radio" aria-checked="true">Chat</button><button type="button" class="md" data-mode="build" role="radio" aria-checked="false">Build</button><button type="button" class="md" data-mode="create" role="radio" aria-checked="false">Create</button></div><span class="grow"></span><div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
+<div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
+<div class="pgrid"><div class="rail" id="rail" aria-label="Providers"></div><div class="mlist" id="mlist" role="listbox" aria-label="Models"></div></div>
+<div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><button type="button" id="byor" class="byor" hidden>No key? Log in with OpenRouter, free</button><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div><label class="byrev"><input type="checkbox" id="byrev"> Also use this AI for PR reviews (the key is then stored encrypted on our server; change it in Settings)</label></div></div></div></div><button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
 <p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line. <label class="look">Look <select id="look" aria-label="Look of the page">${THEMES.map(([id, label]) => `<option value="${id}"${id === theme ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label></p>
@@ -1126,7 +1168,8 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 </div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};window.__ANON__=${anon ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
-      APP_JS,
+      APP_JS +
+      EARTH_JS,
     true,
     theme,
   );
