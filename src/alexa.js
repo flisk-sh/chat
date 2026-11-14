@@ -14,11 +14,22 @@ const same = (a, b) => {
   return d === 0;
 };
 
-export const reply = (text, { end = false, history = [], reprompt = 'What else would you like to know?', card = '' } = {}) => ({
+// Ava's voice: Alexa plays an mp3 from an HTTPS URL inside <audio>, and speaks the text between the tags in its own voice
+// if the file cannot be fetched or played. The URL is signed with the skill key, so only text this endpoint wrote can be read.
+export async function sign(text, key) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(key)), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(String(text))));
+  return [...mac.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export const MAX_VOICE = 400; // longer answers are spoken by Alexa itself: a long mp3 is slow to make and the URL grows
+export const voiceUrl = async (origin, text, key) =>
+  text.length <= MAX_VOICE ? `${origin}/alexa/voice?t=${encodeURIComponent(text)}&s=${await sign(text, key)}` : '';
+
+export const reply = (text, { end = false, history = [], reprompt = 'What else would you like to know?', card = '', voice = '' } = {}) => ({
   version: '1.0',
   sessionAttributes: { history },
   response: {
-    outputSpeech: { type: 'SSML', ssml: `<speak>${esc(text)}</speak>` },
+    outputSpeech: { type: 'SSML', ssml: voice ? `<speak><audio src="${esc(voice)}">${esc(text)}</audio></speak>` : `<speak>${esc(text)}</speak>` },
     ...(end ? {} : { reprompt: { outputSpeech: { type: 'PlainText', text: reprompt } } }),
     ...(card ? { card: { type: 'Simple', title: 'Flisk', content: card } } : {}),
     shouldEndSession: end,
@@ -39,7 +50,7 @@ export function intentOf(body) {
 }
 
 // ask(messages) -> { text } | { error }; overLimit() -> bool. Both come from index.js so tests can fake them.
-export async function alexaHandle(request, env, { ask, overLimit, now = Date.now() }) {
+export async function alexaHandle(request, env, { ask, overLimit, now = Date.now(), origin = '' }) {
   if (!env.ALEXA_KEY) return Response.json({ error: 'the Alexa skill is not set up on this server' }, { status: 503 });
   const key = new URL(request.url).searchParams.get('key') || '';
   if (!same(key, env.ALEXA_KEY)) return Response.json({ error: 'not allowed' }, { status: 403 });
@@ -51,17 +62,18 @@ export async function alexaHandle(request, env, { ask, overLimit, now = Date.now
   if (!Number.isFinite(at) || Math.abs(now - at) > MAX_AGE_MS) return Response.json({ error: 'request too old' }, { status: 400 });
 
   const it = intentOf(body);
+  const say = async (text, o = {}) => Response.json(reply(text, { ...o, voice: origin ? await voiceUrl(origin, text, env.ALEXA_KEY) : '' }));
   if (it.kind === 'end') return Response.json({ version: '1.0', response: {} });
-  if (it.kind === 'stop') return Response.json(reply('Okay. Talk soon.', { end: true }));
-  if (it.kind === 'open') return Response.json(reply('Flisk Oracle here. Ask me anything.', { reprompt: 'Go ahead, ask me anything.' }));
-  if (it.kind === 'help') return Response.json(reply('Say ask, then your question. For example: ask what is the weather in London.'));
+  if (it.kind === 'stop') return say('Okay. Talk soon.', { end: true });
+  if (it.kind === 'open') return say('Flisk Oracle here. Ask me anything.', { reprompt: 'Go ahead, ask me anything.' });
+  if (it.kind === 'help') return say('Say ask, then your question. For example: ask what is the weather in London.');
 
   const old = Array.isArray(body?.session?.attributes?.history) ? body.session.attributes.history : [];
   const history = [...old.slice(-8), { role: 'user', content: it.query }];
-  if (await overLimit()) return Response.json(reply("That's today's limit for the home speaker. Try again tomorrow.", { end: true }));
+  if (await overLimit()) return say("That's today's limit for the home speaker. Try again tomorrow.", { end: true });
   const r = await ask(talkMessages(history, 'en'), it.query);
-  if (r.error) return Response.json(reply('Sorry, I could not think of an answer just now. Try again.', { history: old }));
+  if (r.error) return say('Sorry, I could not think of an answer just now. Try again.', { history: old });
   const { text, build } = talkReply(r.text, it.query, history);
-  const say = build ? `${text} I cannot build from the speaker, so open chat dot flisk dot si on your phone to build it.` : text;
-  return Response.json(reply(say, { history: [...history, { role: 'assistant', content: text }].slice(-10), card: build ? 'Open chat.flisk.si to build: ' + build.slice(0, 200) : '' }));
+  const spoken = build ? `${text} I cannot build from the speaker, so open chat dot flisk dot si on your phone to build it.` : text;
+  return say(spoken, { history: [...history, { role: 'assistant', content: text }].slice(-10), card: build ? 'Open chat.flisk.si to build: ' + build.slice(0, 200) : '' });
 }
