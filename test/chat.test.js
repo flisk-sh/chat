@@ -575,7 +575,7 @@ test('the Fleet menu and the voice buttons sit inside the composer toolbar row (
   };
   // Depth 2 = inside the + menu, which sits in .bar. A stray </div> in the model popover would drop these out of the row.
   expect(depthAt('<details class="pick"')).toBe(2);
-  expect(depthAt('id="mic"')).toBe(2);
+  expect(depthAt('id="mic"')).toBe(1);
   expect(depthAt('id="orbbtn"')).toBe(2);
 });
 
@@ -995,4 +995,13 @@ describe('looks', () => {
     expect(html).toContain('Try saying');
     expect(html).toContain('data-act="voice"');
   });
+});
+
+test('the composer has a Chat / Build / Create switch next to the model picker, outside the + menu', async () => {
+  const { appPage } = await import('../src/page.js');
+  const h = appPage ? String(appPage({})) : '';
+  expect(h).toContain('class="modes"');
+  for (const m of ['chat', 'build', 'create']) expect(h).toContain('data-mode="' + m + '"');
+  expect(h.indexOf('class="modes"')).toBeGreaterThan(h.indexOf('id="plusmenu"') + h.slice(h.indexOf('id="plusmenu"')).indexOf('</div>'));
+  expect(h).toContain("setMode(m0)");
 });
