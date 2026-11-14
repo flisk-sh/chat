@@ -194,3 +194,10 @@ test('a refused setting is not reported as "model not available"', async () => {
   expect(r.kind).toBe('setting');
   expect(r.error).not.toMatch(/is not available/);
 });
+
+test('Workers AI answering in the newer OpenAI-style shape (choices) is read, not taken as an empty answer', async () => {
+  const w = world();
+  delete w.env.OPENROUTER_KEY;
+  w.env.AI = { run: async () => ({ object: 'chat.completion', model: '@cf/meta/llama-3.1-8b-fast-v2', choices: [{ index: 0, message: { role: 'assistant', content: 'from the new shape' } }] }) };
+  expect(await modelFrom(w.env, w.fetchImpl)(msgs)).toEqual({ text: 'from the new shape', by: WORKERS_AI_FALLBACK });
+});

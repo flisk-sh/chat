@@ -107,6 +107,23 @@ describe('a task over the socket', () => {
     expect(BROWSER_NOTE).toMatch(/NO internet/);
   });
 
+  test('settle runs once after the task, and not for a refused one', async () => {
+    const t = tab();
+    const s = fakeSocket(t.page);
+    let settled = 0;
+    const gate = async () => ({ model: async () => ({ error: 'The free AI is busy right now.', kind: 'busy' }), settle: async () => settled++, maxSteps: 8 });
+    const job = runOverSocket(s, { gate, origin: ORIGIN, publish: async () => ({ error: 'no' }) });
+    s.say({ type: 'task', task: 'make website coffee', history: [], files: [] });
+    await job;
+    expect(settled).toBe(1);
+    const r = fakeSocket(tab().page);
+    let refusedSettle = 0;
+    const refused = runOverSocket(r, { gate: async () => ({ refuse: { status: 429, error: 'x' }, settle: async () => refusedSettle++ }), origin: ORIGIN });
+    r.say({ type: 'task', task: 'x' });
+    await refused;
+    expect(refusedSettle).toBe(0);
+  });
+
   test('a refused task says why and runs nothing', async () => {
     for (const [first, refuse, want] of [
       [{ type: 'task', task: '  ' }, null, { status: 400, error: 'type a task' }],

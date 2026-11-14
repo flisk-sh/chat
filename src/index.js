@@ -186,6 +186,28 @@ export async function overDailyLimit(login, { cache = globalThis.caches?.default
   return false;
 }
 
+// A free task the free AI never answered (every free model busy) gives its count back, so "busy" does not use up the day.
+export async function refundDailyLimit(login, { cache = globalThis.caches?.default, now = Date.now(), scope = 'chat-limit' } = {}) {
+  if (!cache) return;
+  const url = `https://${scope}.invalid/${encodeURIComponent(login)}/${new Date(now).toISOString().slice(0, 10)}`;
+  try {
+    const hit = await cache.match(url);
+    const count = hit ? Number(await hit.text()) || 0 : 0;
+    if (count > 0) await cache.put(url, new Response(String(count - 1), { headers: { 'cache-control': 'max-age=90000' } }));
+  } catch {}
+}
+
+// Wraps a model so the task can tell, at its end, whether the model answered even once.
+export function answeredModel(model) {
+  let answered = false;
+  const ask = async (messages) => {
+    const r = await model(messages);
+    if (!r?.error) answered = true;
+    return r;
+  };
+  return { ask, answered: () => answered };
+}
+
 // The free model's last fallback (Workers AI on our account) has one daily cap for everyone, so chat keeps to its share.
 // Each person may use only a share of it, so one busy visitor cannot use up the day for everybody.
 export const WORKERS_AI_PER_PERSON = 40;
@@ -490,7 +512,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
         const resetsIn = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
         return { refuse: { status: 429, error: `That's your ${anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY} free tasks for today`, limit: anon ? ANON_TASKS_PER_DAY : TASKS_PER_DAY, resetsIn, anon } };
       }
-      return { model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen) };
+      const m = answeredModel(modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)));
+      const refund = async () => chosen.free && !m.answered() && refundDailyLimit(await who(login), { cache: env.LIMIT_CACHE, scope: anon ? 'chat-anon' : 'chat-limit' });
+      return { model: m.ask, settle: refund, maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen) };
     };
     const job = runOverSocket(server, { gate, origin, fetchImpl, publish: (content) => publishSite(env, login, content, origin), saveVideo: async () => ({ error: 'a video needs a cloud computer' }) });
     if (waitUntil) waitUntil(job);
@@ -598,10 +622,14 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const enc = new TextEncoder();
       const emit = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
       const github = anon ? null : { login, ...((await loadGithubToken(env, login).catch(() => null)) || {}) };
-      const job = runTask({ task, history: body.history, github, origin, model: modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)), maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer: fleet, track: podTracker(env, login, fleet), fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const m = answeredModel(modelFrom(env, fetchImpl, chosen, freeModelOpts(env, await who(login), anon)));
+      const job = runTask({ task, history: body.history, github, origin, model: m.ask, maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer: fleet, track: podTracker(env, login, fleet), fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then((r) => emit({ type: 'done', ms: r.ms, error: r.error }))
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
-        .finally(() => w.close().catch(() => {}));
+        .finally(async () => {
+          if (chosen.free && !m.answered()) await refundDailyLimit(await who(login), { cache: env.LIMIT_CACHE, scope: anon ? 'chat-anon' : 'chat-limit' });
+          await w.close().catch(() => {});
+        });
       if (waitUntil) waitUntil(job);
       return new Response(readable, { headers: { 'content-type': 'application/x-ndjson', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
     }
