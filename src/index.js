@@ -12,6 +12,7 @@ import { runOverSocket } from './browserpod.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { placeFrom, warmWeather, weatherNote } from './weather.js';
+import { ALEXA_PER_DAY, alexaHandle } from './alexa.js';
 
 export const TASKS_PER_DAY = 20;
 // Visitors without GitHub are counted by network address, not by cookie (a cookie can be thrown away), so their share is smaller.
@@ -416,6 +417,19 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   // GitHub App: "@flisk-chat review" on a pull request (signed webhook, no session).
   if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin, freeModelLimit: freeModelOpts(env).overLimit }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+
+  // Alexa skill (Echo speaker at home): public URL guarded by ?key=ALEXA_KEY, see src/alexa.js.
+  if (request.method === 'POST' && path === '/alexa') {
+    const chosen = resolveModel({ ai: 'wolf' });
+    return alexaHandle(request, env, {
+      overLimit: () => overDailyLimit('alexa-home', { cache: env.LIMIT_CACHE, limit: ALEXA_PER_DAY, scope: 'alexa-limit' }),
+      ask: async (messages, heard) => {
+        const note = await weatherNote(heard, fetchImpl, placeFrom(request.cf));
+        if (note) messages[0] = { role: 'system', content: `${messages[0].content}\n${note}` };
+        return modelFrom(env, fetchImpl, chosen, freeModelOpts(env, 'alexa-home', false))(messages);
+      },
+    });
+  }
 
   if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil });
 
