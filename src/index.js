@@ -275,6 +275,26 @@ export async function recordRun(env, { task, ai, free, anon, result }) {
     .run();
 }
 
+// Why a finished task is worth a look: it failed, a bigger app skipped the "system" builder, or most of its steps failed.
+export function runProblem(result) {
+  const st = result.stats || {};
+  if (result.error) return `failed: ${String(result.error).slice(0, 150)}`;
+  if (st.big && !st.system) return 'a bigger app did not use the system builder';
+  if (st.errors >= 3) return `${st.errors} steps failed`;
+  if (st.big && !st.shared) return 'a bigger app ended without a live link';
+  return null;
+}
+
+// Posts a weak or failed task to a private Discord channel (env.DISCORD_ERRORS_WEBHOOK, a webhook URL). Never throws.
+export async function alertRun(env, { task, ai, anon, result }, fetchImpl = fetch) {
+  const url = env.DISCORD_ERRORS_WEBHOOK;
+  const why = runProblem(result);
+  if (!url || !why) return;
+  const st = result.stats || {};
+  const text = `**Chat task needs a look: ${why}**\n> ${String(task).slice(0, 300).replace(/\n/g, ' ')}\n${anon ? 'anonymous' : 'signed in'} · ${ai} · ${result.steps.length} steps · ${st.errors || 0} failed · ${st.bad || 0} bad JSON · ${st.system ? 'system builder' : 'no system builder'} · ${st.shared ? 'live link' : 'no live link'} · ${Math.round((result.ms || 0) / 1000)} s${result.answer ? `\nAnswer: ${String(result.answer).slice(0, 300)}` : ''}`;
+  await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900), allowed_mentions: { parse: [] } }) }).catch(() => {});
+}
+
 // GET /api/admin/runs?days=7 with Authorization: Bearer <ADMIN_KEY>: totals and the 30 newest tasks.
 async function adminRuns(request, env) {
   const key = env.ADMIN_KEY || '';
@@ -732,6 +752,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const job = runTask({ task, history: body.history, github, origin, model: m.ask, maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer: fleet, track: podTracker(env, login, fleet), fetchImpl, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content) => publishSite(env, login, content, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then(async (r) => {
           await recordRun(env, { task, ai: modelLabel(chosen), free: !!chosen.free, anon, result: r }).catch(() => {});
+          await alertRun(env, { task, ai: modelLabel(chosen), anon, result: r }, fetchImpl).catch(() => {});
           emit({ type: 'done', ms: r.ms, error: r.error });
         })
         .catch((e) => emit({ type: 'error', error: String(e?.message || e).slice(0, 200) }))
