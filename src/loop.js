@@ -390,6 +390,8 @@ export async function runTask({ task, history = [], github = undefined, origin =
   let provider = null;
   const steps = [];
   const links = [];
+  // What went wrong or right, counted for the build analytics (src/index.js recordRun): why a build came out weak.
+  const stats = { big: bigApp, bad: 0, empty: 0, provider: 0, errors: 0, system: false, shared: false, copy: false, firstAction: null };
   const t0 = Date.now();
   const finish = async (answer, error = null) => {
     if (podId && kept) {
@@ -399,7 +401,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
       emit({ type: 'pod_stopped', ok: s?.status === 200 });
       if (s?.status === 200) await Promise.resolve(track.stopped?.(podId)).catch(() => {});
     }
-    return { answer, error, steps, links, provider, ms: Date.now() - t0 };
+    return { answer, error, steps, links, provider, ms: Date.now() - t0, stats };
   };
   let emptyRetries = 0;
   let providerRetries = 0;
@@ -420,6 +422,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
       // without using up a step.
       if (reply.kind === 'empty' && emptyRetries < 2) {
         emptyRetries++;
+        stats.empty++;
         emit({ type: 'retry' });
         messages.push({ role: 'user', content: 'Your last reply was empty. Reply now with the next action as one short JSON object.' });
         step--;
@@ -429,6 +432,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
       // retry one bad answer ended a build halfway and stopped its computer, so wait and ask again, twice per task at most.
       if (reply.kind === 'provider' && providerRetries < 2) {
         providerRetries++;
+        stats.provider++;
         emit({ type: 'retry' });
         await wait(providerRetries * 3000);
         step--;
@@ -440,6 +444,8 @@ export async function runTask({ task, history = [], github = undefined, origin =
       }
       messages.push({ role: 'assistant', content: reply.text });
       const action = parseAction(reply.text);
+      if (action.type === 'bad') stats.bad++;
+      if (stats.firstAction === null && action.type !== 'bad') stats.firstAction = action.type;
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });
         messages.push({ role: 'user', content: 'That reply is not valid JSON. Send the same action again as one valid JSON object only (no tags, no XML, no explanations). Escape " as \\" inside strings.' });
@@ -542,7 +548,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
         shown = made.error ? { error: made.error } : { exitCode: 0, stdout: made.summary, stderr: '' };
         // The app runs on a computer that stops with the answer unless it is shared (see the nudge above).
         if (!made.error) {
-          startedServer = ranApp = builtSystem = true;
+          startedServer = ranApp = builtSystem = stats.system = true;
           appPort = made.web;
         }
       } else if (action.type === 'share') {
@@ -552,6 +558,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
         if (r.error) shown = { error: r.error };
         else {
           kept = r;
+          stats.shared = true;
           links.push(r.url);
           await Promise.resolve(track.kept?.(podId, r.url, r.expiresAt)).catch(() => {});
           emit({ type: 'live', url: r.url });
@@ -567,6 +574,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
           ? 'do not publish a copy of the app. This computer cannot have a public link, so "say" that plainly: the app was built and checked here, and a provider that can share (for example Upstash Box) gives a live link next time.'
           : `this task runs an app with an API, so do not publish a copy of it. Send {"share": ${appPort || '<the website port>'}} for a live link to the real app.` };
       } else if (action.type === 'publish') {
+        stats.copy = true;
         emit({ type: 'publish', path: action.path });
         const r = await computer.read(podId, action.path);
         if (r.error) shown = { error: r.error };
@@ -584,6 +592,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
         const r = await computer.read(podId, action.path);
         shown = r.error ? { error: scrub(r.error, token) } : { content: clip(scrub(r.data.content, token)) };
       }
+      if (shown.error || shown.exitCode > 0) stats.errors++;
       steps.push({ action, ...shown });
       if (!shown.widget) emit({ type: 'output', ...shown });
       const note = shown.error
