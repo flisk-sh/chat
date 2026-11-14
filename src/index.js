@@ -156,6 +156,12 @@ export function cspWithPod(pod, origin) {
   return SECURITY['content-security-policy'].replace("script-src 'unsafe-inline'", `script-src 'unsafe-inline' 'wasm-unsafe-eval' ${from}`).replace("connect-src 'self'", `connect-src 'self' ${ws} ${from}`) + '; worker-src blob:';
 }
 const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY, ...extra } });
+// '2 tries, won 2 | 1 at0 o412 s520 a- x | 2 at800 o1190 s1290 a1450': for each ask of the voice, ms from the request
+// to its start (at), socket open (o), Microsoft's turn start (s) and first audio (a); x = it failed.
+export function voiceDesc(info = {}) {
+  const asks = (info.asks || []).map((r, i) => `${i + 1} at${r.at ?? 0} o${r.o ?? '-'} s${r.s ?? '-'} a${r.a ?? '-'}${r.x ? ' x' : ''}`);
+  return [`${info.tries || 1} tries${info.won ? `, won ${info.won}` : ''}`, ...asks].join(' | ');
+}
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
 const redirect = (location, extra = {}) => new Response(null, { status: 303, headers: { location, ...extra } });
 const readJson = async (request) => {
@@ -454,13 +460,15 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     if (!text) return json(400, { error: 'nothing to say' });
     if (text.length > MAX_SPEAK) return json(413, { error: `keep it under ${MAX_SPEAK} characters` });
     if (await overDailyLimit(await who(session.login), { cache: env.LIMIT_CACHE, limit: anon ? ANON_SPEAK_PER_DAY : SPEAK_PER_DAY, scope: anon ? 'speak-anon' : 'speak-limit' })) return json(429, { error: 'the voice has read enough for today' });
+    const info = {}, t0 = Date.now();
     try {
-      const info = {}, t0 = Date.now();
       const stream = await (env.SPEAK || speakStream)(text, String(url.searchParams.get('l') || '').slice(0, 8), { info });
       // Time to the first audio and how many asks it took, so a slow voice can be told apart in the browser.
-      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${info.tries || 1} tries"` } });
+      return new Response(stream, { headers: { 'content-type': 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${voiceDesc(info)}"` } });
     } catch (e) {
-      return json(502, { error: String(e?.message || e).slice(0, 160) });
+      const res = json(502, { error: String(e?.message || e).slice(0, 160) });
+      res.headers.set('server-timing', `voice;desc="${voiceDesc(info)}"`);
+      return res;
     }
   }
 
