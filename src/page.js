@@ -227,6 +227,10 @@ html .plusmenu>.chip.ico.on{background:transparent;color:var(--ink);border-color
 /* An open menu sits above everything after the box (the idea buttons have their own blur layer). */
 .composer:has(.pop:not([hidden])),html.plus .composer{position:relative;z-index:25}
 .pop[hidden]{display:none}.pop{max-height:calc(100vh - 150px);overflow:auto}
+/* While the iPhone keyboard is open, give the phone screen to the conversation and the message box */
+@media (max-width:860px){html.kbopen flisk-bar,html.kbopen .top{display:none!important}}
+/* iPhone Safari zooms the whole page when a field under 16px gets focus */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select{font-size:16px!important}}
 .pop .ps{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--soft)}
 .pop .ps input{flex:1;border:0;outline:0;font:14px var(--sans);background:transparent;color:var(--ink);min-width:0}
 .pgrid{display:grid;grid-template-columns:78px minmax(0,1fr);grid-template-rows:minmax(0,1fr);max-height:min(420px,48vh);min-height:0}
@@ -458,8 +462,14 @@ const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link 
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
 const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, no sign-in needed.';
+// iPhone Safari does not shrink the page when the keyboard opens, so the full-height chat hides its
+// message box behind the keyboard. Pin the body to the part of the screen the keyboard leaves visible.
+export const KEYBOARD_FIT = "(function(){var v=window.visualViewport,r=document.documentElement;if(!v)return;function fit(){var b=document.body,kb=v.scale<1.05&&r.clientHeight-v.height>120;" +
+  "r.classList.toggle('kbopen',kb);b.style.position=kb?'fixed':'';b.style.top=kb?v.offsetTop+'px':'';b.style.left=kb?'0':'';b.style.right=kb?'0':'';b.style.height=kb?v.height+'px':''}" +
+  "v.addEventListener('resize',fit);v.addEventListener('scroll',fit);fit()})();";
+
 const shell = (title, body, script = '', index = false, theme = '') =>
-  `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"${theme === 'classic' ? '' : ' class="nt"'}` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style><script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script><script src="https://flisk.si/assets/bar.js" defer></script></head><body>${body}${script ? `<script>${script}</script>` : ''}</body></html>`;
+  `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"${theme === 'classic' ? '' : ' class="nt"'}` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta name="twitter:card" content="summary">` : '<meta name="robots" content="noindex">'}<link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#F7F6F2"><meta name="description" content="${index ? DESC : 'Ask for a task or a website. Flisk Chat gets a real computer and does it.'}">${FONTS}<style>${CSS}</style><script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script><script src="https://flisk.si/assets/bar.js" defer></script></head><body>${body}<script>${KEYBOARD_FIT}${script}</script></body></html>`;
 
 const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:inherit">chat<span>.</span>flisk</b></a>`;
 
