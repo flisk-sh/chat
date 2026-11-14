@@ -8,7 +8,7 @@ export const VOICE = 'en-US-AvaMultilingualNeural';
 // Elvira, German Katja, Portuguese (Brazil) Francisca, French Denise. Anything else keeps Ava, who speaks every language.
 export const VOICES = { nl: 'nl-NL-FennaNeural', es: 'es-ES-ElviraNeural', de: 'de-DE-KatjaNeural', pt: 'pt-BR-FranciscaNeural', fr: 'fr-FR-DeniseNeural' };
 export const voiceFor = (lang = '') => VOICES[String(lang).slice(0, 2).toLowerCase()] || VOICE;
-export const RATE = '-5%';
+export const RATE = '-12%'; // slower and warmer than Ava's default
 export const PITCH = '-4Hz';
 export const MAX_SPEAK = 1200;
 const TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
