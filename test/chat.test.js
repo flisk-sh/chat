@@ -1001,7 +1001,7 @@ describe('looks', () => {
     expect(html).toContain('html[data-theme=earth].home.earthon .earthstill{opacity:0}');
     expect(html).toContain('url(https://unpkg.com/three-globe@2.45.6/example/img/earth-blue-marble.jpg)');
     // Like terafab.ai: no green from the shared bar or the logo, one white button and grey glass ones.
-    expect(html).toContain('html[data-theme=earth] flisk-bar,html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}');
+    expect(html).toContain('html[data-theme=earth] flisk-bar::part(tone),html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}');
     expect(html).toContain('.excta button:first-child{background:var(--ink);color:var(--bg)}');
     expect(html).not.toMatch(/\.excta button\{[^}]*uppercase/);
     expect(html).toContain(`analytics.flisk.si · ${USERS_DATE}`);

@@ -353,8 +353,8 @@ html[data-theme=earth] #hist li:hover,html[data-theme=earth] #hist li.cur{backgr
 html[data-theme=earth] .frail a:hover,html[data-theme=earth] .frail button:hover{background:rgba(255,255,255,.07)}
 html[data-theme=earth] .welcome .ex{display:block;margin:24px 0 0}html[data-theme=earth] .expanel{max-width:420px}
 html[data-theme=earth].home:not(.ex-about) .tpill,html[data-theme=earth].home:not(.ex-about) .welcome .sub,html[data-theme=earth].home:not(.ex-about) .fine,html[data-theme=earth].home:not(.ex-ideas) #sugg,html[data-theme=earth]:not(.ex-users) .expanel{display:none}
-/* Earth reads like terafab.ai: no colour anywhere, one white button, the rest grey glass over the photo. */
-html[data-theme=earth] flisk-bar,html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}
+/* Earth reads like terafab.ai: no colour anywhere, one white button, the rest grey glass over the photo. The bar's pink sponsor button is the one exception (it has no part=tone). */
+html[data-theme=earth] flisk-bar::part(tone),html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}
 html[data-theme=earth].home .side{background:rgba(0,0,0,.4);backdrop-filter:blur(14px)}
 .excta{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
 .excta button{border:0;background:rgba(255,255,255,.14);color:var(--ink);padding:10px 15px;font:500 13px/1 var(--sans);cursor:pointer;border-radius:var(--radius);backdrop-filter:blur(8px)}
