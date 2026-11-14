@@ -102,11 +102,13 @@ function ask(words, lang, open, totalMs, rec = {}, t0 = Date.now()) {
 
 // Text -> a stream of mp3 bytes. Resolves once the first audio arrives, so the caller can still fall back to another
 // voice when nothing comes; rejects on any failure before that.
-// Hedged: from Cloudflare, Microsoft now and then holds the first audio of a request for 2-8 s (or never sends it),
-// while a second request made at the same moment starts in 0.2 s. So when no audio has come 'hedgeMs' after asking,
-// it asks again on a new connection (at once when the first fails), and whichever speaks first is streamed; the other
-// is closed. 'info' gets how many asks it took (tries), which one spoke (won, from 1) and each ask's timings (asks).
-export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 60000, hedgeMs = 800, open = openSocket, info = {} } = {}) {
+// Hedged: from Cloudflare, Microsoft now and then holds the first audio for 3-5 s or never sends it, for every request
+// at once (2026-11-14: 50 of 50 asks in a slow spell, a second ask stalled as long as the first). So when no audio has
+// come 'hedgeMs' after asking (at once when the first ask fails) it makes one more ask: 'backup' (another voice, an
+// async function giving a stream) when there is one, else Microsoft again on a new connection. Whichever speaks first
+// is streamed; the other is given up. 'info' gets how many asks it took (tries), which one spoke (won, from 1), each
+// ask's timings (asks) and, when the backup spoke, its content type (type).
+export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 60000, hedgeMs = 800, open = openSocket, backup = null, info = {} } = {}) {
   const words = String(text || '').trim();
   if (!words) throw new Error('nothing to say');
   const asks = [], t0 = Date.now();
@@ -118,7 +120,7 @@ export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 6
       done = true;
       clearTimeout(first); clearTimeout(hedge);
       info.tries = asks.length;
-      if (won) info.won = asks.indexOf(won) + 1;
+      if (won) { info.won = asks.indexOf(won) + 1; if (won.type) info.type = won.type; }
       for (const a of asks) if (a !== won) a.close();
       if (err) reject(err); else resolve(stream);
     };
@@ -126,7 +128,11 @@ export async function speakStream(text, lang = '', { firstMs = 5500, totalMs = 6
     const start = () => {
       const rec = { at: Date.now() - t0 };
       info.asks.push(rec);
-      const a = ask(words, lang, open, totalMs, rec, t0);
+      let a;
+      if (asks.length && backup) {
+        rec.kind = backup.kind || 'backup';
+        a = { type: backup.type, close: () => {}, p: Promise.resolve().then(() => backup(words, lang)).then((st) => { rec.a = Date.now() - t0; return st; }) };
+      } else a = ask(words, lang, open, totalMs, rec, t0);
       asks.push(a);
       a.p.then((stream) => finish(null, stream, a), (e) => {
         last = e; failed++; rec.x = 1;
