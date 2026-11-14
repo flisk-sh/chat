@@ -120,20 +120,22 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   // Their own AI from chat.flisk.si, or the free one.
   const saved = await loadSettings(env, sender, { withKey: true }).catch(() => null);
   const chosen = saved ? resolveModel(saved) : { ai: 'wolf', free: true };
+  // The AI label goes into every result, so analytics and alerts show which model a failed review used.
+  const who = chosen.free ? 'Flisk Wolf (free)' : String(chosen.model || saved?.model || saved?.ai || 'own key');
   if (chosen.error) {
     await say(`@${sender} the review could not start: ${chosen.error}. Check your AI at ${env.PUBLIC_ORIGIN}/reviews.`);
-    return { error: chosen.error };
+    return { error: chosen.error, ai: who };
   }
   if (chosen.free && (await overLimit(sender))) {
-    if (event.auto) return { limited: true };
+    if (event.auto) return { limited: true, ai: who };
     await say(`@${sender} you used today's ${REVIEWS_PER_DAY} free reviews. Save your own AI key at ${env.PUBLIC_ORIGIN}/reviews and reviews will use it with no daily limit.`);
-    return { limited: true };
+    return { limited: true, ai: who };
   }
 
   const dres = await api(`/repos/${repo}/pulls/${issue.number}`, { accept: 'application/vnd.github.v3.diff' });
   if (!dres.ok) {
     await say(`@${sender} the review failed: GitHub did not give the diff (HTTP ${dres.status}).`);
-    return { error: `diff ${dres.status}` };
+    return { error: `diff ${dres.status}`, ai: who };
   }
   const cap = chosen.free ? WOLF_DIFF : OWN_KEY_DIFF;
   const cut = dres.text.length > cap;
@@ -150,10 +152,9 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   }
   if (!review) {
     await say(`@${sender} the review failed: ${err || 'the model did not answer in the expected shape'}. ${chosen.free ? '' : 'Check your key at ' + env.PUBLIC_ORIGIN + '/reviews.'}`);
-    return { error: err || 'bad model answer' };
+    return { error: err || 'bad model answer', ai: who };
   }
 
-  const who = chosen.free ? 'Flisk Wolf (free)' : `${chosen.model}`;
   const foot = `\n\n<sub>Reviewed by ${who} on request of @${sender}${cut ? `, first ${Math.round(cap / 1000)} KB of the diff only` : ''}. ${saved ? '' : `Use your own model: ${env.PUBLIC_ORIGIN}/reviews. `}A model can be wrong: read before you merge.</sub>`;
   const comments = cleanComments(review.comments, files);
   const event_ = { approve: 'APPROVE', request_changes: 'REQUEST_CHANGES', comment: 'COMMENT' }[review.verdict];
@@ -169,11 +170,11 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
 }
 
 // A review that failed or never answered goes to the private Discord channel (env.DISCORD_ERRORS_WEBHOOK). Never throws.
-export async function alertReview(env, { repo, pr, sender, auto, why }, fetchImpl = fetch) {
+export async function alertReview(env, { repo, pr, sender, auto, ai, why }, fetchImpl = fetch) {
   const url = env.DISCORD_ERRORS_WEBHOOK;
   if (!url || !why) return;
   const link = repo && pr ? `https://github.com/${repo}/pull/${pr}` : repo || 'unknown pull request';
-  const text = `**Chat review failed: ${String(why).slice(0, 300)}**\n${link} · ${auto ? 'automatic review' : `asked by @${sender || 'unknown'}`}`;
+  const text = `**Chat review failed: ${String(why).slice(0, 300)}**\n${link} · ${auto ? 'automatic review' : `asked by @${sender || 'unknown'}`}${ai ? ` · ${ai}` : ''}`;
   await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900), allowed_mentions: { parse: [] } }) }).catch(() => {});
 }
 
@@ -228,7 +229,7 @@ export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil
     .then(async (r) => {
       console.log('review', JSON.stringify(r));
       await finishReviewRow(env, rowId, r, Date.now() - started);
-      if (r?.error) await alertReview(env, { ...info, why: r.error }, fetchImpl);
+      if (r?.error) await alertReview(env, { ...info, ai: r.ai, why: r.error }, fetchImpl);
     })
     .catch(async (e) => {
       const why = `crashed: ${String(e?.message || e).slice(0, 250)}`;
