@@ -5,7 +5,7 @@ import { intentOf } from '../src/alexa.js';
 const ORIGIN = 'https://chat.test';
 const memCache = () => { const m = new Map(); return { match: async (k) => m.get(String(k.url || k))?.clone(), put: async (k, r) => { m.set(String(k.url || k), r); } }; };
 const INFERENCE = { fetch: async () => Response.json({ choices: [{ message: { content: 'It is sunny & warm.' } }] }) };
-const env = (more = {}) => ({ PUBLIC_ORIGIN: ORIGIN, SESSION_SECRET: 's', LIMIT_CACHE: memCache(), VOICE_CACHE: memCache(), SPEAK: async () => new Response(new Uint8Array(900).fill(1)).body, INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', ALEXA_KEY: 'k'.repeat(24), ALEXA_SKILL_ID: 'amzn1.ask.skill.test', ...more });
+const env = (more = {}) => ({ PUBLIC_ORIGIN: ORIGIN, SESSION_SECRET: 's', LIMIT_CACHE: memCache(), VOICE_CACHE: memCache(), SPEAK: async () => new Response(new Uint8Array(900).fill(1)).body, INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions', ALEXA_KEY: 'k'.repeat(24), ALEXA_AVA: '1', ALEXA_SKILL_ID: 'amzn1.ask.skill.test', ...more });
 const req = (request, key = 'k'.repeat(24), at = new Date().toISOString()) => new Request(`${ORIGIN}/alexa?key=${key}`, { method: 'POST', body: JSON.stringify({ session: { application: { applicationId: 'amzn1.ask.skill.test' }, attributes: {} }, request: { timestamp: at, ...request } }) });
 const ask = (query, e = env(), key, at) => handle(req({ type: 'IntentRequest', intent: { name: 'AskIntent', slots: { query: { value: query } } } }, key, at), e, { fetchImpl: async () => Response.json({}) });
 
@@ -75,4 +75,9 @@ test('the file made while answering is what Alexa fetches next, with no second t
   expect(ok.status).toBe(200);
   expect((await ok.arrayBuffer()).byteLength).toBe(900);
   expect(calls).toBe(1);
+});
+
+test('Ava is off unless ALEXA_AVA=1, so the speaker keeps one voice', async () => {
+  const j = await (await ask('weather', env({ ALEXA_AVA: '' }))).json();
+  expect(j.response.outputSpeech.ssml).toBe('<speak>It is sunny &amp; warm.</speak>');
 });

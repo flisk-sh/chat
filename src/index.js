@@ -442,7 +442,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   if (request.method === 'POST' && path === '/alexa') {
     const chosen = resolveModel({ ai: 'wolf' });
     return alexaHandle(request, env, {
-      origin,
+      origin: env.ALEXA_AVA === '1' ? origin : '', // Ava is opt-in (ALEXA_AVA=1): when it is slow the speaker swaps between two voices
       // Make Ava's file now and keep it for the fetch Alexa does next; false means Alexa reads the text itself.
       prepare: async (text, voice) => {
         const cache = alexaCache(env);
