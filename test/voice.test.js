@@ -440,8 +440,12 @@ test('Dutch is read by Fenna, a native Dutch lady voice; other languages keep Av
   expect(voiceFor('nl')).toBe('nl-NL-FennaNeural');
   expect(ssml('Hallo', 'nl')).toContain("<voice name='nl-NL-FennaNeural'>");
   expect(ssml('Hallo', 'nl')).toContain("xml:lang='nl-NL'");
-  for (const l of ['en', 'uk', 'de', '']) expect(voiceFor(l)).toBe(VOICE);
+  for (const l of ['en', 'uk', 'ru', '']) expect(voiceFor(l)).toBe(VOICE);
   expect(voiceFor('es')).toBe('es-ES-ElviraNeural');
+  expect(voiceFor('de')).toBe('de-DE-KatjaNeural');
+  expect(voiceFor('pt')).toBe('pt-BR-FranciscaNeural');
+  expect(voiceFor('fr-CA')).toBe('fr-FR-DeniseNeural');
+  expect(ssml('Bonjour', 'fr')).toContain("xml:lang='fr-FR'");
   expect(ssml('Hola', 'es')).toContain("<voice name='es-ES-ElviraNeural'>");
 });
 
@@ -470,4 +474,14 @@ test('Spanish browser fallback takes a lady (Mónica, Paulina), never Jorge or J
   const cut = (a, b) => page.slice(page.indexOf(a), page.indexOf(b));
   const pick = (voices, lang) => new Function('TTS', `${cut('const LADY=', 'const langOf=')}${cut('const pickVoice=', 'const utter=')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
   expect(pick([{ name: 'Jorge', lang: 'es-ES', default: true }, { name: 'Juan', lang: 'es-MX' }, { name: 'Paulina', lang: 'es-MX' }, { name: 'Mónica', lang: 'es-ES' }], 'es').name).toBe('Mónica');
+});
+
+test('German, Portuguese and French browser fallbacks take a lady, never a man', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  const cut = (a, b) => page.slice(page.indexOf(a), page.indexOf(b));
+  const pick = (voices, lang) => new Function('TTS', `${cut('const LADY=', 'const langOf=')}${cut('const pickVoice=', 'const utter=')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
+  const v = (name, lang, d = false) => ({ name, lang, default: d });
+  expect(pick([v('Markus', 'de-DE', true), v('Hans', 'de-DE'), v('Anna', 'de-DE')], 'de').name).toBe('Anna');
+  expect(pick([v('Felipe', 'pt-BR', true), v('Luciana', 'pt-BR')], 'pt').name).toBe('Luciana');
+  expect(pick([v('Thomas', 'fr-FR', true), v('Yannick', 'fr-CA'), v('Amélie', 'fr-CA')], 'fr').name).toBe('Amélie');
 });
