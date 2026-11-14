@@ -1023,6 +1023,14 @@ describe('looks', () => {
     expect(JSON.parse(m[1])).toEqual(USERS);
     expect(m[2]).toBe(THREE_SRC);
     expect(() => new Function(EARTH_JS)).not.toThrow();
+    // Wrangler bundles with keepNames, which writes __name(fn, "x") calls into earthClient's text.
+    // The live page threw "__name is not defined" (Nov 14); the snippet must bring its own.
+    const named = EARTH_JS.replace(/function earthClient\(([^)]*)\)\s*\{/, (s) => `${s}__name(function(){}, "x");`);
+    expect(named).not.toBe(EARTH_JS);
+    const added = [];
+    const doc = { documentElement: { dataset: {}, classList: { contains: () => false } }, getElementById: () => null, addEventListener: (t) => added.push(t) };
+    expect(() => new Function('document', named)(doc)).not.toThrow();
+    expect(added).toContain('click');
     expect(shortCount(32540)).toBe('32.5k');
     expect(shortCount(5620)).toBe('5.62k');
     expect(shortCount(2080)).toBe('2.08k');
