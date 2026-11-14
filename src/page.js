@@ -149,19 +149,21 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .sqs{display:flex;gap:8px;flex-wrap:wrap}
 .trow.done .sq{height:40px;padding:0 10px;flex-direction:row;align-items:center;justify-content:flex-start;font-size:12px}.trow.done .sq svg{display:none}.trow.done .sq>span:last-child{margin:0}
 .trow.done .q{padding-top:11px}
-.sq{flex:0 0 100px;width:100px;height:84px;border:0;border-radius:var(--radius);padding:9px 10px;font:500 13px/1.25 var(--sans);cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;transition:transform .16s ease-out,box-shadow .16s,opacity .16s}
+.sq{flex:0 0 100px;width:100px;height:84px;border:1.5px solid transparent;border-radius:var(--radius);padding:9px 10px;font:500 13px/1.25 var(--sans);cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;transition:background .15s,border-color .15s,color .15s}
 .sq svg{border-radius:var(--radius);flex:none}.sq>span:last-child{margin-top:auto}
-.sq:hover,.sq:focus-visible{transform:translateY(-3px);box-shadow:0 6px 14px -6px rgba(27,27,24,.35);outline:0}
-.sq.on{box-shadow:inset 0 0 0 2px currentColor}
+.sq:focus-visible,.ss:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.sq.on{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
 .sq.other{background:transparent;border:1.5px dashed var(--line2);color:var(--dim)}.sq.other.on{border-style:solid;border-color:var(--ink);color:var(--ink);box-shadow:none}
-.sqs:has(.sq.on) .sq:not(.on){opacity:.5}.sqs:has(.sq.on) .sq:not(.on):hover{opacity:1}
+.sqs:has(.sq.on) .sq:not(.on):not(.other){background:transparent;border-color:var(--line2);color:var(--dim)}
 .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;animation:rise .2s ease-out}
-.ss{border:0;border-radius:var(--radius);height:34px;padding:0 12px;font:500 13px var(--sans);cursor:pointer;transition:transform .15s,box-shadow .15s}
-.ss:hover,.ss:focus-visible{transform:translateY(-2px);outline:0}.ss.on{box-shadow:inset 0 0 0 2px currentColor}
+.ss{border:1.5px solid transparent;border-radius:var(--radius);height:34px;padding:0 12px;font:500 13px var(--sans);cursor:pointer;transition:border-color .15s}
+.ss.on{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
 .p0{background:var(--t0);color:var(--t0i)}.p1{background:var(--t1);color:var(--t1i)}.p2{background:var(--t2);color:var(--t2i)}.p3{background:var(--t3);color:var(--t3i)}
+/* Hover outlines only for a real mouse: on a phone :hover sticks to whatever square ends up under the last tap. */
+@media (hover:hover){.sq:hover,.ss:hover{border-color:currentColor}.sqs:has(.sq.on) .sq:not(.on):not(.other):hover{border-color:var(--ink);color:var(--ink)}}
 .zchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .zchip{font-size:12px;border:1px solid var(--line2);border-radius:var(--radius);padding:3px 10px;color:var(--soft)}
-.zchip.ok{background:var(--ink);border-color:var(--ink);color:#fff}
+.zchip.ok{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .zskip{margin-left:auto;font-size:13px;border:1px solid var(--ink);border-radius:var(--radius);background:var(--panel);padding:5px 12px;cursor:pointer}
 .zskip.ready{background:var(--green);border-color:var(--green);color:#fff}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -276,7 +278,7 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 .dock{background:linear-gradient(to bottom,rgba(22,22,20,0),var(--bg) 18px)}
 .rail button[aria-pressed=true],.crow.auto .nm{color:#CFE8BE}.crow.auto small{color:#9CCB7B}
 details.pick .menu::after{background:linear-gradient(to bottom,rgba(31,31,28,0),var(--panel))}
-.sq:hover,.sq:focus-visible,.composer,.pop,details.pick .menu{box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
+.composer,.pop,details.pick .menu{box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
 .zchip.ok,.talkb{color:#161614!important}
 }
 /* Looks. The page has five: classic (above), and four lighter ones set on <html data-theme>. html.nt marks any of the four. */
@@ -322,7 +324,7 @@ html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap
 .frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
 .frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
 /* Earth: black, a photoreal globe with a light on each country people use Flisk Chat from, thin rules, light Inter. */
-html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:300;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--sans:'Inter',Geist,system-ui,sans-serif}
+html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:300;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--t0:#2E1D17;--t0i:#F6C9B4;--t1:#2C2615;--t1i:#F2DC9E;--t2:#142B26;--t2i:#A9E3D3;--t3:#2E1A26;--t3i:#F0C2D6;--sans:'Inter',Geist,system-ui,sans-serif}
 .earthc{display:none}.ex{display:none}
 html[data-theme=earth].home .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
 html[data-theme=earth].home.earthon .earthc{opacity:1}
@@ -332,13 +334,14 @@ html[data-theme=earth].home .earthstill{display:block;position:fixed;z-index:0;p
 html[data-theme=earth].home.earthon .earthstill{opacity:0}
 @media (max-width:860px){html[data-theme=earth].home .earthstill{width:68vh;height:68vh;left:calc(50vw - 34vh);top:65vh}}
 html[data-theme=earth] .app{position:relative;z-index:1}
+html[data-theme=earth] .errbox,html[data-theme=earth] .err{background:#1A0F0D;border-color:#5A2620;color:#F2938B}html[data-theme=earth] .errbox .err{background:transparent}
 html[data-theme=earth].home .main,html[data-theme=earth].home .scroll,html[data-theme=earth].home .top{background:transparent}
 html[data-theme=earth] .dock{background:linear-gradient(to bottom,rgba(0,0,0,0),var(--bg) 18px)}
 html[data-theme=earth].home .dock{background:transparent}
 html[data-theme=earth] .welcome{text-align:left}
 html[data-theme=earth] .welcome h1{font:var(--flisk-heading-weight) clamp(38px,5.4vw,64px)/1.04 var(--flisk-font-heading);letter-spacing:-.035em;max-width:13ch}
 html[data-theme=earth] .welcome .sub{color:var(--dim);max-width:46ch;margin-left:0}
-html[data-theme=earth] .newchat,html[data-theme=earth] .send{color:var(--flisk-on-accent)}
+html[data-theme=earth] .newchat,html[data-theme=earth] .send,html[data-theme=earth] .btn.go,html[data-theme=earth] .zskip.ready{color:var(--flisk-on-accent)}
 @media (min-width:861px){html[data-theme=earth].home .col{margin-left:max(24px,5vw);max-width:660px}}
 html[data-theme=earth] .tpill{display:inline-flex;background:transparent;border-color:var(--line);text-transform:uppercase;letter-spacing:.14em;font-size:10px;white-space:nowrap;max-width:100%}
 html[data-theme=earth] .tpill em{letter-spacing:.14em;white-space:nowrap}
@@ -495,7 +498,7 @@ const CATS = [
   { id: 'check', label: 'Check a page', ideas: ['Fetch https://flisk.si and tell me its page title.', 'Is https://example.com up, and how fast does it answer?', 'List the links on https://flisk.sh.'] },
 ];
 
-// Zachman questions for the tree of squares: each answer has its own smaller squares, shown when you hover it.
+// Zachman questions for the tree of squares: each answer has its own smaller squares, shown when you choose it.
 const ZQ = [
   ['What', 'What is it?', [['A website', 'website', ['Landing page', 'Shop', 'Portfolio']], ['A small app', 'app', ['Calculator', 'Tracker', 'Booking form']], ['A system of services', 'system', ['Orders, stock, billing', 'Customers and invoices', 'A back office']], ['A video', 'video', ['Promo', 'Explainer', 'Social short']], ['An answer or check', 'answer', ['Maths', 'Facts from the web', 'Check a site']]]],
   ['Who', 'Who is it for?', [['Customers', '', ['People nearby', 'Online buyers', 'Regulars']], ['My team', '', ['In the office', 'Remote', 'Clients too']], ['Just me', '', ['Personal', 'Learning', 'A hobby']], ['Kids or students', '', ['Under 10', 'Teens', 'University']]]],
@@ -1111,7 +1114,7 @@ function limitCard(turn,task,b){
   const cp=node('button','btn','Copy my task');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(task).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy my task',1500);});};
   c.querySelector('.acts').append(fr,k,cp,discord());turn.setAttribute('data-limit','1');turn.appendChild(c);box.value=task;fit();down();
 }
-// Zachman questions as a tree of squares: hover (or tap) one to choose it and see its smaller squares; the next
+// Zachman questions as a tree of squares: click (or tap) one to choose it and see its smaller squares; the next
 // question opens below, until all six are answered. "Other…" takes a typed answer.
 const ZQ=window.__ZQ__||[];
 let treeAnswer=null;
@@ -1119,33 +1122,33 @@ let treeAnswer=null;
 addEventListener('beforeunload',e=>{if(document.querySelector('.work:not(.done):not(.fail)')){e.preventDefault();e.returnValue='';}});
 function ask6(task){
   chatting(true);
-  const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Hover a square to choose it and see more, or type your own answer.'));
+  const wrap=add(node('div','zq'));wrap.appendChild(node('div','h','A few quick questions so it fits you. Click a square to choose it and see more, or type your own answer.'));
   const rows=node('div');rows.style.cssText='display:flex;flex-direction:column;gap:14px';const chips=node('div','zchips');wrap.append(rows,chips);
-  let pick=[],sub=[],sent=false,prevLen=0;
+  let pick=[],sub=[],sent=false,prevLen=0,fk='';
   const kind=/\\b(video|clip|promo|reel)\\b/i.test(task)?'A video':/\\b(erp|back office|platform|services|microservices?|suite)\\b/i.test(task)?'A system of services':/\\b(app|tool|dashboard|calculator)\\b/i.test(task)?'A small app':/\\b(website|web page|webpage|landing|site|page|shop|store)\\b/i.test(task)?'A website':'';
   if(kind){pick=[kind];prevLen=1;}
   const ans=(i)=>pick[i]?pick[i]+(sub[i]?' ('+sub[i]+')':''):'';
   const finish=()=>{if(sent||!wrap.isConnected)return;sent=true;treeAnswer=null;box.placeholder='What should it do?';rows.remove();wrap.firstChild.textContent=pick.length?'Your answers':'Skipped the questions';const sk=chips.querySelector('.zskip');if(sk)sk.remove();chips.querySelectorAll('.zchip:not(.ok)').forEach(c=>c.remove());
     const full=pick.length?task+'\\n\\nAnswers: '+pick.map((p,i)=>ZQ[i][0]+': '+ans(i)).join('; ')+'.':task;history.push({role:'user',content:full});saveChat();run(full);};
   treeAnswer=(text)=>{if(sent)return;const i=Math.min(pick.length,ZQ.length-1);pick=pick.slice(0,i);sub=sub.slice(0,i);pick[i]=text.slice(0,120);draw();if(pick.length===ZQ.length)finish();};
-  // Hover chooses only when a mouse really moves over a square: a new row that appears under a still pointer (the
-  // chat scrolls as rows are added) must not choose itself, and a tap on a phone is a click, not a hover.
-  const hover=(el,fn)=>{let tm=0;el.onpointermove=(e)=>{if(e.pointerType!=='mouse'||tm)return;tm=setTimeout(()=>{tm=0;fn();},220);};el.onpointerleave=()=>{clearTimeout(tm);tm=0;};return ()=>{clearTimeout(tm);tm=0;};};
+  // A click (or tap) chooses; hover only outlines. Choosing on hover picked squares the mouse merely crossed, and
+  // each pick reflowed the rows so the next square slid under the still pointer and chose itself.
   const draw=()=>{if(!wrap.isConnected)return;const grew=pick.length>prevLen;prevLen=pick.length;rows.textContent='';
     for(let i=0;i<=Math.min(pick.length,ZQ.length-1);i++){const row=node('div','trow'+(grew&&i===pick.length?' new':'')+(i<pick.length-1?' done':''));row.appendChild(node('div','q',ZQ[i][1]));
       const right=node('div'),sqs=node('div','sqs');right.appendChild(sqs);row.appendChild(right);
       const opts=ZQ[i][2];
-      opts.forEach(([t,ic],k)=>{const on=pick[i]===t,s=node('button','sq p'+((i+k)%4)+(on?' on':''));s.type='button';s.setAttribute('aria-pressed',String(on));
+      opts.forEach(([t,ic],k)=>{const on=pick[i]===t,s=node('button','sq p'+((i+k)%4)+(on?' on':''));s.type='button';s.dataset.k=i+'|'+t;s.setAttribute('aria-pressed',String(on));
         s.innerHTML=(ic&&IC[ic]?svgAt(IC[ic],24):'')+'<span></span>';s.lastChild.textContent=t;
         const choose=()=>{if(sent||pick[i]===t)return;pick=pick.slice(0,i);sub=sub.slice(0,i);pick[i]=t;draw();};
-        const stop=hover(s,choose);s.onclick=()=>{stop();choose();if(pick.length===ZQ.length)finish();};sqs.appendChild(s);});
+        s.onclick=()=>{fk=s.dataset.k;choose();if(pick.length===ZQ.length)finish();};sqs.appendChild(s);});
       const custom=pick[i]&&!opts.some(o=>o[0]===pick[i]),o=node('button','sq other'+(custom?' on':''));o.type='button';
       o.innerHTML='<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 14.5V16h1.5l8.8-8.8-1.5-1.5zM14.6 4.2l1.2 1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span></span>';o.lastChild.textContent=custom?pick[i]:'Other…';
       o.onclick=()=>{if(sent)return;pick=pick.slice(0,i);sub=sub.slice(0,i);draw();box.placeholder='Type your own answer: '+ZQ[i][1];box.focus();};sqs.appendChild(o);
       const chosen=opts.findIndex(x=>x[0]===pick[i]);
-      if(chosen>=0){const subs=node('div','subs');opts[chosen][2].forEach(st=>{const on=sub[i]===st,b=node('button','ss p'+((i+chosen)%4)+(on?' on':''),st);b.type='button';b.setAttribute('aria-pressed',String(on));
-        const choose=()=>{if(sent||sub[i]===st)return;sub[i]=st;draw();};const stop=hover(b,choose);b.onclick=()=>{stop();choose();if(pick.length===ZQ.length)finish();};subs.appendChild(b);});right.appendChild(subs);}
+      if(chosen>=0){const subs=node('div','subs');opts[chosen][2].forEach(st=>{const on=sub[i]===st,b=node('button','ss p'+((i+chosen)%4)+(on?' on':''),st);b.type='button';b.dataset.k=i+'/'+st;b.setAttribute('aria-pressed',String(on));
+        const choose=()=>{if(sent||sub[i]===st)return;sub[i]=st;draw();};b.onclick=()=>{fk=b.dataset.k;choose();if(pick.length===ZQ.length)finish();};subs.appendChild(b);});right.appendChild(subs);}
       rows.appendChild(row);}
+    if(fk){const f=[...rows.querySelectorAll('button')].find(e=>e.dataset.k===fk);fk='';if(f)f.focus({preventScroll:true});}
     chips.textContent='';ZQ.forEach((z,i)=>chips.appendChild(node('span','zchip'+(pick[i]?' ok':''),z[0]+(pick[i]?': '+ans(i):''))));
     const all=pick.length===ZQ.length,sk=node('button','zskip'+(all?' ready':''),all?'Build it':'Skip, just build it');sk.type='button';sk.onclick=finish;chips.appendChild(sk);
     if(!sent)box.placeholder=pick.length<ZQ.length?'Or type your own answer: '+ZQ[pick.length][1]:'Add anything else, or press Build it';down();};
