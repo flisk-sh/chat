@@ -270,7 +270,9 @@ details.pick .menu{position:absolute;left:0;bottom:calc(100% + 10px);z-index:20;
 .app{grid-template-columns:1fr}.side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:40;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 60px -30px rgba(0,0,0,.4)}
 .side{visibility:hidden;transition:transform .2s,visibility 0s linear .2s}.side.open{transform:none;visibility:visible;transition:transform .2s}.scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(27,27,24,.35);opacity:0;pointer-events:none;transition:opacity .2s}.side.open~.scrim{opacity:1;pointer-events:auto}
 .composer{position:relative}.mp{position:static}.pop{left:0;right:0;width:auto}.top{display:flex}.col{padding:0 16px}.welcome{padding:6vh 0 16px}
-.u{max-width:90%}.composer .chip.plain:not(#voice){display:none}.pop{max-height:calc(100vh - 140px);overflow:auto}}
+.u{max-width:90%}.composer .chip.plain:not(#voice){display:none}
+/* When the buttons wrap, the mic keeps its place beside send instead of starting the second row alone. */
+.composer .bar #mic{margin-left:auto}.composer .bar #mic:not([hidden])+.send{margin-left:6px}.pop{max-height:calc(100vh - 140px);overflow:auto}}
 @media (prefers-color-scheme:dark){
 :root{color-scheme:dark;--bg:#161614;--panel:#1F1F1C;--side:#1B1B18;--line:#2E2D28;--line2:#3D3C35;--ink:#F1EFE8;--dim:#A8A598;--soft:#7C7A70;--green:#3E9A5E;--green-d:#4BB06E;--tint:#1F3326;--warn:#E0924A;--red:#F2746B;
 --t0:#4A2A1D;--t0i:#F6D2C2;--t1:#4A3A18;--t1i:#F7E3B0;--t2:#1D3F37;--t2i:#C9EDE4;--t3:#47263A;--t3i:#F4D3E1}
@@ -633,7 +635,8 @@ function videoCard(video){const v=node('div','vres'),pl=document.createElement('
 function resultLinks(text){const o=location.origin.replace(/[.]/g,'[.]'),site=new RegExp(o+'/s/[a-f0-9]{16}','g'),vid=new RegExp(o+'/v/[a-f0-9]{16}[.]mp4','g'),app=/https:[/][/][a-z0-9-]+-[0-9]{2,5}[.]preview[.]box[.]upstash[.]com/g,t=String(text||'');return {site:(t.match(app)||[])[0]||(t.match(site)||[])[0]||'',video:(t.match(vid)||[])[0]||''};}
 function openChat(c){newChat();chatId=c.id;history=c.msgs.slice();chatting(true);history.forEach(m=>{if(m.role!=='user'){asstMsg(m.content);const rl=resultLinks(m.content);if(rl.site)add(siteCard(rl.site));if(rl.video)add(videoCard(rl.video));return;}const u=userMsg(m.content);if(u&&Array.isArray(m.files)&&m.files.length){const fl=node('div','ufiles');m.files.forEach(n=>fl.appendChild(node('span','fchip',String(n))));u.appendChild(fl);}});const lastM=history[history.length-1];if(lastM&&lastM.role==='user'){const ic=node('div','errbox');ic.appendChild(node('div','err','This task was interrupted: the page was closed before it finished.'));const n=node('div','next');const rb=node('button','btn go','Run it again');rb.type='button';rb.onclick=()=>{ic.remove();run(lastM.content);};n.appendChild(rb);ic.appendChild(n);add(ic);}drawHist();}
 $('newchat').onclick=()=>{newChat();closeSide();};
-const side=$('side');const closeSide=()=>side.classList.remove('open');$('sideopen').onclick=()=>side.classList.add('open');$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
+const side=$('side');const closeSide=()=>side.classList.remove('open');// On a phone the sidebar is fixed to the window; start it under the flisk bar, which sits above it.
+$('sideopen').onclick=()=>{const fb=document.querySelector('flisk-bar'),t=fb?Math.max(0,fb.getBoundingClientRect().bottom):0;side.style.top=t+'px';side.classList.add('open');};$('sideclose').onclick=closeSide;$('scrim').onclick=closeSide;
 // Kinds of task: each pill shows its starter ideas.
 const CATS=window.__CATS__||[],sugg=$('sugg');
 const showCat=(id)=>{document.querySelectorAll('.cat').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cat===id)));const c=CATS.find(x=>x.id===id)||CATS[0];sugg.textContent='';c.ideas.forEach(t=>{const li=node('li'),b=node('button','',t);b.type='button';b.onclick=()=>{box.value=t;fit();box.focus();};li.appendChild(b);sugg.appendChild(li);});};
