@@ -353,7 +353,10 @@ export async function runTask({ task, history = [], github = undefined, origin =
   if (lastPast?.role === 'user' && String(lastPast.content || '').trim() === String(task).trim()) past.pop();
   // Asked "which model are you", the model would say it does not know: tell it what the visitor picked.
   const who = modelName ? `\n\nThe AI model behind you is ${String(modelName).slice(0, 120)}. If the user asks which model you are, say that, in "say".` : '';
-  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who + (github === undefined ? '' : githubNote(github, origin));
+  // A small model reads the one-app recipe and skips the "system" action: for a bigger app, say so plainly and last.
+  const bigApp = /\b(crm|erp|back office|platform|services|microservices?|suite|bigger app|system of services)\b/i.test(String(task));
+  const force = bigApp ? '\n\nThis task is a bigger app with several parts: your FIRST action must be the "system" action described above. Do not run flisk create and do not write the app files yourself.' : '';
+  const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who + force + (github === undefined ? '' : githubNote(github, origin));
   const token = github?.token || '';
   const messages = [{ role: 'system', content: system }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
