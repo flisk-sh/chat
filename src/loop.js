@@ -8,7 +8,7 @@ import { githubNote, scrub, setupGithub } from './github.js';
 export const MAX_STEPS = 8;
 // The visitor's own key pays for its own steps, so a bigger app (install, write several files, start, check) fits.
 export const BYO_STEPS = 16;
-export const GITHUB_STEPS = 32; // fork, clone, read, edit, test, commit, push and PR need more than 16 actions
+export const GITHUB_STEPS = 20; // a fork-to-PR run needs more than 16 actions, but Workers Free stops at 50 subrequests per run (a 32-action run died at 25)
 export const MAX_TASK = 2000;
 const OUT_CHARS = 1500;
 
