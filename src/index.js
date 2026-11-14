@@ -12,7 +12,7 @@ import { runOverSocket } from './browserpod.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { placeFrom, warmWeather, weatherNote } from './weather.js';
-import { ALEXA_PER_DAY, alexaHandle } from './alexa.js';
+import { ALEXA_PER_DAY, MAX_VOICE, alexaHandle, sign as alexaSign } from './alexa.js';
 
 export const TASKS_PER_DAY = 20;
 // Visitors without GitHub are counted by network address, not by cookie (a cookie can be thrown away), so their share is smaller.
@@ -419,9 +419,25 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin, freeModelLimit: freeModelOpts(env).overLimit }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
 
   // Alexa skill (Echo speaker at home): public URL guarded by ?key=ALEXA_KEY, see src/alexa.js.
+  // Ava reading an Alexa answer: Alexa fetches this mp3 itself (no cookie, no headers), so the URL carries a signature
+  // of the text made with ALEXA_KEY. 24 kHz 48 kbps mono mp3 is the format Alexa's <audio> accepts.
+  if (request.method === 'GET' && path === '/alexa/voice') {
+    const text = String(url.searchParams.get('t') || '');
+    const sig = String(url.searchParams.get('s') || '');
+    if (!env.ALEXA_KEY || !text || text.length > MAX_VOICE || sig !== (await alexaSign(text, env.ALEXA_KEY))) return json(403, { error: 'not allowed' });
+    try {
+      const bytes = await (async () => {
+        const stream = await (env.SPEAK || speakStream)(text, '', { backup: null, hedgeMs: AVA_HEAD_START_MS, firstMs: 4000 });
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+      })();
+      if (bytes.length < 500) return json(502, { error: 'the voice sent no audio' });
+      return new Response(bytes, { headers: { 'content-type': 'audio/mpeg', 'content-length': String(bytes.length), 'cache-control': 'public, max-age=86400' } });
+    } catch (e) { return json(502, { error: String(e?.message || e).slice(0, 160) }); }
+  }
   if (request.method === 'POST' && path === '/alexa') {
     const chosen = resolveModel({ ai: 'wolf' });
     return alexaHandle(request, env, {
+      origin,
       overLimit: () => overDailyLimit('alexa-home', { cache: env.LIMIT_CACHE, limit: ALEXA_PER_DAY, scope: 'alexa-limit' }),
       ask: async (messages, heard) => {
         const note = await weatherNote(heard, fetchImpl, placeFrom(request.cf));
