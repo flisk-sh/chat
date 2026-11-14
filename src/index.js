@@ -10,7 +10,7 @@ import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
-import { weatherNote } from './weather.js';
+import { placeFrom, warmWeather, weatherNote } from './weather.js';
 
 export const TASKS_PER_DAY = 20;
 // Visitors without GitHub are counted by network address, not by cookie (a cookie can be thrown away), so their share is smaller.
@@ -35,6 +35,7 @@ export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.fl
 - Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
 - If the person asks you to build or make something (a website, an app, a video, a system) or says "build it", reply with ONLY this JSON and nothing else: {"say":"one short sentence saying you are building it now","build":"the full task in plain words, with every detail they gave, using the earlier turns if they said build it"}. A real computer then builds it. Never say you cannot build.
 - Never invent phone numbers, emails, prices or addresses. If you do not know, say so in a few words.
+- You can tell the live weather anywhere: chat looks it up from a live weather service and gives you the numbers. Weather numbers you said earlier in this talk were real and live: never take them back, never say they were made up, and never say you cannot check the weather.
 - Reply in the language the person speaks.`;
 
 // One spoken turn for voice talk: the model answers directly, no computer, short and plain so it sounds right aloud.
@@ -396,7 +397,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (cookie) res.headers.append('set-cookie', cookie);
       return res;
     };
-    const page = (opts) => html(appPage({ ...opts, models, theme }));
+    // The talk circle's Earth turns to the visitor's side of the world (whole degrees only).
+    const spot = placeFrom(request.cf);
+    const here = spot ? { lat: Math.round(spot.latitude), lng: Math.round(spot.longitude) } : null;
+    const page = (opts) => html(appPage({ ...opts, models, theme, here }));
     if (!session) {
       if (!env.SESSION_SECRET) return withLook(page({ login: null, connected: [] }));
       const login = newAnonLogin();
@@ -478,6 +482,14 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       return r.error ? json(r.status, { error: r.error }) : json(200, { text: r.text, lang: r.lang });
     }
 
+    // The talk page calls this when it opens: the visitor's own weather is fetched now, so asking for it answers at once.
+    if (path === '/api/talk/warm') {
+      const job = warmWeather(placeFrom(request.cf), fetchImpl).catch(() => {});
+      if (waitUntil) waitUntil(job);
+      else await job;
+      return json(200, { ok: true });
+    }
+
     if (path === '/api/talk') {
       const body = await readJson(request);
       // One round trip per spoken turn: the audio comes with the request, is written down here, then answered.
@@ -493,7 +505,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const history = Array.isArray(body?.history) ? body.history.slice(-12) : [];
       if (heard) history.push({ role: 'user', content: heard });
       const messages = talkMessages(history, lang);
-      const note = await weatherNote(messages[messages.length - 1]?.content, fetchImpl);
+      const note = await weatherNote(messages[messages.length - 1]?.content, fetchImpl, placeFrom(request.cf));
       if (note) messages[0] = { role: 'system', content: `${messages[0].content}\n${note}` };
       if (messages.length < 2 || messages[messages.length - 1].role !== 'user') return json(400, { error: 'say something first' });
       const chosen = resolveModel(body.ai);

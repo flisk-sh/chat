@@ -1,5 +1,5 @@
 import { icon } from './icons.js';
-import { EARTH_JS, TEXTURES, earthUsers } from './earth.js';
+import { EARTH_JS, TEXTURES, earthUsers, orbJs } from './earth.js';
 import { LOGOS } from './logos.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -186,18 +186,22 @@ html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.
 .chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:pointer}.chip.plain:hover{border-color:var(--ink)}
 .chip.ico{padding:5px 8px;color:var(--dim)}.chip.ico.on{color:#fff;background:var(--green);border-color:var(--green)}
 .talkb{color:#fff!important;background:var(--ink)!important;border-color:var(--ink)!important}.talkb:hover{opacity:.85}
-.oracle{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 40%,#1d2b22 0,#0d110e 70%);color:#eef2ec;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:84px 16px 24px}
-.oracle[hidden]{display:none}.otop{position:absolute;top:18px;left:0;right:0;text-align:center;display:flex;flex-direction:column;gap:4px}.otitle{font-weight:600;letter-spacing:.04em}.ohint{font-size:12px;color:#9fb0a3}
-.orb{position:relative;width:190px;height:190px;border:0;background:none;cursor:pointer;padding:0;--lv:0}
-.orb .ocore{position:absolute;inset:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#b9f0c9,#3fa765 45%,#1e5c35 100%);box-shadow:0 0 60px rgba(80,200,120,.35);transform:scale(calc(1 + var(--lv)*.35));transition:transform .08s linear}
-.orb .oring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(140,230,170,.35)}
-.oracle.listening .oring{animation:oring 1.6s ease-out infinite}.oracle.thinking .ocore{animation:othink 1.1s ease-in-out infinite;filter:hue-rotate(40deg)}
-.oracle.speaking .ocore{animation:ospeak .7s ease-in-out infinite alternate}.oracle.idle .ocore{filter:grayscale(.6) brightness(.8)}
-@keyframes oring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}@keyframes othink{50%{transform:scale(.88)}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.12)}}
-.osens{display:flex;align-items:center;gap:10px;font-size:12px;color:#9fb0a3}.osens input{width:170px;accent-color:#3fa765;cursor:pointer}
+.oracle{position:fixed;inset:0;z-index:100;background:radial-gradient(1px 1px at 12% 18%,#fff8,transparent),radial-gradient(1px 1px at 78% 12%,#fff6,transparent),radial-gradient(1px 1px at 88% 64%,#fff7,transparent),radial-gradient(1px 1px at 22% 72%,#fff5,transparent),radial-gradient(1.5px 1.5px at 64% 86%,#fff6,transparent),radial-gradient(1px 1px at 40% 8%,#fff5,transparent),radial-gradient(1px 1px at 6% 48%,#fff4,transparent),radial-gradient(1px 1px at 95% 35%,#fff5,transparent),radial-gradient(circle at 50% 38%,#0b1a2e 0,#04070d 55%,#000 100%);color:#eef2ec;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:84px 16px 24px}
+.oracle[hidden]{display:none}.otop{position:absolute;top:18px;left:0;right:0;text-align:center;display:flex;flex-direction:column;gap:4px}.otitle{font-weight:600;letter-spacing:.04em}.ohint{font-size:12px;color:#9fb0c3}
+/* The talk circle is an Earth (earth.js orbClient). Until the 3D globe is ready, a still photo of Earth shows in its place. */
+.orb{position:relative;width:260px;height:260px;border:0;background:none;cursor:pointer;padding:0;--lv:0}
+.orb .ocore{position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 30% 28%,rgba(255,255,255,.18),rgba(255,255,255,0) 40%),radial-gradient(circle at 32% 30%,rgba(0,0,0,0) 40%,rgba(0,0,0,.92) 78%),url(${TEXTURES[1]}img/earth-blue-marble.jpg) 45% 50%/auto 100%,radial-gradient(circle at 35% 30%,#2a5f96,#0d2a4a 55%,#02060d);box-shadow:0 0 70px rgba(90,150,255,.28);transform:scale(calc(1 + var(--lv)*.18));transition:transform .08s linear,box-shadow .4s,filter .4s}
+.orb .ocore canvas{position:absolute;inset:-9%;width:118%;height:118%;opacity:0;transition:opacity .9s}
+.orb.earthready .ocore{background:none;box-shadow:0 0 60px rgba(90,150,255,.22)}.orb.earthready .ocore canvas{opacity:1}
+.orb .oring{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(140,190,255,.18)}
+.oracle.listening .oring{animation:oring 1.6s ease-out infinite}.oracle.thinking .ocore{box-shadow:0 0 90px rgba(120,180,255,.45)}
+.oracle.speaking .ocore{animation:ospeak .7s ease-in-out infinite alternate;box-shadow:0 0 80px rgba(110,170,255,.38)}.oracle.idle .ocore{filter:saturate(.55) brightness(.75)}
+@keyframes oring{0%{transform:scale(.92);opacity:1}100%{transform:scale(1.22);opacity:0}}@keyframes ospeak{from{transform:scale(1)}to{transform:scale(1.05)}}
+@media (max-width:520px),(max-height:700px){.orb{width:200px;height:200px}}
+.osens{display:flex;align-items:center;gap:10px;font-size:12px;color:#9fb0c3}.osens input{width:170px;accent-color:#5b9cff;cursor:pointer}
 .ostate{margin:0;font-size:15px;color:#cfe0d3;min-height:22px}.ocap{max-width:600px;width:100%;text-align:center;min-height:90px}
-.oyou{margin:0 0 10px;color:#9fb0a3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
-.ohear{margin-top:14px;padding:10px 18px;border-radius:var(--radius);border:1px solid #9fb0a3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
+.oyou{margin:0 0 10px;color:#9fb0c3;font-size:14px}.osay{margin:0;font-size:20px;line-height:1.45}
+.ohear{margin-top:14px;padding:10px 18px;border-radius:var(--radius);border:1px solid #9fb0c3;background:transparent;color:#eef2ec;font:inherit;cursor:pointer}.ohear:hover{background:#ffffff1a}.ohear[hidden]{display:none}
 .oend{width:58px;height:58px;border-radius:50%;border:0;background:#c0392b;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}.oend:hover{background:#a93226}
 @media (prefers-reduced-motion:reduce){.oracle .ocore,.oracle .oring{animation:none!important}}
 .chip.plain.on{color:#fff;background:var(--green);border:1px solid var(--green)}#mic{padding:4px 8px}#mic.rec{color:#fff;background:#c0392b;border-color:#c0392b;animation:micp 1.2s ease-in-out infinite}#mic.busy{opacity:.6;cursor:progress}@keyframes micp{50%{box-shadow:0 0 0 5px rgba(192,57,43,.25)}}
@@ -954,6 +958,8 @@ async function oOpen(){
   // The level meter's AudioContext is made inside the tap: an iPhone leaves one made later silent, and talk never hears you.
   const AC=window.AudioContext||window.webkitAudioContext;try{oCtx=new AC();oCtx.resume().catch(()=>{});}catch(e){oCtx=null;}
   stopTalk();oracle.hidden=false;oYou.textContent='';oSay.textContent='';oTurns=[];oLang='';oSet('thinking','Opening the microphone…');
+  // Look up the weather where you are now, while the mic opens, so asking for it answers at once.
+  fetch('/api/talk/warm',{method:'POST'}).catch(()=>{});
   try{oStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
   catch(e){oClose();errMsg(micHelp(e,'tap the wave again'));return;}
   if(!oCtx){oClose();errMsg('This browser cannot listen for pauses. Use the mic button instead.');return;}
@@ -1162,7 +1168,7 @@ const bare = (name) => icon(name, 10).replace(/ width="10" height="10" aria-hidd
 const logo = (id, size = 16) =>
   LOGOS[id] ? `<span class="lg" style="width:${size}px;height:${size}px" aria-hidden="true"><img src="${LOGOS[id]}" alt=""></span>` : `<span class="lt" style="width:${size}px;height:${size}px" aria-hidden="true">${esc(String(PROVIDER_NAMES[id] || id).slice(0, 2))}</span>`;
 
-export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'earth' }) {
+export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'earth', here = null }) {
   if (!THEME_IDS.includes(theme)) theme = 'earth';
   const list = cleanModels(models);
   const cards = PROVIDER_CARDS.map(
@@ -1233,7 +1239,7 @@ ${earthUsers(esc)}
 <aside class="thx rcol" aria-label="Computers and ideas"><h5>Computers · ${on.length} <a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h5>${on.length ? on.map((id) => `<div class="rc"><span class="wdot ok"></span>${esc(PROVIDER_NAMES[id])}<small>ready</small></div>`).join('') : `<div class="rc off"><span class="wdot"></span>${login && !anon ? 'None connected yet' : 'Sign in to see yours'}<small>—</small></div>`}<h5>Try saying</h5>${CATS[0].ideas.map((i) => `<button type="button" data-idea="${esc(i)}">“${esc(i)}”</button>`).join('')}</aside></div>
 <div id="oracle" class="oracle" hidden role="dialog" aria-modal="true" aria-label="Voice talk">
 <div class="otop"><span class="otitle">Flisk Oracle</span><span class="ohint">Talk. Pause when you are done. Tap the circle to interrupt.</span></div>
-<button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"></span></button>
+<button type="button" id="orb" class="orb" aria-label="Tap to talk or interrupt"><span class="oring"></span><span class="ocore"><canvas id="oearth" aria-hidden="true"></canvas></span></button>
 <p id="ostate" class="ostate" aria-live="polite">Starting…</p>
 <div class="ocap"><p id="oyou" class="oyou"></p><p id="osay" class="osay"></p><button type="button" id="ohear" class="ohear" hidden>Tap to hear the answer</button></div>
 <label class="osens" title="How much it hears. 0 = only your own loud, close voice; slide right to also catch quieter voices farther away in the room"><span>Only me</span><input id="osens" type="range" min="0" max="100" step="5" value="0" aria-label="Who it hears: 0 only me, 100 the whole room"><span>Whole room</span></label>
@@ -1242,7 +1248,8 @@ ${earthUsers(esc)}
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
     `window.__SIGNED__=${login ? 'true' : 'false'};window.__ANON__=${anon ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS +
-      EARTH_JS,
+      EARTH_JS +
+      orbJs(here),
     true,
     theme,
   );
