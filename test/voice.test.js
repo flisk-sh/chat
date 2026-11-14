@@ -266,3 +266,13 @@ test('voice talk hears only the loudest, closest voice by default; the slider le
   expect(0.06 > bar(0, 0.005, 0.2)).toBe(false);
   expect(0.06 > bar(100, 0.005, 0.2)).toBe(true);
 });
+
+test('voice talk never takes back live weather, and the talk circle is an Earth that turns to where you are', () => {
+  expect(TALK_SYSTEM).toMatch(/never take them back/);
+  expect(TALK_SYSTEM).toMatch(/never say you cannot check the weather/);
+  const page = appPage({ login: 'ann', connected: [], here: { lat: 51, lng: 0 } });
+  expect(page).toContain('id="oearth"');
+  expect(page).toContain('earth_day_4096.jpg');
+  expect(page).toContain('{"lat":51,"lng":0}');
+  expect(page).toContain("fetch('/api/talk/warm'");
+});

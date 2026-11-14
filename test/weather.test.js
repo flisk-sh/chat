@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { asksWeather, placeGuesses, sky, weatherNote } from '../src/weather.js';
+import { asksWeather, clearWeatherCache, placeFrom, placeGuesses, sky, weatherNote } from '../src/weather.js';
 
 test('weather questions in several languages are recognised', () => {
   for (const q of ["What's the weather in Kyiv?", 'Яка погода у Львові?', 'Какая погода сегодня', '¿Qué tiempo hace en Madrid?', 'Wie ist das Wetter in Berlin']) expect(asksWeather(q)).toBe(true);
@@ -34,4 +34,25 @@ test('not a weather question: nothing is looked up', async () => {
   let called = false;
   expect(await weatherNote('Write me a poem', async () => { called = true; return Response.json({}); })).toBe('');
   expect(called).toBe(false);
+});
+
+test('every spelling of a place is asked for at once, and a second ask comes from the cache', async () => {
+  clearWeatherCache();
+  let calls = 0, open = 0, most = 0;
+  const base = fakeNet({ 'Харк': [{ name: 'Харків', country: 'Ukraine', latitude: 49.99, longitude: 36.23, population: 1400000 }] });
+  const net = async (u) => { calls++; open++; most = Math.max(most, open); await new Promise((r) => setTimeout(r, 5)); open--; return base(u); };
+  expect(await weatherNote('Яка погода в Харкові?', net)).toMatch(/Харків/);
+  expect(most).toBeGreaterThan(1);
+  const first = calls;
+  expect(await weatherNote('Яка погода в Харкові?', net)).toMatch(/Харків/);
+  expect(calls).toBe(first);
+});
+
+test('no place named: the weather where the person is, from their connection', async () => {
+  clearWeatherCache();
+  const here = placeFrom({ city: 'London', country: 'GB', latitude: '51.51', longitude: '-0.13' });
+  const note = await weatherNote("What's the weather like?", fakeNet({}), here);
+  expect(note).toMatch(/London, GB \(where the person is now/);
+  expect(note).toMatch(/real and live/);
+  expect(placeFrom({})).toBe(null);
 });
