@@ -41,7 +41,7 @@ test('a task signs gh in on the computer with a file, never in a command, and sc
   const computer = {
     start: async () => ({ data: { id: 'p1', provider: 'daytona' } }),
     write: async (id, path, content) => (calls.push({ write: path, content }), { data: {} }),
-    run: async (id, command) => (calls.push({ run: command }), { data: { exitCode: 0, stdout: command.includes('gh auth status') ? 'GH_OK\n' : `leak ${TOKEN}\n`, stderr: '' } }),
+    run: async (id, command) => (calls.push({ run: command }), { data: { exitCode: 0, stdout: command.includes('gh api user') ? 'GH_OK\n' : `leak ${TOKEN}\n`, stderr: '' } }),
     read: async () => ({ data: { encoding: 'utf8', content: '' } }),
     stop: async () => ({ status: 200 }),
   };
