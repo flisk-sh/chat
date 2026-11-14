@@ -5,7 +5,7 @@ import { fleetClient } from './fleet.js';
 import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, modelFrom, modelLabel, resolveModel, runTask, WORKERS_AI_PER_DAY } from './loop.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, reviewsPage, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
-import { githubWebhook, REVIEWS_PER_DAY } from './review.js';
+import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { runOverSocket } from './browserpod.js';
@@ -305,7 +305,9 @@ async function adminRuns(request, env) {
   const totals = await env.DB.prepare('SELECT COUNT(*) AS tasks, SUM(error IS NOT NULL) AS failed, SUM(shared) AS live_links, SUM(copy) AS copies, SUM(big) AS big_apps, SUM(big AND system) AS big_built_by_system, SUM(big AND NOT system) AS big_skipped_system, SUM(bad_json) AS bad_json, SUM(provider_retries) AS provider_retries, ROUND(AVG(steps), 1) AS avg_steps, ROUND(AVG(ms) / 1000.0, 1) AS avg_seconds FROM task_runs WHERE created >= ?').bind(since).first();
   const byAi = await env.DB.prepare('SELECT ai, COUNT(*) AS tasks, SUM(error IS NOT NULL) AS failed, SUM(shared) AS live_links, SUM(big AND system) AS big_built_by_system, SUM(big) AS big_apps FROM task_runs WHERE created >= ? GROUP BY ai ORDER BY tasks DESC').bind(since).all();
   const recent = await env.DB.prepare('SELECT created, who, task, ai, provider, steps, errors, bad_json, big, system, first_action, shared, copy, ms, error, answer FROM task_runs WHERE created >= ? ORDER BY id DESC LIMIT 30').bind(since).all();
-  return json(200, { days, totals, byAi: byAi.results, recent: recent.results });
+  const reviews = await env.DB.prepare("SELECT COUNT(*) AS reviews, SUM(status = 'posted') AS posted, SUM(status = 'failed') AS failed, SUM(status = 'lost') AS lost, SUM(status = 'started') AS running, SUM(status = 'limited') AS limited, ROUND(AVG(ms) / 1000.0, 1) AS avg_seconds FROM review_runs WHERE created >= ?").bind(since).first().catch(() => null);
+  const recentReviews = await env.DB.prepare('SELECT created, repo, pr, auto, status, ai, verdict, error, ms FROM review_runs WHERE created >= ? ORDER BY id DESC LIMIT 30').bind(since).all().catch(() => ({ results: [] }));
+  return json(200, { days, totals, byAi: byAi.results, recent: recent.results, reviews, recentReviews: recentReviews.results });
 }
 
 // A site a task made: stored as one HTML file, linked by an unguessable id, kept 7 days, the oldest dropped over 5.
@@ -771,5 +773,8 @@ export default {
   fetch: (request, env, ectx) =>
     handle(request, env, { waitUntil: ectx?.waitUntil ? (p) => ectx.waitUntil(p) : null }).catch((e) => json(500, { error: 'chat failed: ' + String(e?.message || e).slice(0, 200) })),
   // Hourly (wrangler.toml [triggers]): delete computers that are past their time.
-  scheduled: (event, env, ectx) => ectx.waitUntil(cleanPods(env).then((r) => console.log('cleanPods', JSON.stringify(r)))),
+  scheduled: (event, env, ectx) => {
+    ectx.waitUntil(cleanPods(env).then((r) => console.log('cleanPods', JSON.stringify(r))));
+    ectx.waitUntil(reportLostReviews(env).then((r) => console.log('lostReviews', JSON.stringify(r))).catch((e) => console.log('lostReviews failed', String(e?.message || e))));
+  },
 };
