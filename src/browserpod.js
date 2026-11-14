@@ -97,10 +97,11 @@ export function runOverSocket(socket, { gate, origin, publish, saveVideo, fetchI
     if (msg?.type === 'pod_reply') return pod.reply(msg);
     if (msg?.type !== 'task' || started) return;
     started = true;
+    let ok;
     try {
       const task = String(msg.task || '').trim();
       const refuse = !task ? { status: 400, error: 'type a task' } : task.length > MAX_TASK ? { status: 400, error: `keep the task under ${MAX_TASK} characters` } : null;
-      const ok = refuse ? { refuse } : await gate(msg);
+      ok = refuse ? { refuse } : await gate(msg);
       if (ok.refuse) {
         send({ type: 'refused', ...ok.refuse });
         return end();
@@ -113,6 +114,10 @@ export function runOverSocket(socket, { gate, origin, publish, saveVideo, fetchI
       send({ type: 'error', error: String(e?.message || e).slice(0, 200) });
       send({ type: 'done', error: 'failed' });
     }
+    // A free task the free AI never answered is given back (gate's settle).
+    try {
+      await ok?.settle?.();
+    } catch {}
     end();
   });
   return done;

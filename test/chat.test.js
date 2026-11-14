@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { handle, overDailyLimit, publishSite, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
+import { answeredModel, handle, overDailyLimit, publishSite, refundDailyLimit, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
 import { modelLabel, parseAction, resolveModel, runTask, SYSTEM } from '../src/loop.js';
 import { EARTH_JS, shortCount, THREE_SRC, USERS, USERS_DATE } from '../src/earth.js';
 import { makeSession } from '../src/session.js';
@@ -157,6 +157,26 @@ describe('safety', () => {
     for (let i = 0; i < 20; i++) expect(await overDailyLimit('octo', { cache })).toBe(false);
     expect(await overDailyLimit('octo', { cache })).toBe(true);
     expect(await overDailyLimit('other', { cache })).toBe(false);
+  });
+
+  test('a task the free AI never answered gives its count back, and the count never goes below zero', async () => {
+    const store = new Map();
+    const cache = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+    for (let i = 0; i < 20; i++) await overDailyLimit('octo', { cache });
+    await refundDailyLimit('octo', { cache });
+    expect(await overDailyLimit('octo', { cache })).toBe(false);
+    expect(await overDailyLimit('octo', { cache })).toBe(true);
+    await refundDailyLimit('nobody', { cache });
+    expect([...store.keys()].some((k) => k.includes('nobody'))).toBe(false);
+  });
+
+  test('answeredModel tells whether the model answered at least once', async () => {
+    const busy = answeredModel(async () => ({ error: 'busy', kind: 'busy' }));
+    await busy.ask([]);
+    expect(busy.answered()).toBe(false);
+    const ok = answeredModel(async () => ({ text: 'hi' }));
+    expect(await ok.ask([])).toEqual({ text: 'hi' });
+    expect(ok.answered()).toBe(true);
   });
 
   test('the home page and the app page escape the login and their scripts parse', async () => {

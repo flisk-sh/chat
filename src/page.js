@@ -498,7 +498,7 @@ const CATS = [
   { id: 'website', label: 'Website', ideas: ['Make me a one-page website for a coffee shop called Moon Roast.', 'A wedding page with the date, the place and an RSVP form.', 'A menu page for my bakery, with prices and opening hours.'] },
   { id: 'app', label: 'Small app', ideas: ['Build a tip calculator web page with a dark theme.', 'A countdown timer page for my product launch on December 1.', 'A simple to-do list page that remembers my items.'] },
   { id: 'system', label: 'System', ideas: ['Build a back office with orders, stock, billing and customers as separate services, and check they all answer.', 'A booking platform: bookings, staff, payments and reminders as four services.', 'Start a support suite with tickets, users, notifications and reports, and show me which parts are healthy.'] },
-  { id: 'answer', label: 'Answer', ideas: ['What is the 40th Fibonacci number? Check it with Python.', 'How many working days are there between today and New Year?', 'Turn 72 degrees Fahrenheit into Celsius and show the formula.'] },
+  { id: 'answer', label: 'Answer', ideas: ['What is the 40th Fibonacci number? Work it out on the computer.', 'How many working days are there between today and New Year?', 'Turn 72 degrees Fahrenheit into Celsius and show the formula.'] },
   { id: 'video', label: 'Video', ideas: ['Make a 30-second promo video for my coffee shop called Moon Roast.', 'A short explainer video: how to brew pour-over coffee in 5 steps.', 'A birthday video for my friend Sam with 4 happy messages.'] },
   { id: 'check', label: 'Check a page', ideas: ['Fetch https://flisk.si and tell me its page title.', 'Is https://example.com up, and how fast does it answer?', 'List the links on https://flisk.sh.'] },
 ];

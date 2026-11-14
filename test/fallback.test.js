@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'bun:test';
+import { afterAll, beforeEach, expect, test } from 'bun:test';
 import { FREE_BUSY, freeOpenRouterModels, modelFrom, OPENROUTER_URL, resetFallbacks, WORKERS_AI_FALLBACK } from '../src/loop.js';
 
 const WOLF = 'https://inf.test/v1/chat/completions';
@@ -24,6 +24,8 @@ function world({ wolf = budgetOut, or = {}, ai = null } = {}) {
 }
 
 beforeEach(() => resetFallbacks());
+// Wolf's rest is module state: leave it clear for the test files that run after this one.
+afterAll(() => resetFallbacks());
 
 test('Wolf answers first when it can', async () => {
   const w = world({ wolf: () => answer('wolf here') });
@@ -193,4 +195,11 @@ test('a refused setting is not reported as "model not available"', async () => {
   const r = await modelFrom({}, fetchImpl, { ...claude, ai: 'openrouter', model: 'x/new' })(msgs);
   expect(r.kind).toBe('setting');
   expect(r.error).not.toMatch(/is not available/);
+});
+
+test('Workers AI answering in the newer OpenAI-style shape (choices) is read, not taken as an empty answer', async () => {
+  const w = world();
+  delete w.env.OPENROUTER_KEY;
+  w.env.AI = { run: async () => ({ object: 'chat.completion', model: '@cf/meta/llama-3.1-8b-fast-v2', choices: [{ index: 0, message: { role: 'assistant', content: 'from the new shape' } }] }) };
+  expect(await modelFrom(w.env, w.fetchImpl)(msgs)).toEqual({ text: 'from the new shape', by: WORKERS_AI_FALLBACK });
 });

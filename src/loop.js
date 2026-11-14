@@ -270,7 +270,9 @@ function workersAiModel(env, overLimit) {
     if (overLimit && (await overLimit())) return { error: 'the Workers AI fallback is used up for today', kind: 'limit' };
     try {
       const r = await env.AI.run(WORKERS_AI_FALLBACK, { messages, max_tokens: 1024, temperature: 0 });
-      const text = typeof r?.response === 'string' ? r.response : r?.response ? JSON.stringify(r.response) : '';
+      // Older models answer { response }; newer ones (llama-3.1-8b-fast-v2 behind the same name) answer OpenAI-style choices.
+      const raw = r?.response ?? r?.choices?.[0]?.message?.content ?? '';
+      const text = typeof raw === 'string' ? raw : JSON.stringify(raw);
       return text.trim() ? { text } : { error: 'the model sent an empty answer', kind: 'empty' };
     } catch (e) {
       return { error: String(e?.message || e).slice(0, 200), kind: 'provider' };
