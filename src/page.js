@@ -167,6 +167,10 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .dock{padding:0 0 14px;background:linear-gradient(to bottom,rgba(247,246,242,0),var(--bg) 18px)}
 .composer{background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);box-shadow:0 10px 30px -18px rgba(27,27,24,.35);padding:12px 12px 10px 16px;transition:border-color .15s,box-shadow .15s}
 .composer:focus-within{border-color:var(--ink)}
+/* Everything but the + and Send stays folded until + is pressed. */
+html:not(.plus) .composer .bar>:not(#plus):not(#go),html:not(.plus) .cats,html:not(.plus) .sidesec .comps,html:not(.plus) .rcol .rc,html:not(.plus) .rcol h5:first-child{display:none!important}
+#plus[aria-expanded=true]{color:#fff;background:var(--green);border-color:var(--green)}#plus svg{transition:transform .15s}#plus[aria-expanded=true] svg{transform:rotate(45deg)}
+.composer .bar #go{margin-left:auto}
 .composer textarea{display:block;width:100%;min-height:52px;max-height:200px;border:0;outline:0;resize:none;background:transparent;font:16px/1.5 var(--sans);color:var(--ink);padding:2px 0 8px}
 .composer textarea::placeholder{color:var(--soft)}
 .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -668,6 +672,7 @@ const auto=$('auto'),opts=[...document.querySelectorAll('input[name=sb]')],sum=$
 const picked=()=>opts.filter(o=>o.checked).map(o=>o.value);
 const syncSb=()=>{const p=picked();auto.checked=!p.length;sum.textContent=p.length?p.map(x=>document.querySelector('input[value='+x+']').dataset.label).join(', '):'Fleet: cheapest first';};
 auto.onchange=()=>{if(auto.checked)opts.forEach(o=>o.checked=false);syncSb();};opts.forEach(o=>o.onchange=syncSb);syncSb();
+{const pb=document.getElementById('plus');if(pb)pb.onclick=()=>{const on=document.documentElement.classList.toggle('plus');pb.setAttribute('aria-expanded',String(on));};}
 const pk=document.querySelector('details.pick');
 document.addEventListener('click',e=>{if(pk&&pk.open&&!pk.contains(e.target))pk.open=false;if(!pop.hidden&&e.target.isConnected&&!$('mp').contains(e.target))closePop();});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!pop.hidden){closePop();mpBtn.focus();}else if(pk&&pk.open){pk.open=false;pk.querySelector('summary').focus();}else closeSide();});
@@ -1086,6 +1091,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <div class="dock"><div class="col">
 <form id="ask" class="composer"><div id="files" class="files"></div><textarea id="task" maxlength="2000" rows="2" placeholder="What should it do?" aria-label="Task"></textarea>
 <div class="bar">
+<button type="button" id="plus" class="chip ico" aria-expanded="false" aria-controls="ask" title="More: model, computers, voice, attach" aria-label="More options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 <button type="button" id="attach" class="attach" title="Attach files (up to 3, 150 KB each)" aria-label="Attach files"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><input id="fileIn" type="file" multiple hidden>
 <div class="mp" id="mp"><button type="button" id="mpbtn" class="chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="mppop"><i class="ti" style="display:inline-flex"></i><span class="mpname">Flisk Wolf</span><i class="chev"></i></button>
 <div id="mppop" class="pop" hidden><div class="ps"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="mq" type="search" placeholder="Search models" aria-label="Search models" autocomplete="off"></div>
