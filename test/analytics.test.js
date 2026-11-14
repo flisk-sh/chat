@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { handle, recordRun } from '../src/index.js';
+import { alertRun, handle, recordRun, runProblem } from '../src/index.js';
 import { runTask } from '../src/loop.js';
 import { fakeD1 } from './d1.js';
 
@@ -28,5 +28,22 @@ describe('build analytics', () => {
     expect(ok.status).toBe(200);
     expect(body.totals.tasks).toBe(1);
     expect(body.recent[0].who).toBe('anon');
+  });
+
+  test('a failed or weak task goes to the Discord webhook, a good one does not', async () => {
+    const sent = [];
+    const f = async (url, init) => (sent.push(JSON.parse(init.body)), new Response(null, { status: 204 }));
+    const env = { DISCORD_ERRORS_WEBHOOK: 'https://discord.com/api/webhooks/1/x' };
+    const base = { steps: [{}], links: [], ms: 4000 };
+    expect(runProblem({ ...base, stats: { big: true, system: true, shared: true } })).toBeNull();
+    await alertRun(env, { task: 'build me a CRM', ai: 'Wolf', anon: true, result: { ...base, stats: { big: true, system: true, shared: true } } }, f);
+    expect(sent.length).toBe(0);
+    await alertRun(env, { task: 'build me a CRM', ai: 'Wolf', anon: true, result: { ...base, stats: { big: true, system: false } } }, f);
+    await alertRun(env, { task: 'x', ai: 'Wolf', anon: false, result: { ...base, error: 'ran out of steps', stats: {} } }, f);
+    expect(sent.length).toBe(2);
+    expect(sent[0].content).toContain('did not use the system builder');
+    expect(sent[0].allowed_mentions).toEqual({ parse: [] });
+    await alertRun({}, { task: 'x', ai: 'a', anon: false, result: { ...base, error: 'e', stats: {} } }, f);
+    expect(sent.length).toBe(2);
   });
 });
