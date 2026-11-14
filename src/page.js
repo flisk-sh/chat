@@ -796,15 +796,15 @@ const unlockAudio=()=>{try{AUD.src=SILENT;const p=AUD.play();if(p)p.catch(()=>{}
 const stopTalk=()=>{sayGen++;try{AUD.pause();}catch(e){}try{TTS&&TTS.cancel();}catch(e){}};
 // When Ava cannot start, the browser reads with a lady's voice too: the ranked names below come first, a man's voice
 // (Daniel, Alex, Google UK English Male...) is used only when the browser has nothing else for that language.
-const LADY=['Ava','Samantha','Google US English','Aria','Jenny','Emma','Michelle','Zira','Allison','Susan','Google UK English Female','Female','Serena','Karen','Moira','Tessa','Kate','Fiona','Victoria','Natural','Neural','Premium','Enhanced','Google'];
-const MALE=['Male','Daniel','Alex','Fred','Tom','Aaron','Arthur','Gordon','Rishi','Ralph','Albert','Bruce','Junior','Reed','Rocko','Eddy','Grandpa','Guy','Davis','Andrew','Brian','Christopher','Eric','Roger','Steffan','Thomas','Oliver','Ryan','David','Mark','George','James','Evan','Nathan','Jorge','Diego','Juan','Yuri','Maxim','Dmitry','Ostap','Pavel','Martin','Markus','Luca','Ivan','Lee'];
+const LADY=['Ava','Samantha','Google US English','Aria','Jenny','Emma','Michelle','Zira','Allison','Susan','Google UK English Female','Female','Serena','Karen','Moira','Tessa','Kate','Fiona','Victoria','Fenna','Colette','Ellen','Claire','Natural','Neural','Premium','Enhanced','Google'];
+const MALE=['Male','Daniel','Alex','Fred','Tom','Aaron','Arthur','Gordon','Rishi','Ralph','Albert','Bruce','Junior','Reed','Rocko','Eddy','Grandpa','Guy','Davis','Andrew','Brian','Christopher','Eric','Roger','Steffan','Thomas','Oliver','Ryan','David','Mark','George','James','Evan','Nathan','Jorge','Diego','Juan','Yuri','Maxim','Dmitry','Ostap','Pavel','Martin','Markus','Luca','Ivan','Lee','Xander','Maarten','Arnaud'];
 const isMale=(v)=>String(v.name).split(/[^A-Za-z]+/).some(w=>MALE.indexOf(w)>=0);
 // Which language a text is in: Whisper's answer when there is one, else a guess from the letters, else the browser's.
 const LOC={en:'en-US',uk:'uk-UA',ru:'ru-RU',es:'es-ES',de:'de-DE',fr:'fr-FR',it:'it-IT',pt:'pt-BR',pl:'pl-PL',nl:'nl-NL',tr:'tr-TR',cs:'cs-CZ',ja:'ja-JP',ko:'ko-KR',zh:'zh-CN',ar:'ar-SA',he:'he-IL',hi:'hi-IN',el:'el-GR',sv:'sv-SE',fi:'fi-FI',da:'da-DK',no:'nb-NO',ro:'ro-RO',hu:'hu-HU',bg:'bg-BG',vi:'vi-VN',th:'th-TH',id:'id-ID',kk:'kk-KZ',ka:'ka-GE',be:'be-BY'};
 const langOf=(t,hint)=>{if(hint)return String(hint).slice(0,2).toLowerCase();t=String(t||'');
   if(/[іїєґ]/i.test(t))return 'uk';if(/[а-яё]/i.test(t))return 'ru';if(/[가-힣]/.test(t))return 'ko';if(/[ぁ-ヿ]/.test(t))return 'ja';if(/[一-鿿]/.test(t))return 'zh';
   if(/[α-ω]/i.test(t))return 'el';if(/[א-ת]/.test(t))return 'he';if(/[ء-ي]/.test(t))return 'ar';if(/[ऀ-ॿ]/.test(t))return 'hi';if(/[ก-๛]/.test(t))return 'th';
-  const w=' '+t.toLowerCase()+' ';if(/[¿¡ñ]/.test(w)||/ (el|los|las|que|es|por|para|una|cuál|qué) /.test(w))return 'es';if(/[ßäöü]/.test(w)||/ (der|die|und|ist|nicht|ich) /.test(w))return 'de';
+  const w=' '+t.toLowerCase()+' ';if(/[¿¡ñ]/.test(w)||/ (el|los|las|que|es|por|para|una|cuál|qué) /.test(w))return 'es';if(/ (het|een|niet|ik|wat|zijn|jij|hoe|ook|maar|heb|wordt|graag|bedankt|dank|goed|mijn) /.test(w)&&!/[ßäöü]/.test(w))return 'nl';if(/[ßäöü]/.test(w)||/ (der|die|und|ist|nicht|ich) /.test(w))return 'de';
   if(/[çœ]/.test(w)||/ (le|les|est|une|vous|je|pas|des) /.test(w))return 'fr';if(/[ãõ]/.test(w)||/ (não|você|uma|para|com) /.test(w))return 'pt';if(/[łąęśźż]/.test(w))return 'pl';
   if(/ (the|and|is|you|what|how|to) /.test(w))return 'en';return (navigator.language||'en').slice(0,2).toLowerCase();};
 const pickVoice=(lang)=>{if(!TTS)return null;const l=String(lang).slice(0,2).toLowerCase(),vs=TTS.getVoices().filter(v=>v.lang&&v.lang.slice(0,2).toLowerCase()===l);if(!vs.length)return null;
@@ -942,7 +942,7 @@ const hearOne=(send)=>new Promise((done)=>{const type=['audio/webm;codecs=opus',
 // The moment a turn ends, a short "Mm-hm" in your language answers at once, while the real answer is made. The clips
 // are fetched once when talk opens (Ava's voice), so playing one never waits on the network; until they arrive, a
 // soft two-note chime answers instead.
-const ACKS={en:['Mm-hm.','Okay.','Got it.','Right.'],uk:['Ага.','Так.','Зрозуміло.'],ru:['Ага.','Так.','Понятно.'],es:['Vale.','Ajá.','Entendido.'],de:['Okay.','Verstehe.','Mhm.'],fr:['D’accord.','Je vois.','Hm hm.'],it:['Va bene.','Capito.'],pt:['Certo.','Entendi.'],pl:['Dobrze.','Jasne.']};
+const ACKS={en:['Mm-hm.','Okay.','Got it.','Right.'],uk:['Ага.','Так.','Зрозуміло.'],ru:['Ага.','Так.','Понятно.'],es:['Vale.','Ajá.','Entendido.'],de:['Okay.','Verstehe.','Mhm.'],fr:['D’accord.','Je vois.','Hm hm.'],it:['Va bene.','Capito.'],pt:['Certo.','Entendi.'],pl:['Dobrze.','Jasne.'],nl:['Oké.','Ja.','Begrijp ik.']};
 const ackClips={};let ackN=0;
 const ackLang=()=>{const l=String(oLang||navigator.language||'en').slice(0,2).toLowerCase();return ACKS[l]?l:'en';};
 function ackLoad(){const l=ackLang();if(ackClips[l]||!window.__SIGNED__)return;const got=ackClips[l]=[];

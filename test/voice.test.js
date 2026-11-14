@@ -148,7 +148,7 @@ test('voice talk starts a build when asked, from the model JSON or from the word
   expect(page).toContain('form.requestSubmit()');
 });
 
-import { ssml, secMsGec, speakStream, VOICE } from '../src/tts.js';
+import { ssml, secMsGec, speakStream, VOICE, voiceFor } from '../src/tts.js';
 
 test('the voice request uses Ava Multilingual, the locale heard, and escapes the text', () => {
   const x = ssml('Tom & <Jerry>', 'uk');
@@ -403,4 +403,23 @@ test('voice: the Melo backup decodes Workers AI audio, only for languages Melo s
   expect(runs).toEqual([[MELO_MODEL, { prompt: 'Bonjour', lang: 'fr' }]]);
   expect(meloBackup(env, '')).not.toBeNull(); // no language means English
   await expect(meloBackup({ AI: { run: async () => ({ audio: '' }) } }, 'en')('x')).rejects.toThrow('no audio');
+});
+
+test('Dutch is read by Fenna, a native Dutch lady voice; other languages keep Ava', () => {
+  expect(voiceFor('nl')).toBe('nl-NL-FennaNeural');
+  expect(ssml('Hallo', 'nl')).toContain("<voice name='nl-NL-FennaNeural'>");
+  expect(ssml('Hallo', 'nl')).toContain("xml:lang='nl-NL'");
+  for (const l of ['en', 'uk', 'de', '']) expect(voiceFor(l)).toBe(VOICE);
+});
+
+test('the page hears Dutch text, says Dutch mm-hm in talk, and skips the Dutch man voice Xander', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain("nl:['Oké.','Ja.','Begrijp ik.']");
+  const cut = (a, b) => page.slice(page.indexOf(a), page.indexOf(b));
+  const langOf = new Function(`${cut('const langOf=', 'const pickVoice=')}\nreturn langOf;`)();
+  expect(langOf('Hoe gaat het met je? Ik heb een vraag.')).toBe('nl');
+  expect(langOf('What is the weather today?')).toBe('en');
+  expect(langOf('Ich habe heute keine Zeit, das ist nicht gut.')).toBe('de');
+  const pick = (voices, lang) => new Function('TTS', `${cut('const LADY=', 'const langOf=')}${cut('const pickVoice=', 'const utter=')}\nreturn pickVoice(${JSON.stringify(lang)});`)({ getVoices: () => voices });
+  expect(pick([{ name: 'Xander', lang: 'nl-NL', default: true }, { name: 'Ellen', lang: 'nl-BE' }], 'nl').name).toBe('Ellen');
 });
