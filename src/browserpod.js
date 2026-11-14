@@ -13,7 +13,7 @@ export const BROWSER_NOTE = `
 IMPORTANT, about this computer: it is a small Linux inside the user's own browser tab. It has busybox sh only (ls, cat, sed, awk, grep, tar, gzip, base64, wc).
 It has NO internet, NO python3, NO node, NO flisk, NO git, and nothing can be installed (no apt, apk, pip or npm).
 So here: never use curl or wget, and never use the "system", "video" or share steps. For a website, "write" one complete index.html (inline CSS and JS) and "publish" it.
-If the task truly needs the internet, Python, Node, an installed package or a running app, do not try: reply with "say" and tell the user this needs a cloud computer, which they connect once under Computers in the menu.`;
+If the task truly needs the internet, Python, Node, an installed package or a running app, do not try: reply with "say" and tell the user this needs a cloud computer, which they connect once: sign in with GitHub, then open Computers in the menu.`;
 
 // send(event) goes to the page. Returns the computer for runTask plus reply(message) and close() for the socket.
 export function browserComputer(send, { callMs = CALL_MS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
