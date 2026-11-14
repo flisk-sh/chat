@@ -241,4 +241,6 @@ function earthClient(U, SRC, G, TG) {
   check();
 }
 
-export const EARTH_JS = `\n;(${earthClient.toString()})(${JSON.stringify(USERS)},${JSON.stringify(THREE_SRC)},${JSON.stringify(TEXTURES[0])},${JSON.stringify(TEXTURES[1])});\n`;
+// Wrangler bundles with keepNames, which puts __name(fn, 'x') calls inside earthClient's text;
+// the page has no __name, so give it a do-nothing one in this function's own scope.
+export const EARTH_JS = `\n;(function(){var __name=function(f){return f};(${earthClient.toString()})(${JSON.stringify(USERS)},${JSON.stringify(THREE_SRC)},${JSON.stringify(TEXTURES[0])},${JSON.stringify(TEXTURES[1])})})();\n`;
