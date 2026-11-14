@@ -4,6 +4,9 @@
 import { hashSecMsGecV2 } from 'msedge-tts/dist/SecMsGec.js';
 
 export const VOICE = 'en-US-AvaMultilingualNeural';
+// Languages where a native lady's voice sounds better than Ava's accent: Dutch gets Fenna (nl-NL), from the same service.
+export const VOICES = { nl: 'nl-NL-FennaNeural' };
+export const voiceFor = (lang = '') => VOICES[String(lang).slice(0, 2).toLowerCase()] || VOICE;
 export const RATE = '-5%';
 export const PITCH = '-4Hz';
 export const MAX_SPEAK = 1200;
@@ -29,7 +32,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 export function ssml(text, lang = '') {
   const loc = LOCALES[String(lang).slice(0, 2).toLowerCase()] || 'en-US';
   const body = esc(String(text).slice(0, MAX_SPEAK));
-  return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${loc}'><voice name='${VOICE}'><prosody pitch='${PITCH}' rate='${RATE}' volume='+0%'>${body}</prosody></voice></speak>`;
+  return `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${loc}'><voice name='${voiceFor(lang)}'><prosody pitch='${PITCH}' rate='${RATE}' volume='+0%'>${body}</prosody></voice></speak>`;
 }
 
 const uuid = () => crypto.randomUUID().replace(/-/g, '');
