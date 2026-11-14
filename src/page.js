@@ -788,6 +788,9 @@ let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MOD
 if(pm&&cats)pm.prepend(cats);
 const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));if(on)placeFloat(pm,pb);};
 if(pb)pb.onclick=()=>setPlus(!document.documentElement.classList.contains('plus'));
+// A kind of task picked in the + menu shows its result: the menu closes, the box says what to type, and the ideas list opens (on Earth it sits behind "Try an idea").
+const CATHINT={website:'Describe the website to make',app:'Describe the small app to make',system:'Describe the system and its parts',answer:'Ask anything',video:'Describe the video to make',check:'Paste the address of the page to check'};
+if(pm)pm.querySelectorAll('.cat').forEach(b=>b.addEventListener('click',()=>{const t=document.getElementById('task');if(t&&CATHINT[b.dataset.cat])t.placeholder=CATHINT[b.dataset.cat];setPlus(false);const ti=document.querySelector('[data-ex=ideas]');if(ti&&ti.getAttribute('aria-expanded')!=='true')ti.click();const sg=document.getElementById('sugg');if(sg&&sg.offsetParent)sg.scrollIntoView({block:'nearest',behavior:'smooth'});if(t)t.focus();}));
 const pkIn=pm&&pm.querySelector('details.pick');if(pkIn)pkIn.addEventListener('toggle',()=>{if(document.documentElement.classList.contains('plus'))placeFloat(pm,pb);if(pkIn.open)pkIn.scrollIntoView({block:'nearest'});});
 document.addEventListener('click',(e)=>{if(document.documentElement.classList.contains('plus')&&!e.target.closest('#plus,#plusmenu')&&!e.target.closest('.sidesec,.rcol'))setPlus(false);});
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&document.documentElement.classList.contains('plus'))setPlus(false);});}
