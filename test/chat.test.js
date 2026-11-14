@@ -925,6 +925,16 @@ describe('a build ends with a public link', () => {
   });
 });
 
+// The composer shows only + and Send; the rest opens from +.
+describe('composer plus', () => {
+  test('a + button folds the model, computers, voice and attach controls, and the start chips', async () => {
+    const html = await (await handle(new Request(`${ORIGIN}/`), env())).text();
+    expect(html).toContain('id="plus"');
+    expect(html).toContain('html:not(.plus) .composer .bar>:not(#plus):not(#go)');
+    expect(html).toContain("document.documentElement.classList.toggle('plus')");
+  });
+});
+
 // The page has five looks. A new visitor gets the next one in turn, kept in a cookie; a saved look is kept; the switch lists all five.
 describe('looks', () => {
   const look = (html) => /<html lang="en" data-theme="([a-z]+)"/.exec(html)?.[1];
