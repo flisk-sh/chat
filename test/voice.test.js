@@ -196,3 +196,64 @@ test('the mic writes the words into the box live while you talk, and Whisper rep
   // The live words are kept when Whisper fails or the visitor is signed out.
   expect(page).toContain('t=t||liveSaid;');
 });
+
+// Drives the page's own hearOne with a fake microphone and clock: loud = talking, quiet = a pause.
+function fakeHear() {
+  const page = appPage({ login: 'ann', connected: [] });
+  const code = page.slice(page.indexOf('const mix='), page.indexOf('// The moment a turn ends'));
+  let now = 0, level = 0, tick = null;
+  class Rec {
+    constructor() { this.state = 'inactive'; this.mimeType = 'audio/webm'; }
+    start() { this.state = 'recording'; }
+    requestData() { queueMicrotask(() => this.ondataavailable({ data: new Blob(['x'.repeat(10)]) })); }
+    stop() { this.state = 'inactive'; queueMicrotask(() => { this.ondataavailable({ data: new Blob(['y']) }); this.onstop(); }); }
+  }
+  Rec.isTypeSupported = () => true;
+  const ctx = { createAnalyser: () => ({ fftSize: 0, getFloatTimeDomainData: (b) => b.fill(level) }), createMediaStreamSource: () => ({ connect() {}, disconnect() {} }) };
+  const D = { now: () => now };
+  const hearOne = new Function('MediaRecorder', 'oStream', 'oCtx', 'orb', 'setInterval', 'clearInterval', 'Date', `let oRec,oStop,oSens=0;${code};return hearOne;`)(
+    Rec, {}, ctx, { style: { setProperty() {} } }, (f) => { tick = f; return 1; }, () => {}, D);
+  const run = async (lv, ms) => { level = lv; for (let t = 0; t < ms; t += 60) { now += 60; tick(); await Promise.resolve(); await Promise.resolve(); } };
+  return { hearOne, run };
+}
+
+test('voice talk sends the words at the first short pause, drops that draft when you go on, and reuses it at the end', async () => {
+  const { hearOne, run } = fakeHear();
+  const sent = [];
+  const send = (blob) => { const s = { blob, aborted: false, ctrl: { abort: () => { s.aborted = true; } }, p: Promise.resolve({ ok: true }) }; sent.push(s); return s; };
+  const turn = hearOne(send);
+  await run(0.5, 1200); // talking
+  expect(sent.length).toBe(0);
+  await run(0, 480); // a short pause: the draft goes up before the turn is over
+  expect(sent.length).toBe(1);
+  await run(0.5, 600); // talking again: that draft is dropped
+  expect(sent[0].aborted).toBe(true);
+  await run(0, 1200); // the pause becomes the end of the turn
+  const got = await turn;
+  expect(sent.length).toBe(2);
+  expect(sent[1].aborted).toBe(false);
+  expect(got.early).toBe(sent[1]);
+  expect(got.blob.size).toBeGreaterThan(0);
+});
+
+test('voice talk answers the instant a turn ends: a preloaded "Mm-hm" in your language, a chime until it loads', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain("const acked=ack()");
+  expect(page).toContain("ackLoad()");
+  expect(page).toContain("uk:['Ага.'");
+  expect(page).toContain('function chime()');
+});
+
+test('voice talk hears only the loudest, closest voice by default; the slider lets the room in', () => {
+  const page = appPage({ login: 'ann', connected: [] });
+  expect(page).toContain('id="osens" type="range" min="0" max="100" step="5" value="0"');
+  const code = page.slice(page.indexOf('const mix='), page.indexOf('// Record one utterance'));
+  const bar = (sens, floor, peak) => new Function('oSens', `${code};return voiceBar(${floor},${peak});`)(sens);
+  // Someone talking across the room (0.02) does not count at 0, and does at 100.
+  expect(0.02 > bar(0, 0.005, 0)).toBe(false);
+  expect(0.02 > bar(100, 0.005, 0)).toBe(true);
+  // A noisy room (hum 0.015) raises the bar; your own loud voice (peak 0.2) keeps a quieter one (0.06) out at 0.
+  expect(bar(0, 0.015, 0)).toBeGreaterThan(0.045);
+  expect(0.06 > bar(0, 0.005, 0.2)).toBe(false);
+  expect(0.06 > bar(100, 0.005, 0.2)).toBe(true);
+});
