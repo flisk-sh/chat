@@ -215,12 +215,12 @@ function earthClient(U, SRC, G, TG) {
       if (!want()) return;
       const dt = last ? Math.min(now - last, 100) : 0;
       last = now;
-      if (!calm.matches) {
-        spin.rotation.y += dt * 0.000035;
-        cloudShell.rotation.y += dt * 0.000008;
-      }
+      // Reduce Motion (a common macOS setting) slows the turn to a quarter speed; it never freezes the Earth.
+      const k = calm.matches ? 0.25 : 1;
+      spin.rotation.y += dt * 0.000035 * k;
+      cloudShell.rotation.y += dt * 0.000008 * k;
       r.render(scene, cam);
-      if (!calm.matches) raf = requestAnimationFrame(frame);
+      raf = requestAnimationFrame(frame);
     };
     run = () => {
       if (want() && !raf) {
@@ -371,7 +371,7 @@ function orbClient(SRC, G, HERE) {
       const dt = last ? Math.min(now - last, 100) : 0;
       last = now;
       const st = (box.className.match(/listening|thinking|speaking|idle/) || ['listening'])[0];
-      const goal = calm.matches ? 0 : SPEED[st];
+      const goal = calm.matches ? SPEED[st] * 0.25 : SPEED[st];
       speed += (goal - speed) * Math.min(1, dt / 350);
       spin.rotation.y += dt * speed;
       surface.uniforms.drift.value = (surface.uniforms.drift.value + dt * speed * 0.012) % 1;
