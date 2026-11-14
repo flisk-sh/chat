@@ -1001,6 +1001,12 @@ describe('looks', () => {
     expect(html).toContain('<li><span>United States</span>');
     expect(html).toContain('<span>32.5k</span>');
     expect(html).toContain('Used in 13 countries');
+    // Little text up front: ideas, the users list and the fine print sit behind three buttons.
+    for (const k of ['ideas', 'users', 'about']) expect(html).toContain(`data-ex="${k}" aria-expanded="false"`);
+    expect(html).toContain('<div class="expanel exusers">');
+    expect(html).toContain('html[data-theme=earth].home:not(.ex-ideas) #sugg');
+    expect(html).toContain('html[data-theme=earth].home:not(.ex-about) .fine');
+    expect(html).toContain('html[data-theme=earth]:not(.ex-users) .expanel{display:none}');
     expect(html).toContain(EARTH_JS.trim());
     expect(html).toContain('three.module.min.js');
     expect(html).toContain('family=Inter:wght@300');

@@ -338,7 +338,11 @@ html[data-theme=earth] .cat{background:rgba(0,0,0,.55);border-color:var(--line2)
 html[data-theme=earth] .composer{background:rgba(11,11,13,.82);backdrop-filter:blur(10px);box-shadow:none}
 html[data-theme=earth] #hist li:hover,html[data-theme=earth] #hist li.cur{background:rgba(255,255,255,.07)}
 html[data-theme=earth] .frail a:hover,html[data-theme=earth] .frail button:hover{background:rgba(255,255,255,.07)}
-html[data-theme=earth] .welcome .ex{display:block;max-width:420px;margin:28px 0 0}
+html[data-theme=earth] .welcome .ex{display:block;margin:24px 0 0}html[data-theme=earth] .expanel{max-width:420px}
+html[data-theme=earth].home:not(.ex-about) .tpill,html[data-theme=earth].home:not(.ex-about) .welcome .sub,html[data-theme=earth].home:not(.ex-about) .fine,html[data-theme=earth].home:not(.ex-ideas) #sugg,html[data-theme=earth]:not(.ex-users) .expanel{display:none}
+.excta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.excta button{border:1px solid var(--line);background:transparent;color:var(--ink);padding:9px 14px;font:400 11px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius)}
+.excta button:hover,.excta button[aria-expanded=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .exfoot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 22px;font:400 11px/1.4 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
 .exfoot i{width:4px;height:4px;border-radius:50%;background:var(--dim)}
 .ex h5{margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line);font:400 11px/1.5 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ink)}

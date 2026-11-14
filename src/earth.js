@@ -28,14 +28,29 @@ export const shortCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ?
 // The users list under the box, shown only in the Earth look.
 export const earthUsers = (esc) => {
   const top = USERS[0][3];
-  return `<div class="ex"><p class="exfoot">Used in ${USERS.length} countries<i></i>Real websites<i></i>Real APIs</p><h5>Who uses Flisk Chat <small>visitors by country · analytics.flisk.si · ${USERS_DATE}</small></h5><ol class="exlist">${USERS.slice(0, 9)
+  // Little text on the page: each extra goes behind one short button (terafab style).
+  return `<div class="ex"><nav class="excta" aria-label="More"><button type="button" data-ex="ideas" aria-expanded="false">Try an idea <span aria-hidden="true">→</span></button><button type="button" data-ex="users" aria-expanded="false">Who uses it <span aria-hidden="true">→</span></button><button type="button" data-ex="about" aria-expanded="false">How it works <span aria-hidden="true">→</span></button></nav><div class="expanel exusers"><p class="exfoot">Used in ${USERS.length} countries<i></i>Real websites<i></i>Real APIs</p><h5>Who uses Flisk Chat <small>visitors by country · analytics.flisk.si · ${USERS_DATE}</small></h5><ol class="exlist">${USERS.slice(0, 9)
     .map(([name, , , n]) => `<li><span>${esc(name)}</span><b><i style="width:${Math.max(1, Math.round((n / top) * 100))}%"></i></b><span>${shortCount(n)}</span></li>`)
-    .join('')}</ol></div>`;
+    .join('')}</ol></div></div>`;
 };
 
 // Runs in the page. It must not use anything from this module: it is sent as text.
 function earthClient(U, SRC, G, TG) {
   const ROOT = document.documentElement;
+  // One open panel at a time; a second click on the same button closes it.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('[data-ex]');
+    if (!b) return;
+    const open = !ROOT.classList.contains(`ex-${b.dataset.ex}`);
+    document.querySelectorAll('[data-ex]').forEach((x) => {
+      ROOT.classList.remove(`ex-${x.dataset.ex}`);
+      x.setAttribute('aria-expanded', 'false');
+    });
+    if (open) {
+      ROOT.classList.add(`ex-${b.dataset.ex}`);
+      b.setAttribute('aria-expanded', 'true');
+    }
+  });
   const cv = document.getElementById('earth');
   if (!cv) return;
   const want = () => ROOT.dataset.theme === 'earth' && ROOT.classList.contains('home') && !document.hidden;
