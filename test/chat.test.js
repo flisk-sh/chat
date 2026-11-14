@@ -996,6 +996,10 @@ describe('looks', () => {
     expect(res.headers.get('set-cookie') || '').not.toContain('chat_theme');
     expect(html).toContain('<canvas id="earth" class="earthc" aria-hidden="true"></canvas>');
     expect(html).toContain('Who uses Flisk Chat');
+    // A still Earth shows at once and fades out once the 3D globe is ready, so a first visit never sees black.
+    expect(html).toContain('<div class="earthstill" aria-hidden="true"></div><canvas id="earth"');
+    expect(html).toContain('html[data-theme=earth].home.earthon .earthstill{opacity:0}');
+    expect(html).toContain('url(https://unpkg.com/three-globe@2.45.6/example/img/earth-blue-marble.jpg)');
     // Like terafab.ai: no green from the shared bar or the logo, one white button and grey glass ones.
     expect(html).toContain('html[data-theme=earth] flisk-bar,html[data-theme=earth] .brand .logo,html[data-theme=earth] .newchat{filter:grayscale(1)}');
     expect(html).toContain('.excta button:first-child{background:var(--ink);color:var(--bg)}');

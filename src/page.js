@@ -1,5 +1,5 @@
 import { icon } from './icons.js';
-import { EARTH_JS, earthUsers } from './earth.js';
+import { EARTH_JS, TEXTURES, earthUsers } from './earth.js';
 import { LOGOS } from './logos.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -322,6 +322,11 @@ html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D
 .earthc{display:none}.ex{display:none}
 html[data-theme=earth].home .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
 html[data-theme=earth].home.earthon .earthc{opacity:1}
+/* A still Earth shows at once, in the same place as the 3D globe, and fades out when the globe is ready. The gradient paints first; the photo fills in when it arrives. */
+.earthstill{display:none}
+html[data-theme=earth].home .earthstill{display:block;position:fixed;z-index:0;pointer-events:none;width:80vh;height:80vh;left:calc(90vw - 40vh);top:21vh;border-radius:50%;background:radial-gradient(circle at 72% 28%,rgba(255,255,255,.16),rgba(255,255,255,0) 38%),radial-gradient(circle at 70% 30%,rgba(0,0,0,0) 34%,rgba(0,0,0,.94) 74%),url(${TEXTURES[1]}img/earth-blue-marble.jpg) 30% 50%/auto 100%,radial-gradient(circle at 68% 32%,#2a5f96,#0d2a4a 55%,#02060d);box-shadow:0 0 70px rgba(110,160,255,.22);transition:opacity 1.2s}
+html[data-theme=earth].home.earthon .earthstill{opacity:0}
+@media (max-width:860px){html[data-theme=earth].home .earthstill{width:68vh;height:68vh;left:calc(50vw - 34vh);top:65vh}}
 html[data-theme=earth] .app{position:relative;z-index:1}
 html[data-theme=earth].home .main,html[data-theme=earth].home .scroll,html[data-theme=earth].home .top{background:transparent}
 html[data-theme=earth] .dock{background:linear-gradient(to bottom,rgba(0,0,0,0),var(--bg) 18px)}
@@ -359,7 +364,7 @@ html[data-theme=earth].home .side{background:rgba(0,0,0,.4);backdrop-filter:blur
 .exlist li span:last-child{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
 .exlist b{height:2px;background:var(--line)}.exlist b i{display:block;height:100%;background:var(--ink)}
 @media (max-width:860px){html[data-theme=earth] .welcome h1{font-size:40px}html[data-theme=earth] .welcome .ex{max-width:none}html[data-theme=earth].home .scroll{padding-bottom:42vh}html[data-theme=earth].home .col{text-shadow:0 1px 3px #000,0 0 14px #000}html[data-theme=earth].home .fine,html[data-theme=earth].home .sugg button{background:rgba(0,0,0,.6)}}
-@media (prefers-reduced-motion:reduce){html[data-theme=earth].home .earthc{transition:none}}
+@media (prefers-reduced-motion:reduce){html[data-theme=earth].home .earthc,html[data-theme=earth].home .earthstill{transition:none}}
 /* Voice first: a big talk circle in the middle, computers and things to say on the right. */
 html[data-theme=voice]{--flisk-bg:#F3F6FB;--flisk-surface:#fff;--flisk-raised:#F3F6FB;--flisk-ink:#1E2A4A;--flisk-muted:#5A6785;--flisk-line:#E3E8F2;--flisk-accent:#1E2A4A;--flisk-accent-ink:#111A33;--flisk-on-accent:#fff;--flisk-hero-bg:#F3F6FB;--flisk-hero-ink:#1E2A4A;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:700;--flisk-radius:14px;--flisk-radius-control:14px;--flisk-radius-button:14px;--flisk-shadow:0 14px 40px -22px rgba(20,30,60,.35);--line2:#DCE3F0;--soft:#8A95AE;--tint:#E4ECFF}
 html[data-theme=voice] .h-def{display:none}html[data-theme=voice] .h-voice{display:inline}
@@ -1174,7 +1179,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
     .join('')}`;
   return shell(
     'Flisk Chat',
-    `<canvas id="earth" class="earthc" aria-hidden="true"></canvas><div class="app">
+    `<div class="earthstill" aria-hidden="true"></div><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div class="app">
 <nav class="thx frail" aria-label="Menu"><a class="fl" href="/" aria-label="Chat home">${icon('chat', 30)}</a><button type="button" data-act="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New</button><button type="button" data-act="hist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Computers</a><button type="button" data-act="voice"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>Voice</button>${login && !anon ? `<a href="/reviews"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</a><a class="end" href="/auth/signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>` : `<a class="end" href="/auth/start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>Sign in</a>`}</nav>
 <aside id="side" class="side" aria-label="Chats">
 <div class="brand">${LOGO}<button type="button" id="sideclose" class="iconbtn only-m" aria-label="Close the menu">×</button></div>
