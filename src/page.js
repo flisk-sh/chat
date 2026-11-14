@@ -826,8 +826,12 @@ const browserSay=(x,lang,gen)=>new Promise((ok)=>{if(!TTS||gen!==sayGen){ok(fals
 // Ava gets 'budget' ms to start (voice talk waits only 3 s: a quiet wait feels broken), then the browser's own voice
 // reads it at once. When neither makes a sound (a blocked autoplay, a muted tab), 'onSilent' offers a button, because a
 // tap is always allowed to play sound.
+// When Ava stalls the server falls back to MeloTTS, but only for these languages; for any other the wait buys nothing,
+// so the browser's voice takes over after 2 s instead of 3 s.
+const MELO_SPEAKS=['en','es','fr','zh','ja','ko'];
 async function say(t,hint,opts){stopTalk();opts=opts||{};const gen=sayGen,lang=langOf(t,hint),words=spoken(t);if(!words)return;
-  if(await playVoice(words,lang,gen,opts.budget))return;
+  const budget=opts.budget&&MELO_SPEAKS.indexOf(lang)<0?Math.min(opts.budget,2000):opts.budget;
+  if(await playVoice(words,lang,gen,budget))return;
   let heard=false;
   for(const x of sentences(t)){if(gen!==sayGen)return;if(await browserSay(x,lang,gen))heard=true;else if(!heard)break;}
   if(!heard&&gen===sayGen&&opts.onSilent)opts.onSilent(words,lang);}
