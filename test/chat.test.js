@@ -443,10 +443,17 @@ test('each kind of step gets its own icon, like tool calls in T3 Code', () => {
   for (const name of ['server', 'pen', 'upload', 'film', 'mic', 'power', 'alert']) expect(js).toContain(`${name}:'<`);
 });
 
-test('a square is chosen by a real mouse move, never by a row that appears under a still pointer or by a tap', () => {
+test('a square is chosen only by a click or tap; hover just outlines it, and only with a mouse', () => {
   const page = appPageUi({ login: 'ann', connected: [] });
-  expect(page).toContain("el.onpointermove=(e)=>{if(e.pointerType!=='mouse'||tm)return;");
-  expect(page).not.toContain('el.onmouseenter=');
+  // Hover used to choose, and each redraw slid the next square under the still pointer.
+  expect(page).not.toContain('onpointermove');
+  expect(page).not.toContain('onmouseenter');
+  expect(page).toContain('s.onclick=()=>{fk=s.dataset.k;choose();');
+  expect(page).toContain('b.onclick=()=>{fk=b.dataset.k;choose();');
+  // On a phone :hover sticks after a tap, so the outline is for real mice only.
+  expect(page).toContain('@media (hover:hover){.sq:hover,.ss:hover{border-color:currentColor}');
+  // Keyboard focus comes back to the chosen square after the redraw.
+  expect(page).toContain('f.focus({preventScroll:true})');
   // Answered rows fold to a thin line; the folded card keeps only answered chips.
   expect(page).toContain("(i<pick.length-1?' done':'')");
   expect(page).toContain(".zchip:not(.ok)");
