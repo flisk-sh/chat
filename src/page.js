@@ -178,6 +178,14 @@ html:not(.plus) .plusmenu{display:none!important}.sidesec,.rcol h5:first-child,.
 .md[aria-checked=true][data-mode=voice]{background:var(--green);color:#fff}
 html .plusmenu>button.talkb{background:transparent!important;color:var(--ink)!important;border-color:transparent!important;opacity:1}html .plusmenu>button.talkb:hover{background:var(--line)!important}
 .plusmenu .mp,.plusmenu details.pick{width:100%}.plusmenu .chev{margin-left:auto}
+/* Inside the + menu every row spans the menu, and the Computers list opens in place under its row (an accordion), not as a second
+   floating box: the + menu scrolls, so a floating list was clipped by it and covered the rows under it, which then could not be clicked. */
+.plusmenu .chip{max-width:none}.plusmenu details.pick .menu{position:static;width:auto;max-height:none;overflow:visible;margin:2px 0 4px;padding:2px 0 2px 8px;border:0;border-left:1px solid var(--line2);border-radius:0;box-shadow:none;background:transparent}.plusmenu details.pick .menu::after{display:none}.plusmenu details.pick[open]>summary .chev{transform:rotate(225deg) translate(-2px,-2px)}
+/* A switched-on row in the + menu stays a plain row with a dot, so it reads the same in every look (Earth's accent is near-white). */
+html .plusmenu>.chip.ico.on{background:transparent;color:var(--ink);border-color:transparent}html .plusmenu>.chip.ico.on:hover{background:var(--line)}.plusmenu>.chip.ico.on::before{content:"";order:3;margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 1px var(--line2)}
+.plusmenu #voice.on::after{content:"Reading answers aloud"}
+/* The phone rules for the old one-row bar (32px icon buttons, Fleet icon only, no arrows; search "max-width:520px") must not reach the + menu rows. */
+.composer .bar .plusmenu>#mic,.composer .bar .plusmenu>#voice,.composer .bar .plusmenu>#orbbtn,.composer .bar .plusmenu>.attach{width:100%;justify-content:flex-start;padding:8px 10px}.composer .bar .plusmenu .chip{gap:7px;padding:8px 10px}.composer .bar .plusmenu .chev{display:inline-block}.plusmenu #sbsum{display:inline}
 .plusmenu .cats{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px;margin:0 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line2)}.plusmenu .cat{border-color:transparent;background:transparent;width:100%;padding:4px 10px 4px 4px}.plusmenu .cat:hover{transform:none;background:var(--line)}
 .plusmenu #orbbtn::after{content:"Voice talk";margin-left:8px;font-size:14px}.plusmenu #voice::after{content:"Read answers aloud";margin-left:8px;font-size:14px}.plusmenu #mic::after{content:"Speak your task";margin-left:8px;font-size:14px}.plusmenu .attach::after{content:"Attach files";margin-left:8px;font-size:14px}
 #plus[aria-expanded=true]{color:var(--flisk-on-accent,#fff);background:var(--green);border-color:var(--green)}#plus svg{transition:transform .15s}#plus[aria-expanded=true] svg{transform:rotate(45deg)}
@@ -188,7 +196,7 @@ html .plusmenu>button.talkb{background:transparent!important;color:var(--ink)!im
 .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);padding:4px 11px 4px 5px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;max-width:240px}
 .chip>span{overflow:hidden;text-overflow:ellipsis}.chip svg{border-radius:var(--radius);flex:none}.chip:hover{border-color:var(--ink)}
 .chip.plain{padding:4px 11px;color:var(--soft);border-style:dashed;cursor:pointer}.chip.plain:hover{border-color:var(--ink)}
-.chip.ico{padding:5px 8px;color:var(--dim)}.chip.ico.on{color:#fff;background:var(--green);border-color:var(--green)}
+.chip.ico{padding:5px 8px;color:var(--dim)}.chip.ico.on{color:var(--flisk-on-accent,#fff);background:var(--green);border-color:var(--green)}
 .talkb{color:#fff!important;background:var(--ink)!important;border-color:var(--ink)!important}.talkb:hover{opacity:.85}
 .oracle{position:fixed;inset:0;z-index:100;background:radial-gradient(1px 1px at 12% 18%,#fff8,transparent),radial-gradient(1px 1px at 78% 12%,#fff6,transparent),radial-gradient(1px 1px at 88% 64%,#fff7,transparent),radial-gradient(1px 1px at 22% 72%,#fff5,transparent),radial-gradient(1.5px 1.5px at 64% 86%,#fff6,transparent),radial-gradient(1px 1px at 40% 8%,#fff5,transparent),radial-gradient(1px 1px at 6% 48%,#fff4,transparent),radial-gradient(1px 1px at 95% 35%,#fff5,transparent),radial-gradient(circle at 50% 38%,#0b1a2e 0,#04070d 55%,#000 100%);color:#eef2ec;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:84px 16px 24px}
 .oracle[hidden]{display:none}.otop{position:absolute;top:18px;left:0;right:0;text-align:center;display:flex;flex-direction:column;gap:4px}.otitle{font-weight:600;letter-spacing:.04em}.ohint{font-size:12px;color:#9fb0c3}
@@ -780,6 +788,7 @@ let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MOD
 if(pm&&cats)pm.prepend(cats);
 const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));if(on)placeFloat(pm,pb);};
 if(pb)pb.onclick=()=>setPlus(!document.documentElement.classList.contains('plus'));
+const pkIn=pm&&pm.querySelector('details.pick');if(pkIn)pkIn.addEventListener('toggle',()=>{if(document.documentElement.classList.contains('plus'))placeFloat(pm,pb);if(pkIn.open)pkIn.scrollIntoView({block:'nearest'});});
 document.addEventListener('click',(e)=>{if(document.documentElement.classList.contains('plus')&&!e.target.closest('#plus,#plusmenu')&&!e.target.closest('.sidesec,.rcol'))setPlus(false);});
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&document.documentElement.classList.contains('plus'))setPlus(false);});}
 const pk=document.querySelector('details.pick');
