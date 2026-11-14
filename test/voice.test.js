@@ -159,7 +159,7 @@ test('the page speaks a reply with a voice for its language, not the browser lan
 
 test('voice talk never goes quiet: Ava gets 3 s, then the browser voice, then a tap-to-hear button', () => {
   const page = appPage({ login: 'ann', connected: [] });
-  expect(page).toContain('{budget:3000,onSilent:');
+  expect(page).toContain('{budget:7000,onSilent:');
   expect(page).toContain('id="ohear" class="ohear" hidden');
   expect(page).toContain('budget||6000');
   expect(page).toContain('quiet>(talked<2000?1100:750)');
@@ -493,4 +493,11 @@ test('voice: Ava speaks slowly, and the daily read-aloud caps cover a few long t
   expect(ssml('Hello', 'en')).toContain(`rate='${RATE}'`);
   expect(ANON_SPEAK_PER_DAY).toBeGreaterThanOrEqual(600);
   expect(SPEAK_PER_DAY).toBeGreaterThanOrEqual(2000);
+});
+
+test('voice: Ava gets a few seconds head start before the robotic Melo backup is asked', async () => {
+  const { AVA_HEAD_START_MS } = await import('../src/index.js');
+  expect(AVA_HEAD_START_MS).toBeGreaterThanOrEqual(2500);
+  const src = await Bun.file(new URL('../src/index.js', import.meta.url)).text();
+  expect(src).toContain('backup: meloBackup(env, lang), hedgeMs: AVA_HEAD_START_MS');
 });

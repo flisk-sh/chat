@@ -830,7 +830,7 @@ const playVoice=(text,lang,gen,budget)=>new Promise((ok)=>{if(gen!==sayGen||!win
   AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(text.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{if(!started)fin(false);});});
 const browserSay=(x,lang,gen)=>new Promise((ok)=>{if(!TTS||gen!==sayGen){ok(false);return;}const u=utter(x,lang,pickVoice(lang));let done=false,w=0,began=false;
   const fin=()=>{if(done)return;done=true;clearInterval(w);ok(began);};u.onstart=()=>{began=true;};u.onend=u.onerror=fin;w=setInterval(()=>{if(gen!==sayGen){try{TTS.cancel();}catch(e){}fin();}},150);TTS.speak(u);setTimeout(fin,4000+x.length*120);});
-// Ava gets 'budget' ms to start (voice talk waits only 3 s: a quiet wait feels broken), then the browser's own voice
+// Ava gets 'budget' ms to start (voice talk waits 7 s: the server gives Ava 3 s before Melo steps in, which takes about 1.5 s more), then the browser's own voice
 // reads it at once. When neither makes a sound (a blocked autoplay, a muted tab), 'onSilent' offers a button, because a
 // tap is always allowed to play sound.
 // When Ava stalls the server falls back to MeloTTS, but only for these languages; for any other the wait buys nothing,
@@ -927,7 +927,7 @@ const oSensEl=$('osens');let oSens=Math.max(0,Math.min(100,Number(lsGet('chat_os
 oSensEl.oninput=()=>{oSens=Number(oSensEl.value)||0;lsSet('chat_osens',oSens?String(oSens):'');};
 const mix=(a,b,k)=>a+(b-a)*k;
 const voiceBar=(floor,peak)=>{const k=oSens/100;return Math.max(mix(0.045,0.008,k),floor*mix(4,1.5,k),peak*mix(0.4,0.1,k));};
-const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;oHear.hidden=true;try{await say(t,hint,{budget:3000,onSilent:(words,lang)=>{oHear.hidden=false;oHear.onclick=()=>{oHear.hidden=true;stopTalk();AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(words.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{});};}});}finally{oSpeaking=false;}};
+const speakAll=async(t,hint)=>{oSpeaking=true;oracle._endSpeak=stopTalk;oHear.hidden=true;try{await say(t,hint,{budget:7000,onSilent:(words,lang)=>{oHear.hidden=false;oHear.onclick=()=>{oHear.hidden=true;stopTalk();AUD.src='/voice?l='+encodeURIComponent(lang)+'&t='+encodeURIComponent(words.slice(0,1200));const p=AUD.play();if(p)p.catch(()=>{});};}});}finally{oSpeaking=false;}};
 // Record one utterance: starts on speech, stops after 1 s of quiet (1.5 s after a short opening like "Hi!", so a greeting
 // and its question stay one turn), or 30 s; gives up after 9 s of silence.
 // Instant answers (the Instagram trick: the photo uploads while you still type the caption). At a short pause the words

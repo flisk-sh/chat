@@ -30,7 +30,10 @@ export const ANON_VOICE_PARTS_PER_DAY = 120;
 export const MAX_AUDIO_B64 = 1_400_000; // about 1 MB of audio, a minute of speech
 export const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
 export const TALK_PER_DAY = 100;
-export const SPEAK_PER_DAY = 2000; // answers read aloud by the Ava voice, per login
+export const SPEAK_PER_DAY = 2000;
+// MeloTTS is robotic next to Ava, so Ava gets this long to start before the backup is asked (it was 0.8 s, and in a slow
+// spell of Microsoft's that meant Melo spoke every answer). Melo still covers a longer stall.
+export const AVA_HEAD_START_MS = 3000; // answers read aloud by the Ava voice, per login
 export const TALK_SYSTEM = `You are Flisk Oracle, a voice you talk to on chat.flisk.si. Your reply is read aloud, so:
 - Answer in one or two short sentences of plain spoken words. No Markdown, no lists, no tables, no links, no code, no emoji.
 - Be warm, direct and sure of yourself, like a wise oracle who also knows practical things. Give the answer first.
@@ -521,7 +524,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const info = {}, t0 = Date.now();
     try {
       const lang = String(url.searchParams.get('l') || '').slice(0, 8);
-      const stream = await (env.SPEAK || speakStream)(text, lang, { info, backup: meloBackup(env, lang) });
+      const stream = await (env.SPEAK || speakStream)(text, lang, { info, backup: meloBackup(env, lang), hedgeMs: AVA_HEAD_START_MS });
       // Time to the first audio and how many asks it took, so a slow voice can be told apart in the browser.
       return new Response(stream, { headers: { 'content-type': info.type || 'audio/mpeg', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'server-timing': `voice;dur=${Date.now() - t0};desc="${voiceDesc(info)}"` } });
     } catch (e) {
