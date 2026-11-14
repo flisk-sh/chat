@@ -120,7 +120,10 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   // Their own AI from chat.flisk.si, or the free one.
   const saved = await loadSettings(env, sender, { withKey: true }).catch(() => null);
   const chosen = saved ? resolveModel(saved) : { ai: 'wolf', free: true };
-  if (chosen.error) return { error: chosen.error };
+  if (chosen.error) {
+    await say(`@${sender} the review could not start: ${chosen.error}. Check your AI at ${env.PUBLIC_ORIGIN}/reviews.`);
+    return { error: chosen.error };
+  }
   if (chosen.free && (await overLimit(sender))) {
     if (event.auto) return { limited: true };
     await say(`@${sender} you used today's ${REVIEWS_PER_DAY} free reviews. Save your own AI key at ${env.PUBLIC_ORIGIN}/reviews and reviews will use it with no daily limit.`);
@@ -128,7 +131,10 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   }
 
   const dres = await api(`/repos/${repo}/pulls/${issue.number}`, { accept: 'application/vnd.github.v3.diff' });
-  if (!dres.ok) return { error: `diff ${dres.status}` };
+  if (!dres.ok) {
+    await say(`@${sender} the review failed: GitHub did not give the diff (HTTP ${dres.status}).`);
+    return { error: `diff ${dres.status}` };
+  }
   const cap = chosen.free ? WOLF_DIFF : OWN_KEY_DIFF;
   const cut = dres.text.length > cap;
   const diff = cut ? dres.text.slice(0, cap) : dres.text;
@@ -159,7 +165,7 @@ export async function reviewPullRequest(env, event, { fetchImpl = fetch, overLim
   if (!res.ok) await say(`@${sender} ${review.summary}${foot}`);
   let run = null;
   if (!event.auto && commandOf(comment.body) === 'review run') run = await startRun(env, { repo, pr: issue.number, installationId: installation.id, sender, isPrivate: !!repository.private, fetchImpl, say });
-  return { posted: true, verdict: review.verdict, comments: comments.length, run };
+  return { posted: true, ai: who, verdict: review.verdict, comments: comments.length, run };
 }
 
 // A review that failed or never answered goes to the private Discord channel (env.DISCORD_ERRORS_WEBHOOK). Never throws.
@@ -169,6 +175,32 @@ export async function alertReview(env, { repo, pr, sender, auto, why }, fetchImp
   const link = repo && pr ? `https://github.com/${repo}/pull/${pr}` : repo || 'unknown pull request';
   const text = `**Chat review failed: ${String(why).slice(0, 300)}**\n${link} · ${auto ? 'automatic review' : `asked by @${sender || 'unknown'}`}`;
   await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: text.slice(0, 1900), allowed_mentions: { parse: [] } }) }).catch(() => {});
+}
+
+// Review analytics (D1 review_runs). Never throws: a broken table must not stop a review.
+async function startReviewRow(env, { repo, pr, sender, auto }) {
+  try {
+    const r = await env.DB.prepare("INSERT INTO review_runs (created, repo, pr, sender, auto, status) VALUES (?, ?, ?, ?, ?, 'started')").bind(new Date().toISOString(), repo || '', Number(pr) || 0, sender || null, auto ? 1 : 0).run();
+    return r?.meta?.last_row_id ?? null;
+  } catch { return null; }
+}
+export const reviewStatus = (r) => (r?.error ? 'failed' : r?.posted ? 'posted' : r?.limited ? 'limited' : r?.auto ? 'auto' : r?.ignored ? 'ignored' : 'failed');
+async function finishReviewRow(env, id, r, ms) {
+  if (id == null) return;
+  try {
+    await env.DB.prepare('UPDATE review_runs SET status = ?, ai = ?, verdict = ?, error = ?, ms = ?, finished = ? WHERE id = ?').bind(reviewStatus(r), r?.ai || null, r?.verdict || null, r?.error ? String(r.error).slice(0, 300) : null, ms, new Date().toISOString(), id).run();
+  } catch {}
+}
+
+// Hourly cron: a review still 'started' after 10 minutes was stopped by the Worker without any answer. Report each once.
+export async function reportLostReviews(env, fetchImpl = fetch, now = Date.now()) {
+  const before = new Date(now - 10 * 60_000).toISOString();
+  const { results = [] } = await env.DB.prepare("SELECT id, repo, pr, sender, auto FROM review_runs WHERE status = 'started' AND created < ? LIMIT 20").bind(before).all();
+  for (const r of results) {
+    await env.DB.prepare("UPDATE review_runs SET status = 'lost' WHERE id = ?").bind(r.id).run();
+    await alertReview(env, { repo: r.repo, pr: r.pr, sender: r.sender, auto: !!r.auto, why: 'it never finished: the Worker stopped it before an answer (likely the 30 s after-response limit), nothing was posted on the PR' }, fetchImpl);
+  }
+  return { lost: results.length };
 }
 
 // The webhook: checked, answered at once, and the review runs after the answer.
@@ -190,9 +222,20 @@ export async function githubWebhook(request, env, { fetchImpl = fetch, waitUntil
     if (waitUntil) waitUntil(alertReview(env, { ...info, why: 'the GitHub App key or id is not set' }, fetchImpl)); else await alertReview(env, { ...info, why: 'the GitHub App key or id is not set' }, fetchImpl);
     return new Response('not set up', { status: 503 });
   }
+  const started = Date.now();
+  const rowId = await startReviewRow(env, info);
   const job = reviewPullRequest(env, ev, { fetchImpl, overLimit })
-    .then((r) => { console.log('review', JSON.stringify(r)); return r?.error ? alertReview(env, { ...info, why: r.error }, fetchImpl) : null; })
-    .catch((e) => { const why = `crashed: ${String(e?.message || e).slice(0, 250)}`; console.log('review failed', why); return alertReview(env, { ...info, why }, fetchImpl); });
+    .then(async (r) => {
+      console.log('review', JSON.stringify(r));
+      await finishReviewRow(env, rowId, r, Date.now() - started);
+      if (r?.error) await alertReview(env, { ...info, why: r.error }, fetchImpl);
+    })
+    .catch(async (e) => {
+      const why = `crashed: ${String(e?.message || e).slice(0, 250)}`;
+      console.log('review failed', why);
+      await finishReviewRow(env, rowId, { error: why }, Date.now() - started);
+      await alertReview(env, { ...info, why }, fetchImpl);
+    });
   if (waitUntil) waitUntil(job);
   else await job;
   return new Response('reviewing', { status: 202 });

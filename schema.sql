@@ -88,3 +88,21 @@ CREATE TABLE IF NOT EXISTS task_runs (
   answer TEXT                   -- first 400 characters
 );
 CREATE INDEX IF NOT EXISTS task_runs_created ON task_runs (created);
+
+-- PR reviews ("@flisk-chat review"): one row when a review starts, finished when it ends. A row still 'started' after
+-- 10 minutes means the Worker stopped the review (the 30 s waitUntil limit, CPU or subrequests): the hourly cron reports it.
+CREATE TABLE IF NOT EXISTS review_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created TEXT NOT NULL,
+  repo TEXT NOT NULL,
+  pr INTEGER NOT NULL,
+  sender TEXT,
+  auto INTEGER NOT NULL,
+  status TEXT NOT NULL,         -- started, posted, failed, limited, ignored, auto, lost
+  ai TEXT,
+  verdict TEXT,
+  error TEXT,
+  ms INTEGER,
+  finished TEXT
+);
+CREATE INDEX IF NOT EXISTS review_runs_created ON review_runs (created);

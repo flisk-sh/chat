@@ -10,7 +10,7 @@ export function fakeD1(schema) {
     all: async () => ({ results: db.query(sql).all(...params) }),
     run: async () => {
       const r = db.query(sql).run(...params);
-      return { meta: { changes: r.changes } };
+      return { meta: { changes: r.changes, last_row_id: Number(r.lastInsertRowid) } };
     },
   });
   return { prepare: (sql) => stmt(sql), batch: async (list) => Promise.all(list.map((s) => s.run())), raw: db };

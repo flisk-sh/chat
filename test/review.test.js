@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 import { loadSettings, saveSettings } from '../src/keys.js';
-import { alertReview, cleanComments, diffLines, parseReview, verifySignature } from '../src/review.js';
+import { alertReview, reportLostReviews, cleanComments, diffLines, parseReview, verifySignature } from '../src/review.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
 
@@ -290,5 +290,43 @@ describe('review failure alerts', () => {
     await alertReview({}, { why: 'x' }, f);
     await alertReview({ DISCORD_ERRORS_WEBHOOK: 'https://d.test' }, {}, f);
     await alertReview({ DISCORD_ERRORS_WEBHOOK: 'https://d.test' }, { why: 'x' }, async () => { throw new Error('down'); });
+  });
+});
+
+describe('review analytics', () => {
+  test('a posted review is one finished row with the model and verdict', async () => {
+    const w = await setup();
+    await w.send(event());
+    const row = w.env.DB.raw.query('SELECT * FROM review_runs').get();
+    expect(row).toMatchObject({ repo: 'o/r', pr: 5, sender: 'odykyi', auto: 0, status: 'posted', ai: 'Flisk Wolf (free)', verdict: 'request_changes', error: null });
+    expect(row.finished).toBeTruthy();
+  });
+
+  test('a diff GitHub will not give is a failed row, a comment on the PR and a Discord alert', async () => {
+    const w = await setup({ DISCORD_ERRORS_WEBHOOK: 'https://discord.test/hook' });
+    const orig = w.env.DB; // keep
+    const f = w.fetchImpl;
+    const fetchImpl = async (url, init = {}) => (new URL(url).pathname === '/repos/o/r/pulls/5' && (init.method || 'GET') === 'GET' ? new Response('gone', { status: 502 }) : f(url, init));
+    const body = JSON.stringify(event());
+    const sig = await sign('whs', body);
+    await handle(new Request('https://chat.test/github/webhook', { method: 'POST', body, headers: { 'x-hub-signature-256': sig, 'x-github-event': 'issue_comment' } }), w.env, { fetchImpl });
+    expect(orig.raw.query('SELECT status, error FROM review_runs').get()).toEqual({ status: 'failed', error: 'diff 502' });
+    expect(w.calls.some((c) => c.path === '/repos/o/r/issues/5/comments' && c.body.body.includes('did not give the diff'))).toBe(true);
+    expect(w.calls.some((c) => c.host === 'discord.test' && c.body.content.includes('diff 502'))).toBe(true);
+  });
+
+  test('a review the Worker stopped is reported once by the hourly check', async () => {
+    const DB = fakeD1(SCHEMA);
+    const old = new Date(Date.now() - 30 * 60_000).toISOString();
+    DB.raw.query("INSERT INTO review_runs (created, repo, pr, sender, auto, status) VALUES (?, 'flisk-sh/flisk', 4182, 'odykyi', 0, 'started')").run(old);
+    DB.raw.query("INSERT INTO review_runs (created, repo, pr, sender, auto, status) VALUES (?, 'o/r', 1, 'x', 0, 'started')").run(new Date().toISOString());
+    const sent = [];
+    const f = async (url, init) => { sent.push(JSON.parse(init.body).content); return new Response('', { status: 204 }); };
+    const env = { DB, DISCORD_ERRORS_WEBHOOK: 'https://discord.test/hook' };
+    expect(await reportLostReviews(env, f)).toEqual({ lost: 1 });
+    expect(await reportLostReviews(env, f)).toEqual({ lost: 0 });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('https://github.com/flisk-sh/flisk/pull/4182');
+    expect(sent[0]).toContain('never finished');
   });
 });
