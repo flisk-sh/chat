@@ -1033,35 +1033,44 @@ async function run(task){
   const txt=(s)=>{const c=document.createElement('span');c.textContent=s;return c.innerHTML;};
   const out=(s,bad)=>{if(!live||!s)return;const p=node('pre','',s.length>1500?s.slice(0,1500)+'\\n…':s);live.querySelector('.t').appendChild(p);if(bad){live.classList.remove('live','ok');live.classList.add('bad');live.querySelector('.si').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SI.alert+'</svg>';}down();};
   const end=(ok)=>{clearInterval(timer);stop.remove();if(live&&live.classList.contains('live')){live.classList.remove('live');live.classList.add(ok?'ok':'bad');}work.classList.add(ok?'done':'fail');wt.textContent=(ok?'Worked for ':'Stopped after ')+secs(Date.now()-t0);ws.textContent='';if(ok&&count)box2.open=false;};
+  // One event of the task, from the cloud stream or from the line to the computer in this tab.
+  const onEv=(ev)=>{
+    if(ev.type==='thinking')ws.textContent='Thinking, step '+ev.step;
+    else if(ev.type==='pod_starting'){step('Starting a computer','','server');ws.textContent='Starting a computer';}
+    else if(ev.type==='pod_started'){if(live)live.querySelector('.t').textContent='Computer ready on '+ev.provider;}
+    else if(ev.type==='run'){step('Ran '+code(ev.command),'',cmdIcon(ev.command));ws.textContent='Running a command';}
+    else if(ev.type==='write'){step('Wrote '+code(ev.path)+' '+txt('('+Number(ev.bytes||0).toLocaleString()+' characters)'),'','pen');ws.textContent='Writing files';}
+    else if(ev.type==='read')step('Read '+code(ev.path),'','file');
+    else if(ev.type==='publish'){step('Publishing '+code(ev.path),'','upload');ws.textContent='Publishing';}
+    else if(ev.type==='share'){step('Giving the running app a public link (port '+Number(ev.port)+')','','upload');ws.textContent='Sharing the app';}
+    else if(ev.type==='system_plan'){step('Building a system of '+ev.services.length+' services: '+txt(ev.services.join(', ')),'','app');ws.textContent='Building a system';}
+    else if(ev.type==='system_start'){step('Starting all services with Flisk','','app');}
+    else if(ev.type==='video_start'){step('Making a video: '+txt(ev.title)+' '+txt('('+ev.scenes+' scenes)'),'','film');ws.textContent='Making a video';}
+    else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
+    else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.live)link=ev.live;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
+    else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
+    else if(ev.type==='pod_kept')step(ev.days?'Computer kept running for the live app: it sleeps when idle, wakes on a visit, deleted after '+Number(ev.days)+' days':'Computer kept running for the live app until '+(ev.until?new Date(ev.until).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'the provider stops it'),'ok','power');
+    else if(ev.type==='widget'){const w=drawWidget(ev);if(w){turn.appendChild(w);down();}}
+    else if(ev.type==='answer')answer=ev.text;
+    else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
+    else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
+  };
   try{
-    const res=await fetch('/api/run',{signal:ac.signal,method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify({task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}})});
+    const payload={task,history,providers:picked(),files:sendFiles,ai:{vision:canSee(),ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model||byoModel.value.trim()}};
+    const res=await fetch('/api/run',{signal:ac.signal,method:'POST',headers:{'content-type':'application/json',accept:'application/x-ndjson'},body:JSON.stringify(payload)});
     if(res.status===401){clearInterval(timer);turn.remove();try{sessionStorage.setItem('chat_pending',task);if(sendFiles.length)sessionStorage.setItem('chat_pending_files',JSON.stringify(sendFiles));}catch(e){}attached=sendFiles;drawFiles();signin.hidden=false;signin.scrollIntoView({block:'center'});go.disabled=false;return;}
+    // No cloud computer connected: the task runs on a small Linux inside this tab, no key needed.
+    // If the tab cannot load or start it, the old ask for a key is shown instead.
+    if(res.status===409&&podOk()&&(ws.textContent='Starting a computer in this tab',await getPod().then(()=>true,()=>false))){const r=await runInBrowser(payload,onEv,ac.signal);if(r&&r.status===429){clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,r);go.disabled=false;return;}if(r){const er=new Error(r.error||'Chat refused the task. Try again in a minute.');er.kind=r.kind;throw er;}}else{
     if(res.status===409){clearInterval(timer);turn.remove();pending=task;asstMsg('I need a computer for that. Connect one of your sandbox accounts below, once.');saveChat();setup.hidden=false;setup.scrollIntoView({block:'start'});go.disabled=false;return;}
     if(res.status===429){const b=await res.json().catch(()=>({}));clearInterval(timer);work.remove();box2.remove();limitCard(turn,task,b);go.disabled=false;return;}
     if(!res.ok||!res.body){const b=await res.json().catch(()=>({}));const er=new Error(b.error||('Chat answered '+res.status+'. Try again in a minute.'));er.kind=b.kind;throw er;}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
     for(;;){const {value,done}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
       while((i=buf.indexOf('\\n'))>=0){const line=buf.slice(0,i);buf=buf.slice(i+1);if(!line.trim())continue;let ev;try{ev=JSON.parse(line);}catch(e){continue;}
-        if(ev.type==='thinking')ws.textContent='Thinking, step '+ev.step;
-        else if(ev.type==='pod_starting'){step('Starting a computer','','server');ws.textContent='Starting a computer';}
-        else if(ev.type==='pod_started'){if(live)live.querySelector('.t').textContent='Computer ready on '+ev.provider;}
-        else if(ev.type==='run'){step('Ran '+code(ev.command),'',cmdIcon(ev.command));ws.textContent='Running a command';}
-        else if(ev.type==='write'){step('Wrote '+code(ev.path)+' '+txt('('+Number(ev.bytes||0).toLocaleString()+' characters)'),'','pen');ws.textContent='Writing files';}
-        else if(ev.type==='read')step('Read '+code(ev.path),'','file');
-        else if(ev.type==='publish'){step('Publishing '+code(ev.path),'','upload');ws.textContent='Publishing';}
-        else if(ev.type==='share'){step('Giving the running app a public link (port '+Number(ev.port)+')','','upload');ws.textContent='Sharing the app';}
-        else if(ev.type==='system_plan'){step('Building a system of '+ev.services.length+' services: '+txt(ev.services.join(', ')),'','app');ws.textContent='Building a system';}
-        else if(ev.type==='system_start'){step('Starting all services with Flisk','','app');}
-        else if(ev.type==='video_start'){step('Making a video: '+txt(ev.title)+' '+txt('('+ev.scenes+' scenes)'),'','film');ws.textContent='Making a video';}
-        else if(ev.type==='note'){if(ev.text!==lastNote){lastNote=ev.text;step(txt(ev.text),'',noteIcon(ev.text));}}
-        else if(ev.type==='output'){if(ev.error)out(ev.error,true);else{if(ev.published)link=ev.published;if(ev.live)link=ev.live;if(ev.video)video=ev.video;out([ev.stdout,ev.stderr,ev.content].filter(Boolean).join('\\n').replace(/\\n$/,''),ev.exitCode>0);}}
-        else if(ev.type==='pod_stopped')step('Computer stopped','ok','power');
-        else if(ev.type==='pod_kept')step(ev.days?'Computer kept running for the live app: it sleeps when idle, wakes on a visit, deleted after '+Number(ev.days)+' days':'Computer kept running for the live app until '+(ev.until?new Date(ev.until).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'the provider stops it'),'ok','power');
-        else if(ev.type==='widget'){const w=drawWidget(ev);if(w){turn.appendChild(w);down();}}
-        else if(ev.type==='answer')answer=ev.text;
-        else if(ev.type==='error'){failed=true;errCard(turn,ev.error,ev.kind,task);}
-        else if(ev.type==='file'&&ev.error)out('Could not put '+ev.path+' on the computer: '+ev.error,true);
+        onEv(ev);
       }}
+    }
   }catch(err){failed=true;if(stopped)turn.appendChild(node('div','err','You stopped this task.'));else errCard(turn,String(err.message||err),err.kind||'other',task);}
   end(!failed||answer!==null);
   if(answer!==null){const a=node('div','a');md(a,answer);turn.appendChild(a);history.push({role:'assistant',content:answer});saveChat();if(voiceOn)talkBack(answer);
@@ -1072,6 +1081,34 @@ async function run(task){
   if(video)turn.appendChild(videoCard(video));
   down();go.disabled=false;box.focus();
 }
+// The computer in this tab (fleet's browser pod): a small Linux on WebAssembly. Loaded on the first task that needs it.
+const podOk=()=>!!window.__POD__&&typeof WebAssembly==='object'&&typeof WebSocket==='function';
+let podP=null;
+function getPod(){if(!podP)podP=import(window.__POD__+'pod.js').then(m=>m.startBrowserPod({base:window.__POD__+'vendor/'})).catch(e=>{podP=null;throw e;});return podP;}
+async function podCall(ev){
+  if(ev.op==='stop'){const was=podP;podP=null;if(was){const p=await was.catch(()=>null);if(p)await p.stop();}return {};}
+  const pod=await getPod();
+  if(ev.op==='start')return {id:'browser',provider:'your browser'};
+  if(ev.op==='run')return pod.run(String(ev.command),{timeout:60});
+  if(ev.op==='write'){await pod.write(String(ev.path),String(ev.content));return {};}
+  if(ev.op==='read')return pod.read(String(ev.path));
+  throw new Error('unknown computer call');
+}
+// One task over a WebSocket to chat: chat thinks, this tab is the computer. Resolves with null when the task is done,
+// or with chat's refusal ({status, error, ...}); rejects when the line breaks or the user presses Stop.
+function runInBrowser(payload,onEv,signal){return new Promise((resolve,reject)=>{
+  let over=false;const ws=new WebSocket(location.origin.replace(/^http/,'ws')+'/api/run');
+  const fin=(v,e)=>{if(over)return;over=true;try{ws.close();}catch(x){}if(e)reject(e);else resolve(v);};
+  signal.addEventListener('abort',()=>{fin(null,new Error('stopped'));podCall({op:'stop'}).catch(()=>{});});
+  ws.onopen=()=>ws.send(JSON.stringify(Object.assign({type:'task'},payload)));
+  ws.onmessage=async(m)=>{let ev;try{ev=JSON.parse(m.data);}catch(e){return;}
+    if(ev.type==='pod_call'){let out;try{out={data:await podCall(ev)};}catch(e){out={error:String((e&&e.message)||e)};}try{ws.send(JSON.stringify(Object.assign({type:'pod_reply',id:ev.id},out)));}catch(e){}return;}
+    if(ev.type==='refused')return fin(ev);
+    if(ev.type==='done')return fin(null);
+    onEv(ev);};
+  ws.onerror=()=>fin(null,new Error('Chat could not open the line to the computer in your browser. Try again.'));
+  ws.onclose=()=>fin(null,new Error('The line to chat closed before the task finished. Try again.'));
+});}
 // An error you can act on: the real reason, then the buttons for what usually fixes it.
 function errCard(turn,msg,kind,task){
   const c=node('div',kind==='busy'?'errbox calm':'errbox');c.appendChild(node('div','err',msg));const n=node('div','next');n.appendChild(node('small','','What to do next'));
@@ -1184,7 +1221,7 @@ const bare = (name) => icon(name, 10).replace(/ width="10" height="10" aria-hidd
 const logo = (id, size = 16) =>
   LOGOS[id] ? `<span class="lg" style="width:${size}px;height:${size}px" aria-hidden="true"><img src="${LOGOS[id]}" alt=""></span>` : `<span class="lt" style="width:${size}px;height:${size}px" aria-hidden="true">${esc(String(PROVIDER_NAMES[id] || id).slice(0, 2))}</span>`;
 
-export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'earth', here = null }) {
+export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'earth', here = null, pod = '' }) {
   if (!THEME_IDS.includes(theme)) theme = 'earth';
   const list = cleanModels(models);
   const cards = PROVIDER_CARDS.map(
@@ -1195,7 +1232,9 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
     ? 'Type a task or a website idea. It runs on a real computer and gives you the result and a live link. You sign in with GitHub only when you press Run.'
     : connected.length
       ? `Runs on your own computers (${connected.length} connected). Fleet picks the cheapest one, or choose them below.`
-      : 'No computer connected yet: the first task asks you for one key.';
+      : pod
+        ? 'No key needed: websites and file tasks run on a small Linux inside this browser tab. Connect a cloud computer for apps, Python or the internet.'
+        : 'No computer connected yet: the first task asks you for one key.';
   const on = Object.keys(PROVIDER_NAMES).filter((id) => connected.includes(id));
   const pill = on.length ? `${on.length} computer${on.length === 1 ? '' : 's'} connected · Fleet picks the cheapest` : 'Runs on a real computer · Fleet picks the cheapest';
   const off = Object.keys(PROVIDER_NAMES).filter((id) => !connected.includes(id));
@@ -1250,7 +1289,7 @@ ${earthUsers(esc)}
 <div id="byo" hidden><div><label for="byomodel">Model name</label><input id="byomodel" type="text" placeholder="Any OpenRouter model id, e.g. google/gemini-2.5-flash" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="bysug"><ul id="bysug" class="bysug" role="listbox" hidden></ul><div id="bywarn" class="bywarn" hidden></div></div><div><label id="byokeylabel" for="byokey">Your API key</label><input id="byokey" type="password" placeholder="Paste your API key" autocomplete="off"><button type="button" id="byor" class="byor" hidden>No key? Log in with OpenRouter, free</button><div class="bystat"><span id="bystat"></span><span class="byacts"><button type="button" id="bysave">Save</button><button type="button" id="byrm" hidden>Remove key</button></span></div><label class="byrev"><input type="checkbox" id="byrev"> Also use this AI for PR reviews (the key is then stored encrypted on our server; change it in Settings)</label></div></div></div></div><button type="button" id="mic" class="chip" hidden title="Speak your task" aria-label="Speak your task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
 <button id="go" class="send" type="submit" aria-label="Run"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 14V4M4.5 8.5L9 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div></form>
-<p class="fine">Runs on a real computer from your own sandbox account. Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line. <label class="look">Look <select id="look" aria-label="Look of the page">${THEMES.map(([id, label]) => `<option value="${id}"${id === theme ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label></p>
+<p class="fine">${pod ? 'Runs on a small Linux in this tab, or on a real computer from your own sandbox account.' : 'Runs on a real computer from your own sandbox account.'} Your keys stay encrypted and are never shown. Enter sends, Shift+Enter adds a line. <label class="look">Look <select id="look" aria-label="Look of the page">${THEMES.map(([id, label]) => `<option value="${id}"${id === theme ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label></p>
 </div></div></div>
 <aside class="thx rcol" aria-label="Computers and ideas"><h5>Computers · ${on.length} <a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h5>${on.length ? on.map((id) => `<div class="rc"><span class="wdot ok"></span>${esc(PROVIDER_NAMES[id])}<small>ready</small></div>`).join('') : `<div class="rc off"><span class="wdot"></span>${login && !anon ? 'None connected yet' : 'Sign in to see yours'}<small>—</small></div>`}<h5>Try saying</h5>${CATS[0].ideas.map((i) => `<button type="button" data-idea="${esc(i)}">“${esc(i)}”</button>`).join('')}</aside></div>
 <div id="oracle" class="oracle" hidden role="dialog" aria-modal="true" aria-label="Voice talk">
@@ -1262,7 +1301,7 @@ ${earthUsers(esc)}
 <button type="button" id="oend" class="oend" aria-label="End voice talk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 <select id="ai" hidden aria-hidden="true">${AI_CHOICES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>`,
-    `window.__SIGNED__=${login ? 'true' : 'false'};window.__ANON__=${anon ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
+    `window.__SIGNED__=${login ? 'true' : 'false'};window.__POD__=${inlineJson(pod || '')};window.__ANON__=${anon ? 'true' : 'false'};window.__MODELS__=${inlineJson(list)};window.__CATS__=${inlineJson(CATS)};window.__ZQ__=${inlineJson(ZQ)};window.__LOGOS__=${inlineJson(Object.fromEntries(['anthropic', 'openai', 'openrouter'].filter((k) => LOGOS[k]).map((k) => [k, LOGOS[k]])))};window.__ICONS__=${inlineJson(Object.fromEntries(['wolf', 'website', 'app', 'system', 'answer', 'video'].map((k) => [k, bare(k)])))};` +
       APP_JS +
       EARTH_JS +
       orbJs(here),
