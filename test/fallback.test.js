@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'bun:test';
+import { afterAll, beforeEach, expect, test } from 'bun:test';
 import { FREE_BUSY, freeOpenRouterModels, modelFrom, OPENROUTER_URL, resetFallbacks, WORKERS_AI_FALLBACK } from '../src/loop.js';
 
 const WOLF = 'https://inf.test/v1/chat/completions';
@@ -24,6 +24,8 @@ function world({ wolf = budgetOut, or = {}, ai = null } = {}) {
 }
 
 beforeEach(() => resetFallbacks());
+// Wolf's rest is module state: leave it clear for the test files that run after this one.
+afterAll(() => resetFallbacks());
 
 test('Wolf answers first when it can', async () => {
   const w = world({ wolf: () => answer('wolf here') });
