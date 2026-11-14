@@ -427,7 +427,7 @@ export const messagePage = (title, text) =>
   shell(`${title} · chat`, `<main class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 8px">${esc(title)}</h1><p style="color:var(--dim)">${esc(text)}</p><a class="btn" href="/">Back to chat</a></main>`);
 
 // Where a person manages the AI behind their pull request reviews (@flisk-chat review). The key is never shown again.
-// The looks a person can pick under the box. A new visitor gets the next one in turn (see index.js), kept in the chat_theme cookie.
+// The looks a person can pick under the box. A new visitor gets Earth (see index.js), kept in the chat_theme cookie.
 export const THEMES = [['classic', 'Classic'], ['ivory', 'Ivory'], ['glow', 'Soft glow'], ['focus', 'Focus'], ['voice', 'Voice first'], ['earth', 'Earth']];
 export const THEME_IDS = THEMES.map(([id]) => id);
 
@@ -580,7 +580,7 @@ function layout(){const t=ROOT.dataset.theme||'classic',home=!welcome.classList.
   if(t!=='classic'&&home){park(form,$('slot'));park(MV.fine,$('slot'));}else{unpark(form);unpark(MV.fine);}
   if(t==='focus'&&matchMedia('(min-width:861px)').matches){park($('sugg'),$('ftry'));park(MV.search,$('frecent'));park(MV.hw,$('frecent'));MV.secs.forEach(s=>park(s,$('fright')));}
   else{[$('sugg'),MV.search,MV.hw].concat(MV.secs).forEach(unpark);}}
-const setTheme=(t)=>{if(TH.indexOf(t)<0)t='classic';ROOT.dataset.theme=t;ROOT.classList.toggle('nt',t!=='classic');try{document.cookie='chat_theme='+t+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure';}catch(e){}layout();};
+const setTheme=(t)=>{if(TH.indexOf(t)<0)t='earth';ROOT.dataset.theme=t;ROOT.classList.toggle('nt',t!=='classic');try{document.cookie='chat_theme='+t+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure';}catch(e){}layout();};
 $('look').onchange=(e)=>setTheme(e.target.value);
 addEventListener('resize',()=>layout());
 (()=>{const h=new Date().getHours(),el=$('hello'),who=el.dataset.who;el.textContent=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+(who?', '+who:'');})();
@@ -1090,8 +1090,8 @@ const bare = (name) => icon(name, 10).replace(/ width="10" height="10" aria-hidd
 const logo = (id, size = 16) =>
   LOGOS[id] ? `<span class="lg" style="width:${size}px;height:${size}px" aria-hidden="true"><img src="${LOGOS[id]}" alt=""></span>` : `<span class="lt" style="width:${size}px;height:${size}px" aria-hidden="true">${esc(String(PROVIDER_NAMES[id] || id).slice(0, 2))}</span>`;
 
-export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'classic' }) {
-  if (!THEME_IDS.includes(theme)) theme = 'classic';
+export function appPage({ login, anon = false, connected = [], models = DEFAULT_MODELS, theme = 'earth' }) {
+  if (!THEME_IDS.includes(theme)) theme = 'earth';
   const list = cleanModels(models);
   const cards = PROVIDER_CARDS.map(
     (p) => `<div class="card"><b>${esc(p.label)}</b><small>${esc(p.note)} <a href="${esc(p.url)}" target="_blank" rel="noopener">Get a key</a></small><form data-p="${esc(p.id)}"><input type="password" autocomplete="off" placeholder="Paste the API key" aria-label="${esc(p.label)} API key"><button class="btn go" type="submit">Connect</button></form></div>`,
