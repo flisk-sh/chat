@@ -372,7 +372,7 @@ export async function makeSystem({ computer, podId, spec, emit = () => {}, polls
     failed.length
       ? `${failed.length} part(s) failed: ${failed.map((x) => x.name).join(', ')}. Look at /tmp/up.log with "run" and fix it before you share.`
       : `Every part works.`,
-    `To change the page, "write" ~/app/web/index.html (keep its fetch('/api/<part>') calls; the website reloads by itself). To change a part, "write" its ~/app/<part>/src/index.js (keep PORT and /health; it restarts by itself).`,
+    `The page and every part already work; do not rewrite them. Only if the user asked for a change, "write" the whole file (the page is ~/app/web/index.html, a part is ~/app/<part>/src/index.js; keep the fetch('/api/<part>') calls, PORT and /health).`,
     `Then send {"share": ${ports.web}} so the user gets the live link to this website and its API.`,
   ].join('\n');
   return { summary, web: ports.web, services: spec.services.map((x) => x.name), ok: !failed.length };
