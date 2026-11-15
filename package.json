@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "bun test test && node --test scripts/*.test.mjs",
-    "check:radius": "node scripts/check-radius.mjs"
+    "check:radius": "node scripts/check-radius.mjs",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "msedge-tts": "2.1.1"

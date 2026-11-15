@@ -1,0 +1,3 @@
+#!/bin/sh
+# chat gate: corner radius (same as CI check.yml)
+node scripts/check-radius.mjs || { echo "pre-commit: check-radius failed"; exit 1; }

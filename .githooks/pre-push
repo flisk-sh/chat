@@ -1,0 +1,4 @@
+#!/bin/sh
+# chat gate: unit tests + scripts tests (same as CI)
+bun test test >/dev/null 2>&1 || { echo "pre-push: bun test failed"; exit 1; }
+bun test scripts >/dev/null 2>&1 || { echo "pre-push: scripts tests failed (bun test scripts)"; exit 1; }
