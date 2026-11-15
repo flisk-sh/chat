@@ -57,5 +57,6 @@ describe('grow widget', () => {
     expect(html).toContain("'Grow it: find the first customers for '+link");
     expect(html).toContain('https://mail.google.com/mail/?view=cm&fs=1&su=');
     expect(html).toContain('Nothing is sent for you');
+    expect(html).toContain("'https://grow.flisk.si/?url='+encodeURIComponent(d.url)");
   });
 });

@@ -640,7 +640,8 @@ const WIDGET_DRAW={
       const ma=lnk('mailto:?'+q,'Mail app','btn');ma.removeAttribute('target');acts.appendChild(ma);
       const cp=node('button','btn','Copy');cp.type='button';cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(e.subject+'\\n\\n'+e.body).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1500);});};acts.appendChild(cp);
       m.appendChild(acts);c.appendChild(m);});
-    c.appendChild(node('p','gdim','Nothing is sent for you: add the address in Gmail and press Send yourself.'));return c;},
+    c.appendChild(node('p','gdim','Nothing is sent for you: add the address in Gmail and press Send yourself.'));
+    const more=node('div','gacts');more.appendChild(lnk('https://grow.flisk.si/?url='+encodeURIComponent(d.url),'Full plan on grow.flisk.si: posts and where to list it','btn'));c.appendChild(more);return c;},
 };
 const drawWidget=(ev)=>{try{const f=WIDGET_DRAW[ev.kind];return f?f(ev.data):null;}catch(e){return null;}};
 const linkify=(n,text)=>{n.textContent='';String(text).split(/(https?:\\/\\/[^\\s)]+)/).forEach(p=>{if(/^https?:\\/\\//.test(p)){const a=document.createElement('a');a.href=p;a.target='_blank';a.rel='noopener';a.textContent=p;n.appendChild(a);}else n.appendChild(document.createTextNode(p));});};
