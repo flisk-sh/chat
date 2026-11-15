@@ -460,7 +460,7 @@ export function asksToBuild(task, history = []) {
 }
 const SCAFFOLD = /\bflisk\s+create\b|flisk\.sh\/install\.sh/;
 
-export async function runTask({ task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', note = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function runTask({ task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, citable = null, order = [], files = [], vision = false, modelName = '', note = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -571,7 +571,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
         }
         widget = w;
         if (!w.widget.needsComputer) {
-          const r = await w.widget.run(w.input, { fetch: fetchImpl });
+          const r = await w.widget.run(w.input, { fetch: fetchImpl, citable });
           if (r.error) {
             emit({ type: 'output', error: r.error });
             messages.push({ role: 'user', content: `Error: ${r.error}\n\nNext action as JSON only.` });
@@ -609,7 +609,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
       let shown;
       let ours = false; // chat itself refused the action (a rule, not a broken computer or file)
       if (widget) {
-        const r = await widget.widget.run(widget.input, { fetch: fetchImpl, computer, podId });
+        const r = await widget.widget.run(widget.input, { fetch: fetchImpl, citable, computer, podId });
         if (r.error) shown = { error: r.error };
         else {
           emit({ type: 'widget', kind: widget.widget.id, data: r.data });

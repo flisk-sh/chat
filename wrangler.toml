@@ -20,6 +20,11 @@ INFERENCE_MODEL = "flisk-wolf-chat"
 binding = "INFERENCE"
 service = "flisk-inference"
 
+# Citable (citable.flisk.si) for the "Grow it" card: can AI search read the live link. Same reason as above.
+[[services]]
+binding = "CITABLE"
+service = "citable"
+
 # Speech to text for the mic button (Whisper), on the account's Workers AI.
 [ai]
 binding = "AI"

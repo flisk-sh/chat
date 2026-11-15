@@ -98,6 +98,48 @@ async function services(_input, { computer, podId }) {
   return { data: { runtime: native ? 'local processes' : 'containers', ready: !!d?.tilt?.readiness?.ready, services: list }, summary: `Services card shown: ${list.map((x) => `${x.name} (${x.status})`).join(', ')}.` };
 }
 
+// Grow: the last step after a build. The model writes the words (who would buy, where they are, email drafts) and chat adds
+// a Citable check of the live link: can ChatGPT, Claude, Perplexity and Google read and cite the page. Nothing is sent to
+// anyone: each email is a draft the user opens in their own Gmail or mail app, adds a recipient to and sends themselves.
+// Citable runs on the same Cloudflare account, so the Worker reaches it through a service binding (ctx.citable); a Worker
+// cannot fetch another Worker by its public address on the same domain.
+export const CITABLE_URL = 'https://citable.flisk.si/api/check?url=';
+const httpUrl = (v) => {
+  try { const u = new URL(str(v, 300)); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch { return ''; }
+};
+function growClean(i) {
+  const url = httpUrl(i.url);
+  const product = str(i.product, 160);
+  const buyers = str(i.buyers, 400);
+  const pitch = str(i.pitch, 200);
+  const places = (Array.isArray(i.places) ? i.places : []).slice(0, 10)
+    .map((p) => ({ name: str(p?.name, 60), why: str(p?.why, 160), url: httpUrl(p?.url) }))
+    .filter((p) => p.name);
+  const emails = (Array.isArray(i.emails) ? i.emails : []).slice(0, 10)
+    .map((e) => ({ to: str(e?.to, 80), subject: str(e?.subject, 120), body: String(e?.body ?? '').replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').trim().slice(0, 1500) }))
+    .filter((e) => e.subject && e.body);
+  if (!url || !buyers || !places.length || !emails.length) return null;
+  return { url, product, buyers, pitch, places, emails };
+}
+async function grow(input, { fetch, citable }) {
+  const call = citable || fetch;
+  let check = null;
+  try {
+    const r = await call(CITABLE_URL + encodeURIComponent(input.url), { headers: { accept: 'application/json', 'user-agent': 'flisk-chat' }, signal: AbortSignal.timeout(20000) });
+    const j = r.ok ? await r.json() : null;
+    if (j && num(j.score) !== null) {
+      const fixes = (Array.isArray(j.checks) ? j.checks : []).filter((c) => c && (c.status === 'fail' || c.status === 'warn'))
+        .slice(0, 3).map((c) => ({ title: str(c.title, 100), summary: str(c.summary, 220) }));
+      check = { score: j.score, grade: str(j.grade, 2), fixes, report: `https://citable.flisk.si/${encodeURIComponent(new URL(input.url).host)}` };
+    }
+  } catch { check = null; }
+  const seen = check ? `AI search check: ${check.score}/100 (${check.grade})${check.fixes.length ? `, to fix: ${check.fixes.map((f) => f.title).join('; ')}` : ', nothing to fix'}.` : 'The AI search check did not answer this time.';
+  return {
+    data: { ...input, check },
+    summary: `Grow card shown for ${input.url}: ${input.places.length} places to find buyers, ${input.emails.length} email drafts the user opens in Gmail and sends themselves. ${seen}`,
+  };
+}
+
 export const WIDGETS = {
   weather: {
     id: 'weather', title: 'Weather',
@@ -116,6 +158,12 @@ export const WIDGETS = {
     prompt: '{"widget": {"kind": "services"}} after "flisk up" has started a project on the computer: draws each service with its state. Then "say" which one to open or what is not ready.',
     clean: () => ({}),
     run: services,
+  },
+  grow: {
+    id: 'grow', title: 'Grow it',
+    prompt: '{"widget": {"kind": "grow", "url": "<the live link from this chat>", "product": "<what it is, one line>", "buyers": "<who would pay for it and why, two sentences, specific: role, size of business, the problem>", "pitch": "<one line that would make them reply>", "places": [{"name": "<a real community, directory, subreddit, newsletter or event where those buyers are>", "why": "<one short line>", "url": "<its address if you are sure, else leave it out>"}], "emails": [{"to": "<the kind of person, never a name or address>", "subject": "<short>", "body": "<under 90 words, plain, one question at the end, sign off with [Your name]>"}]}} when the user says "Grow it" or asks how to find customers or users for what was built: 5 to 8 places, 5 emails, each to a different kind of buyer. Use what you know of the product from this chat; no computer is needed. The card also checks whether AI search can read the live page. Then "say" the first step to take today in one or two sentences.',
+    clean: growClean,
+    run: grow,
   },
 };
 
