@@ -56,6 +56,7 @@ ${SITE_HELP}
 - Only if share returned an error saying this computer cannot have a public link (never when it returned a live link): do NOT make a copy of the app. "say" plainly: the app was built and checked on the computer (what you checked), but this computer's provider cannot give it a public link, so it stops when you answer; connecting a provider that can (for example Upstash Box) gives a live link next time.
 - Every app ends with a shared live link and every show-only page with a published link, in the same answer. Never end with an offer to publish later or with only a localhost address.
 - Each task starts on a fresh computer: files and servers from earlier answers are gone. If the user asks for the link to something built earlier, build it again, then publish it.
+- Flisk is only for building an app the user asked for. A question, a lookup or research (stars, traffic, referring sites, issues of a GitHub repo, even a repo named flisk; a web page; a number) is never an app: answer it with curl, gh api or a widget, never install Flisk and never run flisk create for it.
 - After at most ${MAX_STEPS - 1} actions, reply with "say". If the task needs no computer, reply with "say" at once.
 - Widgets draw a card for the user from data. Prefer one whenever it fits; the computer is only for work a widget cannot do:
 ${widgetPrompt()}
@@ -450,6 +451,15 @@ export function cleanHistory(history) {
 }
 
 // computer: { start, run, write, read, share, stop } (fleet.js, or the visitor's browser: browserpod.js). note: extra instructions about that computer. track: optional { started(podId), kept(podId, url), stopped(podId) }. publish(html, { limit }) -> url. photo(prompt) -> a data: URL or ''. emit(event) gets every step.
+// Words that mean the user wants something built. A plain question ("see referring sites to github.com/flisk-sh/flisk")
+// has none, and a small model that sees "flisk" in it must not install Flisk and scaffold an app nobody asked for.
+const BUILD_WORDS = /\b(build|make|create|scaffold|set ?up|develop|code|program|deploy|add|change|fix|apps?|api|backend|crm|erp|shop|store|tracker|dashboard|todo|to-do|booking|websites?|web ?site|landing|pages?|system|services?|project|tool)\b/i;
+export function asksToBuild(task, history = []) {
+  const said = [task, ...(Array.isArray(history) ? history.filter((h) => h?.role === 'user').map((h) => h.content) : [])];
+  return said.some((t) => BUILD_WORDS.test(typeof t === 'string' ? t : JSON.stringify(t ?? '')));
+}
+const SCAFFOLD = /\bflisk\s+create\b|flisk\.sh\/install\.sh/;
+
 export async function runTask({ task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), fetchImpl = fetch, order = [], files = [], vision = false, modelName = '', note = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
@@ -468,6 +478,7 @@ export async function runTask({ task, history = [], github = undefined, origin =
   const force = bigApp ? '\n\nThis task is a bigger app with several parts: your FIRST action must be the "system" action described above. Do not run flisk create and do not write the app files yourself.' : '';
   const system = SYSTEM.replace(`After at most ${MAX_STEPS - 1} actions`, `After at most ${maxSteps - 1} actions`) + who + force + (github === undefined ? '' : githubNote(github, origin)) + note;
   const token = github?.token || '';
+  const building = asksToBuild(task, history);
   const messages = [{ role: 'system', content: system }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
@@ -604,6 +615,9 @@ export async function runTask({ task, history = [], github = undefined, origin =
           emit({ type: 'widget', kind: widget.widget.id, data: r.data });
           shown = { widget: widget.widget.id, summary: r.summary };
         }
+      } else if (action.type === 'run' && !building && SCAFFOLD.test(action.command)) {
+        shown = { error: 'Refused: the user asked a question, not for an app, so do not install Flisk or make a project. Answer the question itself (curl, gh api or a widget), then "say".' };
+        ours = true;
       } else if (action.type === 'run') {
         emit({ type: 'run', command: action.command });
         if (/\b(flisk up|nohup)\b/.test(action.command)) startedServer = true;
