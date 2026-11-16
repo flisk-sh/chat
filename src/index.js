@@ -519,7 +519,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   }
 
   // GitHub App: "@flisk-chat review" on a pull request (signed webhook, no session).
-  if (request.method === 'POST' && path === '/github/webhook') return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin, freeModelLimit: freeModelOpts(env).overLimit }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+  if (path === '/github/webhook') {
+    if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'POST' } });
+    return githubWebhook(request, { ...env, PUBLIC_ORIGIN: origin, freeModelLimit: freeModelOpts(env).overLimit }, { fetchImpl, waitUntil, overLimit: (login) => overDailyLimit(login, { cache: env.LIMIT_CACHE, limit: REVIEWS_PER_DAY, scope: 'review-limit' }) });
+  }
 
   // Alexa skill (Echo speaker at home): public URL guarded by ?key=ALEXA_KEY, see src/alexa.js.
   // Ava reading an Alexa answer: Alexa fetches this mp3 itself (no cookie, no headers), so the URL carries a signature
