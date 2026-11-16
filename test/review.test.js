@@ -77,6 +77,14 @@ describe('diff and answer parsing', () => {
 });
 
 describe('@flisk-chat review webhook', () => {
+  test('non-POST requests on /github/webhook return 405 with Allow: POST header', async () => {
+    const { env, fetchImpl } = await setup();
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      const res = await handle(new Request('https://chat.test/github/webhook', { method }), env, { fetchImpl });
+      expect(res.status).toBe(405);
+      expect(res.headers.get('allow')).toBe('POST');
+    }
+  });
   test('a write-access comment gets one review with a summary, a valid inline comment and the verdict', async () => {
     const w = await setup();
     const res = await w.send(event());
