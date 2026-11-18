@@ -1,6 +1,7 @@
 // The computer in the visitor's own browser tab (github.com/flisk-sh/linux2wasm, served by fleet at /browserpod/): a small Linux on WebAssembly, no key, no cost.
 // The task loop runs here on the Worker as always; each computer call is sent down the task's WebSocket to the page,
 // which runs it in its pod and sends the result back. Nothing is stored, and a call to the tab is not a subrequest.
+import { cleanMode, searchWeb } from './search.js';
 import { MAX_TASK, cleanFiles, runTask } from './loop.js';
 
 export const POD_ID = 'browser';
@@ -109,7 +110,7 @@ export function runOverSocket(socket, { gate, origin, publish, photo, saveImage 
       }
       // A closed tab cannot run anything: stop asking the model too.
       const model = async (messages) => (pod.closed ? { error: 'the browser tab closed', kind: 'other' } : ok.model(messages));
-      const r = await run({ lookupFacts, task, history: msg.history, origin, model, maxSteps: ok.maxSteps, computer: pod.computer, fetchImpl, files: cleanFiles(msg.files), vision: ok.vision, modelName: ok.modelName, note: BROWSER_NOTE, publish, photo, saveImage, saveVideo, emit: send });
+      const r = await run({ mode: cleanMode(msg.mode), search: (q) => searchWeb(q, { fetch: fetchImpl }), lookupFacts, task, history: msg.history, origin, model, maxSteps: ok.maxSteps, computer: pod.computer, fetchImpl, files: cleanFiles(msg.files), vision: ok.vision, modelName: ok.modelName, note: BROWSER_NOTE, publish, photo, saveImage, saveVideo, emit: send });
       send({ type: 'done', ms: r.ms, error: r.error });
     } catch (e) {
       send({ type: 'error', error: String(e?.message || e).slice(0, 200) });

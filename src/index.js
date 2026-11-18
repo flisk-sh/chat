@@ -9,6 +9,7 @@ import { fleetClient } from './fleet.js';
 import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } from './loop.js';
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
+import { cleanMode, searchWeb } from './search.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, PROVIDER_NAMES, reviewsPage, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
@@ -745,7 +746,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const decision = await (decide(env)?.(task, { needLang: !detectLang(task) }) ?? null);
       const turnLang = decision?.lang && !detectLang(task) ? decision.lang : heuristicLang;
       if (decision?.lang && heuristicLang && decision.lang !== heuristicLang) await sendTrace(env, { route: '/api/run', kind: 'unexpected', why: `Jev says ${decision.lang}, word lists say ${heuristicLang}`, lang: turnLang }, fetchImpl);
-      const job = runTask({ grade: gradeReply(env), stream: true, decision, classify: imageIntent(env), lookupFacts: (q) => lookup(q), task, history: body.history, lang: turnLang, kind: String(body?.cat || '').slice(0, 12), memo: body?.memo, github, origin, model: m.ask, maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer, track: podTracker(env, login, fleet), fetchImpl, citable: env.CITABLE ? (u, init) => env.CITABLE.fetch(u, init) : null, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content, o) => publishSite(env, login, content, origin, o?.limit), photo: (p) => sitePhoto(env, login, p), saveImage: (pic, p) => saveImage(env, login, pic, p, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
+      const job = runTask({ mode: cleanMode(body.mode), search: (q) => searchWeb(q, { fetch: fetchImpl }), grade: gradeReply(env), stream: true, decision, classify: imageIntent(env), lookupFacts: (q) => lookup(q), task, history: body.history, lang: turnLang, kind: String(body?.cat || '').slice(0, 12), memo: body?.memo, github, origin, model: m.ask, maxSteps: chosen.free ? MAX_STEPS : (github?.token ? GITHUB_STEPS : BYO_STEPS), computer, track: podTracker(env, login, fleet), fetchImpl, citable: env.CITABLE ? (u, init) => env.CITABLE.fetch(u, init) : null, order, files: cleanFiles(body.files), vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen), publish: (content, o) => publishSite(env, login, content, origin, o?.limit), photo: (p) => sitePhoto(env, login, p), saveImage: (pic, p) => saveImage(env, login, pic, p, origin), saveVideo: (parts, title) => saveVideo(env, login, parts, title, origin), emit })
         .then(async (r) => {
           if (needPod) return;
           for (const e of buffered) send(e);

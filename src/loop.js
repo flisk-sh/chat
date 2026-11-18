@@ -9,6 +9,7 @@ import { cleanShare, KEEP_DAYS, shareApp } from './share.js';
 import { cleanSite, LAYOUTS, photoPrompt, renderSite } from './sites.js';
 import { scrub, setupGithub } from './github.js';
 import { sourcesNote, splitPoints, wantsLookup, withSources } from './lookup.js';
+import { formatResults, modeNote, searchWeb } from './search.js';
 
 export { MAX_STEPS };
 // A layout page carries its fonts and a photo, so it may be bigger than a hand-written page.
@@ -188,13 +189,14 @@ export function parseAction(text) {
         const spec = cleanShare(a.share);
         if (spec) return { type: 'share', spec };
       }
+      if (typeof a?.search === 'string' && a.search.trim()) return { type: 'search', query: a.search.trim() };
       if (a?.widget && typeof a.widget === 'object') return { type: 'widget', raw: a.widget };
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
   }
   // An action that starts but never closes (the answer was cut off at the length limit, often a long file with no } in
   // it) is a bad reply to retry, never an answer to show.
-  if (start >= 0 && /^\s*\{\s*"(run|write|read|publish|worker|image|site|video|system|share|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
+  if (start >= 0 && /^\s*\{\s*"(run|write|read|publish|worker|image|site|video|system|share|search|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
 
   // If it still looks like a tool call or XML, force a retry.
   if (/DSML|<invoke|<parameter|tool_call|function_call/i.test(String(text))) {
@@ -309,7 +311,7 @@ const SCAFFOLD = /\bflisk\s+create\b|flisk\.sh\/install\.sh/;
 
 // Kinds picked in the chat that make something other than a picture: the name is what the model is told.
 export const BUILD_KINDS = { website: 'a website to build', build: 'a website, app or system to build', app: 'a small app to build', system: 'a system to build' };
-export async function runTask({ grade = null, stream = false, decision = null, classify = null, task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', saveImage = null, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), lookupFacts = null, fetchImpl = fetch, citable = null, order = [], files = [], vision = false, modelName = '', note = '', lang = '', kind = '', memo = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function runTask({ grade = null, stream = false, decision = null, classify = null, task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', saveImage = null, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), lookupFacts = null, mode = 'chat', search = null, fetchImpl = fetch, citable = null, order = [], files = [], vision = false, modelName = '', note = '', lang = '', kind = '', memo = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
   const pics = vision ? files.filter((f) => f.image) : [];
@@ -323,7 +325,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   // The kind the person picked in the + menu or the Build / Create mode. What they type is a description of that thing, however vague
   // ("something cool"), so it is never drawn as a picture and the model is told what was picked.
   const picked = BUILD_KINDS[String(kind || '').toLowerCase()] || '';
-  const system = taskPrompt({ task, maxSteps, modelName, github, origin, note: note + (picked ? `\nThe person picked "${picked}" in the chat, so what they type describes ${picked}, even if it is vague. Make it now and publish it; do not draw a picture instead and do not ask what they meant.` : ''), lang, memo });
+  const system = taskPrompt({ task, maxSteps, modelName, github, origin, note: note + modeNote(mode, maxSteps) + (picked ? `\nThe person picked "${picked}" in the chat, so what they type describes ${picked}, even if it is vague. Make it now and publish it; do not draw a picture instead and do not ask what they meant.` : ''), lang, memo });
   const token = github?.token || '';
   const building = asksToBuild(task, history);
   const analysis = asksAnalysis(task);
@@ -369,6 +371,9 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   let appPort = null; // the website port a bigger app answered with
   let shareRefused = false; // the provider cannot give this computer a public link
   let askedForLink = false;
+  let askedForComputer = false; // computer mode: a first answer with no computer used is sent back once
+  let searches = 0;
+  const MAX_SEARCHES = 2; // each search asks several sources, and Workers Free stops at 50 subrequests per run
   // Draws the picture and keeps it at its own link (saveImage), so the chat history holds a short link, not the picture.
   const drawImage = async (spec) => {
     emit({ type: 'image_start', prompt: spec.prompt });
@@ -454,6 +459,37 @@ export async function runTask({ grade = null, stream = false, decision = null, c
         ][giveUps - 1];
         messages.push({ role: 'user', content: `${hint} Next action as JSON only.` });
         step--; // a retry for a give-up does not use up a step
+        continue;
+      }
+      // Computer mode: the user asked for real work, so an answer with no computer used yet is sent back once.
+      if (mode === 'computer' && action.type === 'say' && !last && !podId && !askedForComputer) {
+        askedForComputer = true;
+        emit({ type: 'retry' });
+        messages.push({ role: 'user', content: 'Computer mode is on: do the work on the computer first. Send a "run" or "write" action as JSON only.' });
+        continue;
+      }
+      // Search mode: a web search runs in the Worker (no computer), and the numbered sources go back to the model.
+      if (action.type === 'search') {
+        if (mode !== 'search') {
+          messages.push({ role: 'user', content: 'Web search is off in this mode. Use the computer or answer with "say".\n\nNext action as JSON only.' });
+          continue;
+        }
+        if (searches >= MAX_SEARCHES) {
+          messages.push({ role: 'user', content: `That is ${MAX_SEARCHES} searches. Answer now with "say" from the sources you have, citing [1], [2].` });
+          continue;
+        }
+        searches++;
+        emit({ type: 'search', query: action.query });
+        const found = await (search ? search(action.query) : searchWeb(action.query, { fetch: fetchImpl }));
+        if (found.error) {
+          emit({ type: 'output', error: found.error });
+          steps.push({ action, error: found.error });
+          messages.push({ role: 'user', content: `Error: ${found.error}\n\nTry other words once, or "say" what you know and that the search found nothing.` });
+        } else {
+          emit({ type: 'sources', query: action.query, results: found.results });
+          steps.push({ action, sources: found.results.length });
+          messages.push({ role: 'user', content: `Web results for "${action.query}":\n\n${formatResults(found.results)}\n\nNext action as JSON only (usually "say", citing [1], [2]).` });
+        }
         continue;
       }
       if (action.type === 'say' || last) {
