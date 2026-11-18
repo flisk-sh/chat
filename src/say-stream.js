@@ -32,7 +32,7 @@ export async function readAiStream(stream, onDelta) {
     if (!l.startsWith('data:')) return;
     const d = l.slice(5).trim();
     if (!d || d === '[DONE]') return;
-    try { const j = JSON.parse(d); const t = j.response ?? j.choices?.[0]?.delta?.content ?? ''; if (typeof t === 'string' && t) { text += t; onDelta?.(t); } } catch { /* a half line */ }
+    try { const j = JSON.parse(d); let t = j.response ?? j.choices?.[0]?.delta?.content ?? ''; if (typeof t === 'number') t = String(t); /* Workers AI sends a digit-only token as a JSON number: {"response":2022} */ if (typeof t === 'string' && t) { text += t; onDelta?.(t); } } catch { /* a half line */ }
   };
   for (;;) {
     const { value, done } = await rd.read();
