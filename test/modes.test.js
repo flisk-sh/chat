@@ -149,43 +149,68 @@ describe('mode and search helpers', () => {
 });
 
 describe('Search mode in the task loop', () => {
-  test('searches, feeds numbered sources to the model, answers with citations, and never starts a computer', async () => {
-    const model = scripted(['{"search":"bun release"}', '{"say":"Bun 1.3 is out [1]."}']);
+  test('chat runs the first search itself, before the model answers: the model gets numbered results and no computer starts', async () => {
+    const model = scripted(['{"say":"Bun 1.3 is out [1]."}']);
     const computer = fakeComputer();
     const ev = [];
     const asked = [];
-    const r = await runTask({ task: 'what is new in bun?', mode: 'search', model: model.ask, computer, search: async (q) => { asked.push(q); return { results: RESULTS }; }, emit: (e) => ev.push(e) });
-    expect(asked).toEqual(['bun release']);
-    expect(r.answer).toBe('Bun 1.3 is out [1].');
-    expect(computer.calls).toEqual([]); // no computer for a web answer
-    expect(ev.find((e) => e.type === 'sources').results).toEqual(RESULTS);
-    // The first prompt turns search on; the second carries the numbered results.
-    expect(model.seen[0][0].content).toContain('SEARCH MODE is on');
-    const second = JSON.stringify(model.seen[1]);
-    expect(second).toContain('[1] Bun 1.3 released');
-    expect(second).toContain('https://bun.sh/docs');
+    const r = await runTask({ task: 'what is new in the latest bun release?', mode: 'search', model: model.ask, computer, search: async (q) => { asked.push(q); return { results: RESULTS }; }, emit: (e) => ev.push(e) });
+    expect(asked.length).toBe(1);
+    expect(asked[0]).toContain('bun');
+    expect(r.answer).toContain('Bun 1.3 is out [1].');
+    expect(computer.calls).toEqual([]);
+    expect(ev.find((e) => e.type === 'websources').results).toEqual(RESULTS);
+    // The very first model call already carries the results and the search-mode note.
+    const sys = model.seen[0][0].content;
+    expect(sys).toContain('SEARCH MODE is on');
+    expect(sys).toContain('[1] Bun 1.3 released');
+    expect(sys).toContain('https://bun.sh/docs');
   });
 
-  test('a failed search is reported to the model, which can still answer', async () => {
-    const model = scripted(['{"search":"x"}', '{"say":"Nothing found."}']);
+  test('the page-facing events never reuse the name "sources" (the page reads ev.sources.length on that one)', async () => {
     const ev = [];
-    const r = await runTask({ task: 't', mode: 'search', model: model.ask, computer: fakeComputer(), search: async () => ({ error: 'no web results for "x"' }), emit: (e) => ev.push(e) });
-    expect(r.answer).toBe('Nothing found.');
+    await runTask({ task: 'bun release', mode: 'search', model: scripted(['{"search":"bun docs"}', '{"say":"ok"}']).ask, computer: fakeComputer(), search: async () => ({ results: RESULTS }), emit: (e) => ev.push(e) });
+    expect(ev.filter((e) => e.type === 'websources').length).toBe(2); // the first search and the model's own
+    expect(ev.filter((e) => e.type === 'sources').every((e) => Array.isArray(e.sources))).toBe(true);
+  });
+
+  test('a model that reaches for a computer in Search mode is sent back once to answer from the web results', async () => {
+    const model = scripted(['{"run":"curl https://bun.sh"}', '{"say":"From the results [1]."}']);
+    const computer = fakeComputer();
+    const r = await runTask({ task: 'bun release', mode: 'search', model: model.ask, computer, search: async () => ({ results: RESULTS }) });
+    expect(JSON.stringify(model.seen[1])).toContain('Search mode is on: do not use a computer');
+    expect(computer.calls).toEqual([]);
+    expect(r.answer).toContain('From the results [1].');
+  });
+
+  test('the model may search again with other words; a failed search is reported and it can still answer', async () => {
+    const model = scripted(['{"search":"x"}', '{"say":"Nothing found."}']);
+    let calls = 0;
+    const r = await runTask({ task: 't t t', mode: 'search', model: model.ask, computer: fakeComputer(), search: async () => (++calls === 1 ? { results: RESULTS } : { error: 'no web results for "x"' }) });
+    expect(calls).toBe(2);
+    expect(r.answer).toContain('Nothing found.');
     expect(JSON.stringify(model.seen[1])).toContain('no web results');
   });
 
-  test('stops after 2 searches and asks for the answer', async () => {
-    const model = scripted(Array(4).fill('{"search":"again"}').concat('{"say":"done [1]"}'));
-    let n = 0;
-    const r = await runTask({ task: 't', mode: 'search', model: model.ask, computer: fakeComputer(), maxSteps: 12, search: async () => { n++; return { results: RESULTS }; } });
-    expect(n).toBe(2);
-    expect(r.answer).toBe('done [1]');
+  test('no results at all: the model still answers, with no web note', async () => {
+    const model = scripted(['{"say":"I do not know."}']);
+    const r = await runTask({ task: 'zzz qqq', mode: 'search', model: model.ask, computer: fakeComputer(), search: async () => ({ error: 'no web results' }) });
+    expect(r.answer).toContain('I do not know.');
+    expect(model.seen[0][0].content).not.toContain('WEB RESULTS');
   });
 
-  test('outside Search mode a search action is refused and nothing is fetched', async () => {
+  test('stops after 2 searches in all (the first one is chat\'s) and asks for the answer', async () => {
+    const model = scripted(Array(4).fill('{"search":"again"}').concat('{"say":"done [1]"}'));
+    let n = 0;
+    const r = await runTask({ task: 'bun release', mode: 'search', model: model.ask, computer: fakeComputer(), maxSteps: 12, search: async () => { n++; return { results: RESULTS }; } });
+    expect(n).toBe(2);
+    expect(r.answer).toContain('done [1]');
+  });
+
+  test('outside Search mode nothing is searched, a search action is refused, and the mode prompt is absent', async () => {
     const model = scripted(['{"search":"bun"}', '{"say":"ok"}']);
     let n = 0;
-    await runTask({ task: 't', mode: 'chat', model: model.ask, computer: fakeComputer(), search: async () => { n++; return { results: RESULTS }; } });
+    await runTask({ task: 'bun release', mode: 'chat', model: model.ask, computer: fakeComputer(), search: async () => { n++; return { results: RESULTS }; } });
     expect(n).toBe(0);
     expect(JSON.stringify(model.seen[1])).toContain('Web search is off');
     expect(model.seen[0][0].content).not.toContain('SEARCH MODE');
@@ -238,7 +263,7 @@ describe('/api/run with modes', () => {
     const { res, modelPrompts } = await run({ mode: 'search' }, { connected: false });
     expect(res.status).toBe(200);
     const ev = (await res.text()).trim().split('\n').map((l) => JSON.parse(l));
-    expect(ev.find((e) => e.type === 'sources').results.map((x) => x.url)).toContain('https://bun.sh/docs');
+    expect(ev.find((e) => e.type === 'websources').results.map((x) => x.url)).toContain('https://bun.sh/docs');
     expect(ev.find((e) => e.type === 'answer').text).toBe('From the web [1].');
     expect(modelPrompts[0][0].content).toContain('SEARCH MODE is on');
   });

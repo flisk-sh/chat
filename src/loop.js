@@ -8,8 +8,8 @@ import { cleanSystem, makeSystem } from './system.js';
 import { cleanShare, KEEP_DAYS, shareApp } from './share.js';
 import { cleanSite, LAYOUTS, photoPrompt, renderSite } from './sites.js';
 import { scrub, setupGithub } from './github.js';
-import { sourcesNote, splitPoints, wantsLookup, withSources } from './lookup.js';
-import { formatResults, modeNote, searchWeb } from './search.js';
+import { searchWords, sourcesNote, splitPoints, wantsLookup, withSources } from './lookup.js';
+import { cleanQuery, formatResults, modeNote, searchWeb } from './search.js';
 
 export { MAX_STEPS };
 // A layout page carries its fonts and a photo, so it may be bigger than a hand-written page.
@@ -341,7 +341,21 @@ export async function runTask({ grade = null, stream = false, decision = null, c
     sources = await Promise.resolve(lookupFacts(task)).catch(() => []) || [];
     if (sources.length) emit({ type: 'sources', sources: sources.map((x) => ({ title: x.title, url: x.url })) });
   }
-  const messages = [{ role: 'system', content: system + sourcesNote(sources) }, ...cleanHistory(past), { role: 'user', content: first }];
+  // Search mode: chat runs the first search itself, before the model answers. A small model does not reliably choose to search
+  // (it reaches for a computer), so it gets the numbered web results up front and only searches again if they fall short.
+  let webNote = '';
+  let prefetched = false;
+  if (mode === 'search' && !files.length) {
+    const q = cleanQuery(searchWords(task) || task);
+    emit({ type: 'search', query: q });
+    const found = q ? await Promise.resolve(search ? search(q) : searchWeb(q, { fetch: fetchImpl })).catch(() => null) : null;
+    prefetched = true;
+    if (found?.results?.length) {
+      emit({ type: 'websources', query: q, results: found.results });
+      webNote = `\n\nWEB RESULTS for "${q}" (chat searched the web for you just now). Answer from these and cite them as [1], [2]. Send {"search": "<other words>"} only if they do not answer the question:\n\n${formatResults(found.results)}`;
+    }
+  }
+  const messages = [{ role: 'system', content: system + sourcesNote(sources) + webNote }, ...cleanHistory(past), { role: 'user', content: first }];
   let podId = null;
   let provider = null;
   const steps = [];
@@ -372,7 +386,8 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   let shareRefused = false; // the provider cannot give this computer a public link
   let askedForLink = false;
   let askedForComputer = false; // computer mode: a first answer with no computer used is sent back once
-  let searches = 0;
+  let searches = prefetched ? 1 : 0;
+  let askedNoComputer = false; // search mode: a computer action is sent back once
   const MAX_SEARCHES = 2; // each search asks several sources, and Workers Free stops at 50 subrequests per run
   // Draws the picture and keeps it at its own link (saveImage), so the chat history holds a short link, not the picture.
   const drawImage = async (spec) => {
@@ -468,6 +483,13 @@ export async function runTask({ grade = null, stream = false, decision = null, c
         messages.push({ role: 'user', content: 'Computer mode is on: do the work on the computer first. Send a "run" or "write" action as JSON only.' });
         continue;
       }
+      // Search mode answers from the web: a computer action with no computer started yet is sent back once.
+      if (mode === 'search' && (action.type === 'run' || action.type === 'write') && !podId && !askedNoComputer) {
+        askedNoComputer = true;
+        emit({ type: 'retry' });
+        messages.push({ role: 'user', content: 'Search mode is on: do not use a computer. Answer with "say" from the web results above, citing [1], [2]. If they do not answer it, send {"search": "<other words>"}. Next action as JSON only.' });
+        continue;
+      }
       // Search mode: a web search runs in the Worker (no computer), and the numbered sources go back to the model.
       if (action.type === 'search') {
         if (mode !== 'search') {
@@ -486,7 +508,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
           steps.push({ action, error: found.error });
           messages.push({ role: 'user', content: `Error: ${found.error}\n\nTry other words once, or "say" what you know and that the search found nothing.` });
         } else {
-          emit({ type: 'sources', query: action.query, results: found.results });
+          emit({ type: 'websources', query: action.query, results: found.results });
           steps.push({ action, sources: found.results.length });
           messages.push({ role: 'user', content: `Web results for "${action.query}":\n\n${formatResults(found.results)}\n\nNext action as JSON only (usually "say", citing [1], [2]).` });
         }
