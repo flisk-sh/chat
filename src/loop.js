@@ -9,7 +9,7 @@ import { cleanShare, KEEP_DAYS, shareApp } from './share.js';
 import { cleanSite, LAYOUTS, photoPrompt, renderSite } from './sites.js';
 import { scrub, setupGithub } from './github.js';
 import { searchWords, sourcesNote, splitPoints, wantsLookup, withSources } from './lookup.js';
-import { cleanQuery, formatResults, modeNote, searchWeb } from './search.js';
+import { answerFromWeb, cleanQuery, formatResults, modeNote, searchWeb } from './search.js';
 
 export { MAX_STEPS };
 // A layout page carries its fonts and a photo, so it may be bigger than a hand-written page.
@@ -346,6 +346,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   // Search mode: chat runs the first search itself, before the model answers. A small model does not reliably choose to search
   // (it reaches for a computer), so it gets the numbered web results up front and only searches again if they fall short.
   let webNote = '';
+  let webResults = null; // what the prefetch found, kept in case no AI is available to write the answer
   let prefetched = false;
   if (mode === 'search' && !files.length) {
     const q = cleanQuery(searchWords(task) || task);
@@ -353,6 +354,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
     const found = q ? await Promise.resolve(search ? search(q) : searchWeb(q, { fetch: fetchImpl })).catch(() => null) : null;
     prefetched = true;
     if (found?.results?.length) {
+      webResults = found.results;
       emit({ type: 'websources', query: q, results: found.results });
       webNote = `\n\nWEB RESULTS for "${q}" (chat searched the web for you just now). Answer from these and cite them as [1], [2]. Send {"search": "<other words>"} only if they do not answer the question:\n\n${formatResults(found.results)}`;
     }
@@ -448,13 +450,32 @@ export async function runTask({ grade = null, stream = false, decision = null, c
       }
       // Every free model busy at once is short-lived (rate limits reset within the minute): wait and go round again, twice, instead
       // of showing an error the person can do nothing about.
-      if (reply.kind === 'busy' && busyRetries < BUSY_WAITS.length) {
+      // (Not when the web already answered: Search mode has its results, so show them now instead of making the person wait 20 s.)
+      if (reply.kind === 'busy' && busyRetries < BUSY_WAITS.length && !webResults?.length) {
         const ms = BUSY_WAITS[busyRetries++];
         emit({ type: 'reroute', text: `Every free model is busy, trying again in ${Math.round(ms / 1000)} s` });
         emit({ type: 'retry' });
         await wait(ms);
         step--;
         continue;
+      }
+      // No AI at all (every free model busy or out of budget): a question is still answered from the web, with sources,
+      // instead of ending on "the free AI is busy". Search mode already has the results; a plain question searches now.
+      if (reply.error && ['busy', 'limit', 'provider', 'empty'].includes(reply.kind) && !podId && !files.length) {
+        const askedWeb = mode === 'search' || (mode === 'chat' && !building && wantsLookup(task, { building, files: files.length }));
+        let results = webResults;
+        if (askedWeb && !results) {
+          const q = cleanQuery(searchWords(task) || task);
+          emit({ type: 'search', query: q });
+          const found = q ? await Promise.resolve(search ? search(q) : searchWeb(q, { fetch: fetchImpl })).catch(() => null) : null;
+          results = found?.results || null;
+          if (results?.length) emit({ type: 'websources', query: q, results });
+        }
+        if (askedWeb && results?.length) {
+          const text = answerFromWeb(results);
+          emit({ type: 'answer', text });
+          return await finish(text);
+        }
       }
       if (reply.error) {
         emit({ type: 'error', error: reply.error, kind: reply.kind });

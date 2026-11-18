@@ -224,6 +224,15 @@ export async function searchWeb(query, { fetch = globalThis.fetch, only = null, 
   return { results };
 }
 
+// No AI is available (every free model is busy or out of budget): the answer is what the web says, straight from the best
+// results, with the sources. Better than an error when the search already found the page.
+export function answerFromWeb(results) {
+  const top = results.slice(0, 3).filter((r) => r.snippet);
+  const body = top.map((r, i) => `**${r.title}** [${i + 1}]\n${r.snippet}`).join('\n\n');
+  const sources = results.map((r, i) => `- [${i + 1}] [${r.title}](${r.url})`).join('\n');
+  return `${body || 'These are the best matches I found.'}\n\n**Sources**\n${sources}\n\n_The free AI is busy right now, so this comes straight from the web without it writing an answer. Try again in a minute for a written one._`;
+}
+
 // What the model reads back: numbered, so the answer can cite [1], [2].
 export const formatResults = (results) => results.map((r, i) => `[${i + 1}] ${r.title}\n${r.url}\n${r.snippet}`).join('\n\n');
 

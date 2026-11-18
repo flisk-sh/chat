@@ -41,6 +41,8 @@ export function explainModelError(body, status, chosen = {}) {
   const hay = `${msg} ${detail}`.toLowerCase();
   let kind = 'other';
   if (/temperature|top_p|max_tokens|max_completion_tokens|unsupported (parameter|value)|not supported with this model/.test(hay) && code === 400) kind = 'setting';
+  // "This model is not available in your region" comes as a 403 but is not a bad key: that one model is out, so the chain goes on to the next.
+  else if (/(not available|unavailable|not supported|blocked|restricted)[^.]{0,30}\b(region|country|location)\b|\b(region|country|location)\b[^.]{0,30}(not (available|supported)|blocked|restricted)/.test(hay)) kind = 'model';
   else if (code === 401 || code === 403 || /api key|unauthori|invalid.*key|no auth/.test(hay)) kind = 'key';
   else if (code === 402 || code === 429 || /credit|quota|rate.?limit|insufficient|too many/.test(hay)) kind = 'limit';
   else if (code === 404 || code === 400 && /model/.test(hay) || /no endpoints|not a valid model|model.*not (found|exist)|does not exist|unknown model/.test(hay)) kind = 'model';
