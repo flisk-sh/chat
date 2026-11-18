@@ -14,7 +14,17 @@ export const MAX_QUERY = 200;
 
 export const cleanQuery = (q) => String(q ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_QUERY);
 
-const text = (s, n) => String(s ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim().slice(0, n);
+// Plain text from a snippet that may hold HTML: tags are removed until none are left, entities are decoded in ONE pass
+// (so "&amp;lt;" stays "&lt;" and is never decoded twice), and any angle bracket that is left is dropped.
+const ENTITIES = { amp: '&', quot: '"', lt: '<', gt: '>', '#39': "'", '#x27': "'" };
+const text = (s, n) => {
+  let t = String(s ?? '');
+  for (let prev = ''; prev !== t; ) {
+    prev = t;
+    t = t.replace(/<[^>]*>/g, '');
+  }
+  return t.replace(/&(amp|quot|lt|gt|#39|#x27);/g, (_, e) => ENTITIES[e]).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
+};
 
 // Only http(s) links, so a result can never become a javascript: link on the page.
 const safeUrl = (u) => {

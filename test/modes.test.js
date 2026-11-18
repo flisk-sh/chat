@@ -86,6 +86,17 @@ describe('mode and search helpers', () => {
     expect(r.results.map((x) => x.url)).toEqual(['https://en.wikipedia.org/wiki/Bun_(software)']);
   });
 
+  test('snippets are cleaned: nested tags and double-encoded entities cannot survive', async () => {
+    const fetch = async (url) => {
+      if (new URL(url).host !== 'hn.algolia.com') return new Response('no', { status: 404 });
+      return Response.json({ hits: [{ title: 'bun <<b>script</b>>alert(1)</b> &amp;lt;i&amp;gt; &lt;img onerror=x&gt;', url: 'https://bun.sh/x', points: 1, objectID: '1' }] });
+    };
+    const r = await searchWeb('bun alert', { fetch, cache: memoryCache() });
+    const title = r.results[0].title;
+    expect(title).not.toMatch(/[<>]/);
+    expect(title).toContain('&lt;i&gt;'); // decoded once, not twice
+  });
+
   test('bm25 puts the result that matches more of the question first, and drops the ones that match nothing', () => {
     const docs = [
       { title: 'Cats', url: 'a', snippet: 'about cats' },
