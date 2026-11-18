@@ -1107,7 +1107,11 @@ describe('looks', () => {
     expect(html).toContain('html[data-theme=earth]:not(.ex-users) .expanel{display:none}');
     expect(html).toContain(EARTH_JS.trim());
     expect(html).toContain('three.module.min.js');
-    expect(html).toContain('family=Inter:wght@200;300');
+    // Every look uses the system font stack: no Inter or Geist download for text.
+    expect(html).toContain("--sans:-apple-system-body,ui-sans-serif,-apple-system,system-ui,'Segoe UI',Helvetica,'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji','Segoe UI Symbol'");
+    expect(html).not.toContain('family=Inter');
+    // The left sidebar (chats) is monospace.
+    expect(html).toContain('.side{--sans:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-family:var(--sans)}');
     const csp = res.headers.get('content-security-policy');
     expect(csp).toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.181\.0\/build\/(;| )/);
     expect(csp).toMatch(/img-src [^;]*https:\/\/cdn\.jsdelivr\.net\/gh\/mrdoob\/three\.js@r181\/examples\/textures\/planets\//);

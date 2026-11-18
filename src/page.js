@@ -43,7 +43,7 @@ export function cleanModels(list) {
 const CSS = `
 :root{--bg:#F7F6F2;--panel:#fff;--side:#F0EEE7;--line:#E3E0D6;--line2:#D3D0C5;--ink:#1B1B18;--dim:#6B6960;--soft:#9A988E;--green:#2F7D4A;--green-d:#246139;--tint:#EAF3DE;--warn:#B54708;--red:#B42318;
 --t0:#F6D2C2;--t0i:#712B13;--t1:#F7E3B0;--t1i:#633806;--t2:#C9EDE4;--t2i:#085041;--t3:#F4D3E1;--t3i:#72243E;
---sans:Geist,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--radius:4px}
+--sans:-apple-system-body,ui-sans-serif,-apple-system,system-ui,'Segoe UI',Helvetica,'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji','Segoe UI Symbol';--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--radius:4px}
 .set{display:grid;grid-template-columns:240px minmax(0,1fr);flex:1;min-height:0}
 .setnav{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:14px 12px;overflow:auto}
 .setnav>a{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius);color:var(--ink);text-decoration:none;font-size:14px}.setnav>a:hover,.setnav>a.cur{background:rgba(27,27,24,.06)}
@@ -65,7 +65,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);o
 a{color:var(--green)}button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .app{display:grid;grid-template-columns:264px minmax(0,1fr);flex:1;min-height:0}
-.side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:14px 12px;gap:10px}
+.side{--sans:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-family:var(--sans)}.side button,.side input,.side textarea,.side select{font-family:inherit}.side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding:14px 12px;gap:10px}
 .brand{display:flex;align-items:center;justify-content:space-between;padding:2px 4px}
 .logo{display:inline-flex;align-items:center;gap:9px;font:600 17px/1 var(--mono);color:var(--ink);text-decoration:none;letter-spacing:-.01em}.logo span{color:var(--green)}
 .newchat{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:var(--radius);background:var(--green);color:#fff;font-weight:500;padding:10px;cursor:pointer}
@@ -353,7 +353,7 @@ html[data-theme=focus] .fcards{display:grid;grid-template-columns:1.25fr 1fr;gap
 .frail{flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-right:1px solid var(--line);background:var(--side)}
 .frail a,.frail button{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border:0;background:none;border-radius:var(--radius);font-size:10.5px;color:var(--dim);text-decoration:none;cursor:pointer}.frail a:hover,.frail button:hover{background:rgba(0,0,0,.05);color:var(--ink)}.frail .fl{margin-bottom:8px}.frail .end{margin-top:auto}
 /* Earth: black, a photoreal globe with a light on each country people use Flisk Chat from, thin rules, light Inter. */
-html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:'Inter Tight','Inter',var(--sans);--flisk-font-body:'Inter',var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:200;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--t0:#2E1D17;--t0i:#F6C9B4;--t1:#2C2615;--t1i:#F2DC9E;--t2:#142B26;--t2i:#A9E3D3;--t3:#2E1A26;--t3i:#F0C2D6;--sans:'Inter',Geist,system-ui,sans-serif}
+html[data-theme=earth]{color-scheme:dark;--flisk-bg:#000;--flisk-surface:#0B0B0D;--flisk-raised:#050506;--flisk-ink:#EDEDEE;--flisk-muted:#8D8D92;--flisk-line:#26262B;--flisk-accent:#EDEDEE;--flisk-accent-ink:#fff;--flisk-on-accent:#000;--flisk-hero-bg:#000;--flisk-hero-ink:#EDEDEE;--flisk-font-heading:var(--sans);--flisk-font-body:var(--sans);--flisk-font-mono:var(--mono);--flisk-heading-weight:200;--flisk-radius:0;--line2:#34343A;--soft:#6B6B70;--tint:#10161F;--t0:#2E1D17;--t0i:#F6C9B4;--t1:#2C2615;--t1i:#F2DC9E;--t2:#142B26;--t2i:#A9E3D3;--t3:#2E1A26;--t3i:#F0C2D6;--sans:-apple-system-body,ui-sans-serif,-apple-system,system-ui,'Segoe UI',Helvetica,'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji','Segoe UI Symbol'}
 .earthc{display:none}.ex{display:none}
 html[data-theme=earth].home .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
 html[data-theme=earth].home.earthon .earthc{opacity:1}
@@ -514,7 +514,7 @@ html[data-theme=voice] .composer .bar #orbbtn{background:var(--flisk-accent);col
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
 `;
 
-const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Inter:wght@200;300;400;500&family=Inter+Tight:wght@200;300;400&family=Geist+Mono:wght@400;500;600&display=swap">';
+const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500;600&display=swap">';
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(icon('chat', 32).replace(' aria-hidden="true" focusable="false"', ''))}`;
 
 const DESC = 'Flisk Chat: describe a website, an app, a system of services or a task. It runs on a real computer and gives you the result and a live link. Free model, no sign-in needed.';
