@@ -804,6 +804,18 @@ describe('search visibility', () => {
     expect(map.status).toBe(200);
     expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
   });
+
+  test('robots.txt and sitemap.xml are cached without changing their contents', async () => {
+    const e = env();
+    const robots = await handle(new Request(`${ORIGIN}/robots.txt`), e, {});
+    expect(robots.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(robots.headers.get('content-type')).toBe('text/plain');
+    expect(await robots.text()).toContain('Sitemap: https://chat.flisk.si/sitemap.xml');
+    const map = await handle(new Request(`${ORIGIN}/sitemap.xml`), e, {});
+    expect(map.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(map.headers.get('content-type')).toBe('application/xml');
+    expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
+  });
 });
 
 // Every Flisk site shows the shared Flisk bar at the top; the page loads it and the CSP lets its script and icons through.
