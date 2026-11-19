@@ -1,4 +1,5 @@
 import { OG_PNG } from './og.js';
+import { TOUCH_ICON_PNG } from './touch-icon.js';
 import { cleanMemo, memoMessages } from './memo.js';
 import { detectLang, resolveLang } from './lang.js';
 import { verifyLoginToken } from './login-token.js';
@@ -341,6 +342,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   const origin = env.PUBLIC_ORIGIN || url.origin;
 
   if (request.method === 'GET' && path === '/og.png') return new Response(OG_PNG, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
+  if (request.method === 'GET' && path === '/apple-touch-icon.png') return new Response(TOUCH_ICON_PNG, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path.startsWith('/logo/')) {
     const host = decodeURIComponent(path.slice(6)).toLowerCase();
     if (!/^[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+$/.test(host) || host.length > 100) return new Response(null, { status: 404 });
