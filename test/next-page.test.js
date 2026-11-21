@@ -24,3 +24,9 @@ test('the page policy allows inlined fonts and nothing else new', () => {
   expect(csp).toContain('font-src data: https://fonts.gstatic.com');
   expect(csp).toContain("default-src 'none'");
 });
+
+test('Earth dims behind the text and sinks once a chat starts', async () => {
+  const css = await Bun.file(new URL('../web/src/app.css', import.meta.url)).text();
+  expect(css).toContain('html[data-scheme=earth].chatting');
+  expect(css).toContain('text-shadow');
+});

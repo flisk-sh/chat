@@ -23,3 +23,8 @@ html[data-scheme=earth] .earthc{display:block;position:fixed;inset:0;width:100vw
 html[data-scheme=earth].earthon .earthc{opacity:1}
 html[data-scheme=earth].earthon body::before{opacity:0}
 html[data-scheme=earth] body::before{transition:opacity 1.2s}
+
+/* Earth stays the backdrop, but dimmed so text always reads; once a chat starts it sinks almost to black. */
+html[data-scheme=earth] .astryx-app-shell [class~="x10l6tqk"]{background:rgba(0,0,0,.5)!important;transition:background .6s}
+html[data-scheme=earth].chatting .astryx-app-shell [class~="x10l6tqk"]{background:rgba(0,0,0,.9)!important}
+html[data-scheme=earth] .earth-content{text-shadow:0 1px 3px #000,0 0 12px #000}

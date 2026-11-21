@@ -120,6 +120,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [caption, setCaption] = useState('');
   const [mode, setMode] = useState(() => lsGet('chat_mode') || 'build');
   const [turns, setTurns] = useState([]); // [{task, files, t}]
+  useEffect(() => { document.documentElement.classList.toggle('chatting', turns.length > 0); }, [turns.length]);
   const [busy, setBusy] = useState(false);
   const [value, setValue] = useState('');
   const [files, setFiles] = useState([]);
