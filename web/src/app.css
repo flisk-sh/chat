@@ -207,4 +207,4 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 @media (prefers-reduced-motion:reduce){.demo *{animation-iteration-count:1!important}.demo .ln,.demo .tx,.demo .bar,.demo .chip{transform:none;opacity:.85}.demo .wv,.demo .you,.demo .ai{transform:none}.demo .tk{stroke-dashoffset:0}.demo .ok{opacity:1}}
 
 /* One row: the text area sits on the pill's own colour, not on a darker scrim of its own. */
-.one-row .astryx-chat-composer-input, .one-row .astryx-chat-composer-input * { background-color: transparent !important; }
+html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input [class] { background: transparent !important; }
