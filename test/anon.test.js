@@ -7,7 +7,7 @@ const memCache = () => { const m = new Map(); return { match: async (k) => m.get
 const INFERENCE = { fetch: async () => Response.json({ choices: [{ message: { content: 'Hello.' } }] }) };
 const env = () => ({ PUBLIC_ORIGIN: ORIGIN, SESSION_SECRET: 's', FLEET_URL: 'https://fleet.test', FLEET_SERVICE_SECRET: 'x'.repeat(40), LIMIT_CACHE: memCache(), INFERENCE, INFERENCE_KEY: 'ik', INFERENCE_URL: 'https://inf.test/v1/chat/completions' });
 const net = async (u, init) => (String(u).includes('/v1/connections') ? Response.json({ connections: { e2b: true } }) : Response.json({}));
-const home = (e, cookie = '') => handle(new Request(`${ORIGIN}/`, { headers: { cookie } }), e, { fetchImpl: net });
+const home = (e, cookie = '') => handle(new Request(`${ORIGIN}/classic`, { headers: { cookie } }), e, { fetchImpl: net });
 const anonCookie = async (e) => (await makeSession(e, newAnonLogin())).split(';')[0];
 const post = (e, path, body, cookie, ip = '1.1.1.1') => handle(new Request(`${ORIGIN}${path}`, { method: 'POST', headers: { cookie, origin: ORIGIN, 'content-type': 'application/json', 'cf-connecting-ip': ip }, body: JSON.stringify(body) }), e, { fetchImpl: net });
 

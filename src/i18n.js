@@ -112,7 +112,7 @@ export const UK = {
   'Task': 'Завдання',
   'More: model, computers, voice, attach': 'Ще: модель, комп’ютери, голос, вкладення',
   'More options': 'Додаткові параметри',
-  'Attach files (up to 3, 150 KB each)': 'Додати файли (до 3, по 150 КБ)',
+  'Attach files (up to 3, 5 MB in all)': 'Додати файли (до 3, разом до 5 МБ)',
   'Attach files': 'Додати файли',
   'Fleet picks the computer': 'Fleet обирає комп’ютер',
   'Read answers aloud': 'Читати відповіді вголос',

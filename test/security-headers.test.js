@@ -20,7 +20,7 @@ const baseline = (res) => {
 
 describe('security headers', () => {
   test('the home page carries them and keeps the microphone for voice', async () => {
-    const res = await get('/');
+    const res = await get('/classic');
     expect(res.status).toBe(200);
     baseline(res);
   });

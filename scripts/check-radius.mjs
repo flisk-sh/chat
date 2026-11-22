@@ -8,8 +8,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ALLOWED_PART = /^(?:0|0px|50%|var\(--radius\)|inherit)$/;
 const TOKEN_FILE = 'src/page.js';
 
-const SKIP_DIRS = new Set(['.git', 'node_modules']);
-const SKIP_FILES = new Set(['assets/css/bootstrap.purged.min.css']);
+// web/ is the Astryx front end (rounded by design); its built output is checked in as src/next-app.generated.js.
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'web']);
+// src/next-app.generated.js is the built Astryx bundle (Meta's design system, rounded by design); the rule still guards our own source.
+const SKIP_FILES = new Set(['assets/css/bootstrap.purged.min.css', 'src/next-app.generated.js']);
 const SKIP_PREFIXES = ['assets/social/'];
 const EXTENSIONS = /\.(?:css|html|js|mjs)$/;
 

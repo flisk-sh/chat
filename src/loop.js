@@ -1,6 +1,6 @@
 import { asksAnalysis } from './analysis-style.js';
 import { sayStreamer } from './say-stream.js';
-import { BAD_REPLIES, modelShown } from './model.js';
+import { BAD_REPLIES, modelShown, SUBREQUESTS_RE, SUBREQUESTS_USED } from './model.js';
 import { MAX_STEPS, asksToBuild, githubSourceIn, isBigApp, taskPrompt } from './prompt.js';
 import { parseWidget } from './widgets.js';
 import { cleanVideo, makeVideo } from './video.js';
@@ -272,19 +272,56 @@ const clip = (s, n = OUT_CHARS) => {
 
 
 export const MAX_FILES = 3;
-export const MAX_FILE_BYTES = 150 * 1024;
+export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+// All attached files together. Fleet moves at most 256 KB per call, so a file goes to the computer in parts, one call each,
+// and Workers Free stops a run at 50 subrequests: 5 MB is about 28 parts, which leaves room for the task's own steps.
+export const MAX_TOTAL_FILE_BYTES = MAX_FILE_BYTES;
+export const FILE_PART_CHARS = 240_000; // text parts are cut at 60k characters (up to 4 bytes each), base64 parts at 240k: both under fleet's 256 KB
+const FILE_BYTES = (content, b64) => (b64 ? Math.floor((content.length * 3) / 4) : new TextEncoder().encode(content).length);
 // Files the visitor attached: text, or base64 for anything else. Names are flattened so nothing escapes the folder.
 export function cleanFiles(list) {
   if (!Array.isArray(list)) return [];
+  let total = 0;
   return list.slice(0, MAX_FILES).flatMap((f) => {
     const path = String(f?.name || '').split(/[\\/]/).pop().replace(/[^A-Za-z0-9._ -]/g, '_').replace(/^\.+/, '').slice(0, 80);
     const content = typeof f?.content === 'string' ? f.content : '';
     if (!path || !content || content.length > MAX_FILE_BYTES * 1.4) return [];
     const b64 = !!f.b64;
     if (b64 && !/^[A-Za-z0-9+/=\s]+$/.test(content)) return [];
+    const bytes = FILE_BYTES(content, b64);
+    if (bytes > MAX_FILE_BYTES || total + bytes > MAX_TOTAL_FILE_BYTES) return [];
+    total += bytes;
     const image = b64 && /^image\/(png|jpeg|gif|webp)$/.test(String(f.type || '')) ? String(f.type) : null;
     return [{ path: path.replace(/ /g, '_'), content: b64 ? content.replace(/\s/g, '') : content, b64, ...(image ? { image } : {}) }];
   });
+}
+
+// Writes one attached file to the computer. Small files go in one call; a big one is cut into parts under fleet's per-call
+// limit, written as name.part0, name.part1 ... and joined (base64 files are decoded on the way) in one command.
+export async function putFile(computer, podId, f) {
+  const size = f.b64 ? FILE_PART_CHARS : FILE_PART_CHARS / 4;
+  const parts = [];
+  for (let i = 0; i < f.content.length; ) {
+    let end = Math.min(i + size, f.content.length);
+    const last = f.content.charCodeAt(end - 1); // never cut a surrogate pair in two
+    if (end < f.content.length && last >= 0xd800 && last <= 0xdbff) end--;
+    parts.push(f.content.slice(i, end));
+    i = end;
+  }
+  if (parts.length <= 1) {
+    const r = f.b64 ? await computer.write(podId, `${f.path}.b64`, f.content) : await computer.write(podId, f.path, f.content);
+    if (!r.error && f.b64) await computer.run(podId, `base64 -d '${f.path}.b64' > '${f.path}' && rm '${f.path}.b64'`);
+    return r;
+  }
+  const names = parts.map((_, n) => `${f.path}.part${n}`);
+  for (let n = 0; n < parts.length; n++) {
+    const r = await computer.write(podId, names[n], parts[n]);
+    if (r.error) return r;
+  }
+  const list = names.map((n) => `'${n}'`).join(' ');
+  const r = await computer.run(podId, `cat ${list} ${f.b64 ? '| base64 -d ' : ''}> '${f.path}' && rm ${list}`);
+  const code = r?.data?.exitCode;
+  return r?.error ? r : code ? { error: `could not join the parts of ${f.path}: ${String(r.data.stderr || '').slice(0, 200)}` } : r;
 }
 
 // Addresses on the task's own computer stop working when it stops at the end of the task: say so under the answer.
@@ -316,7 +353,7 @@ export const BUILD_KINDS = { website: 'a website to build', build: 'a website, a
 export async function runTask({ grade = null, stream = false, decision = null, classify = null, task, history = [], github = undefined, origin = 'https://chat.flisk.si', model, computer, publish, photo = async () => '', saveImage = null, track = {}, saveVideo = async () => ({ error: 'videos are not set up here' }), lookupFacts = null, mode = 'chat', search = null, fetchImpl = fetch, citable = null, order = [], files = [], vision = false, modelName = '', note = '', lang = '', kind = '', memo = '', emit = () => {}, maxSteps = MAX_STEPS, wait = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const where = files.length ? `\n\nThe user attached ${files.length} file(s), already on the computer in the current folder: ${files.map((f) => f.path).join(', ')}. Use them.` : '';
   // A model that sees images gets the attached pictures themselves, not only the file on the computer.
-  const pics = vision ? files.filter((f) => f.image) : [];
+  const pics = vision ? files.filter((f) => f.image && f.content.length <= 1_400_000) : []; // about 1 MB: bigger pictures stay on the computer only
   const first = pics.length
     ? [{ type: 'text', text: `${task}${where} The picture${pics.length > 1 ? 's are' : ' is'} also shown to you here: look at ${pics.length > 1 ? 'them' : 'it'} to answer.` }, ...pics.map((f) => ({ type: 'image_url', image_url: { url: `data:${f.image};base64,${f.content}` } }))]
     : task + where;
@@ -395,6 +432,13 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   let searches = prefetched ? 1 : 0;
   let askedNoComputer = false; // search mode: a computer action is sent back once
   const MAX_SEARCHES = 2; // each search asks several sources, and Workers Free stops at 50 subrequests per run
+  // Pages read with the web widget, for the same 50-call budget: a model that guesses addresses (a GitHub repo that 404s,
+  // then another) once read until the run ran out of calls and ended on "the free AI is busy".
+  const MAX_WEB_READS = 6;
+  let webReads = 0;
+  // Each reroute row once per run: the same "Flisk Wolf is resting" on every step filled the page with copies.
+  const rerouteSeen = new Set();
+  const reroute = (text) => { if (rerouteSeen.has(text)) return; rerouteSeen.add(text); emit({ type: 'reroute', text }); };
   // Draws the picture and keeps it at its own link (saveImage), so the chat history holds a short link, not the picture.
   const drawImage = async (spec) => {
     emit({ type: 'image_start', prompt: spec.prompt });
@@ -424,7 +468,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
       if (last) messages.push({ role: 'user', content: 'That was the last action. Reply with {"say": ...} now.' });
       // Words go out as the model writes them (Workers AI streams); the finished answer then replaces them on the page.
       const say = stream ? sayStreamer(emit) : null;
-      const reply = await model(messages, { ...(lang ? { lang } : {}), ...(say ? { onDelta: say } : {}), onReroute: (text) => emit({ type: 'reroute', text }) });
+      const reply = await model(messages, { ...(lang ? { lang } : {}), ...(say ? { onDelta: say } : {}), onReroute: reroute });
       // A backup model answered: the page names it once, so the person knows who wrote the answer.
       const byName = reply.error ? '' : modelShown(reply.by);
       if (byName && byName !== shownModel) { shownModel = byName; emit({ type: 'model', name: byName }); }
@@ -581,7 +625,16 @@ export async function runTask({ grade = null, stream = false, decision = null, c
         }
         widget = w;
         if (!w.widget.needsComputer) {
+          if (w.widget.id === 'web' && webReads >= MAX_WEB_READS) {
+            messages.push({ role: 'user', content: `That is ${MAX_WEB_READS} pages read, the most one request can read. Answer now with "say" from what you have read, and say what you could not open.` });
+            continue;
+          }
+          if (w.widget.id === 'web') webReads++;
           const r = await w.widget.run(w.input, { fetch: fetchImpl, citable });
+          if (r.error && SUBREQUESTS_RE.test(r.error)) {
+            emit({ type: 'error', error: SUBREQUESTS_USED, kind: 'subrequests' });
+            return await finish(null, SUBREQUESTS_USED);
+          }
           if (r.error) {
             emit({ type: 'output', error: r.error });
             messages.push({ role: 'user', content: `Error: ${r.error}\n\nNext action as JSON only.` });
@@ -618,8 +671,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
           if (g.error) messages.push({ role: 'user', content: `Note: signing GitHub in on this computer failed (${scrub(g.error, token)}), so push and gh may not work.` });
         }
         for (const f of files) {
-          const r = f.b64 ? await computer.write(podId, `${f.path}.b64`, f.content) : await computer.write(podId, f.path, f.content);
-          if (!r.error && f.b64) await computer.run(podId, `base64 -d '${f.path}.b64' > '${f.path}' && rm '${f.path}.b64'`);
+          const r = await putFile(computer, podId, f);
           emit({ type: 'file', path: f.path, error: r.error || null });
         }
       }

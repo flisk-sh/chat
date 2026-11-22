@@ -246,7 +246,7 @@ describe('saved key', () => {
   test('a task that stops at the connect-a-computer step is still saved in the chat history', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
-    const html = await (await handle(new Request('https://chat.test/', { headers: { cookie } }), env)).text();
+    const html = await (await handle(new Request('https://chat.test/classic', { headers: { cookie } }), env)).text();
     expect(html).toContain('Connect one of your sandbox accounts below, once.\');saveChat();');
   });
   test('HEAD gets the same status as GET, without a body', async () => {
