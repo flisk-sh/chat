@@ -47,6 +47,8 @@ export function runEvents(result, problem, route = '/api/run', lang = '') {
   if (podMs > 30_000) out.push({ route, kind: 'slow', why: `a computer took ${Math.round(podMs / 1000)} s to start`, detail, ms: podMs });
   // The model's reply was not valid JSON and the words were cut out of it (a person saw the answer, not the braces). Seeing how often tells which model breaks.
   if (result.stats?.salvaged) out.push({ route, kind: 'unexpected', why: `reply was not valid JSON, words salvaged (${result.stats.salvaged}x)`, detail, ms });
+  // The last guard had to cut plumbing out of the answer a person was about to read: the parser let a shape through.
+  if (result.stats?.guarded) out.push({ route, kind: 'unexpected', why: `last guard cut model plumbing from the answer (${result.stats.guarded}x)`, detail, ms });
   if (result.stats?.bad >= 2) out.push({ route, kind: 'unexpected', why: `model sent ${result.stats.bad} unusable replies in one task`, detail, ms });
   if (result.stats?.refused === 1) out.push({ route, kind: 'unexpected', why: `chat refused the model once: ${result.stats.refusedWhy}`.slice(0, 200), detail, ms });
   if (/^\s*Flisk Wolf, a free model[^.]*\.?\s*$/i.test(result.answer || '')) out.push({ route, kind: 'unexpected', why: 'the answer says nothing useful', detail, ms });
