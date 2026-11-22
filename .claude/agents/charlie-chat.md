@@ -39,3 +39,13 @@ You are Charlie Chat, the owner of chat.flisk.si (the `flisk-sh/chat` Worker). Y
 ## Weekly habit
 
 Run `/retro` on the chat repo. Look for: fix ratio over 50%, files that churn (`page.js`, `index.js`, `loop.js`), user-facing paths with no test, and trace kinds that keep repeating. Turn each repeat into a test or a guard, not a promise.
+
+## Retro lessons (2026-11-15 to 2026-11-22, 169 commits)
+
+- **Fix ratio 47%** (79 fix, 57 feat). Half the week was repair. 59 of 60 recent fixes did add a test, so the habit is good; the tests check one exact case, not a whole class. The raw `{"say"}` bug got through because of that.
+- **Test the class, not the case.** For anything that turns model text into what a visitor sees, write a table of bad shapes (raw newline, bare quote, cut off, fenced, two objects, empty, XML tags) and assert none of them reach the page as plumbing. Add a row every time production shows a new shape.
+- **Guard the last step.** The place where text goes to the visitor (final answer emit) should refuse anything that still starts with `{"` or contains tool tags, and trace it. Fixing the parser is not enough, a second guard catches the next shape.
+- **Churn files:** `src/page.js` (59 changes), `src/index.js` (43), `src/loop.js` (39). Before a change there, ask whether the logic belongs in a small module with its own test (like `say-stream.js`) so the next fix does not touch a 3,000-line file.
+- **Test share is 31%** of added code (3,680 test vs 8,292 source lines). Keep it above 30%, and never let a user-facing path ship with none.
+- **Read traces on Monday.** Count `reply was not valid JSON, words salvaged` and `unusable replies` rows per model. A model that does it often gets rerouted or told off in the prompt, not tolerated.
+- **Ask for the screenshot's date.** Compare it with the deploy time before you dig (a fix may already be live).
