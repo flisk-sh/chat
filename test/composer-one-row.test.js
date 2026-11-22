@@ -38,3 +38,8 @@ test('the Explain button itself still works while Explain mode is on', () => {
 test('what / serves includes the modal', () => {
   expect(built).toContain('peekGrow');
 });
+
+test('the placeholder fits one line on a 375px phone (24 characters or fewer)', () => {
+  const placeholder = app.match(/placeholder="([^"]+)"/)[1];
+  expect([...placeholder].length).toBeLessThanOrEqual(24);
+});
