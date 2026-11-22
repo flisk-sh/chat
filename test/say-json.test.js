@@ -4,12 +4,12 @@ import { runEvents } from '../src/trace.js';
 
 // 2026-11-22: people saw {"say": "...\n\n- ..."} and a bare {"say on chat.flisk.si. The model wrote nearly-JSON (raw newline,
 // bare quote, cut off) and parseAction showed the raw text as the answer. A reply starting {"say must never reach a person.
-const raw = '{"say": "Zevenbergen is cold.\n\n- **Today**: cloudy\n- **Tomorrow**: dry"}';
+const raw = '{"say": "London is cold.\n\n- **Today**: cloudy\n- **Tomorrow**: dry"}';
 
 test('a say with raw newlines inside the string shows only its words', () => {
   const a = parseAction(raw);
   expect(a.type).toBe('say');
-  expect(a.text).toBe('Zevenbergen is cold.\n\n- **Today**: cloudy\n- **Tomorrow**: dry');
+  expect(a.text).toBe('London is cold.\n\n- **Today**: cloudy\n- **Tomorrow**: dry');
   expect(a.text).not.toContain('{"say');
 });
 
@@ -20,7 +20,7 @@ test('a say with bare quotes, escaped newlines, or a code fence is cleaned', () 
 });
 
 test('a say cut off mid-word keeps the words it has; one cut before any words is retried', () => {
-  expect(parseAction('{"say": "Zevenbergen is cold and').text).toBe('Zevenbergen is cold and');
+  expect(parseAction('{"say": "London is cold and').text).toBe('London is cold and');
   expect(parseAction('{"say').type).toBe('bad');
   expect(parseAction('{"say": ""}').type).toBe('say'); // valid JSON, empty: handled by the normal path
   expect(salvageSay('{"say": "').type).toBe('bad');
