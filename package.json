@@ -2,6 +2,7 @@
   "name": "flisk-chat",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "scripts": {
     "test": "bun test test && node --test scripts/*.test.mjs evals/answers/*.test.mjs",
     "eval": "node evals/answers/run.mjs",

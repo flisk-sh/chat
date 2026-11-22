@@ -223,14 +223,14 @@ describe('the page', () => {
     expect(podBase(env({ BROWSER_POD_URL: 'https://x.test/pod' }))).toBe('https://x.test/pod/');
     expect(podBase(env({ BROWSER_POD_URL: '' }))).toBe('');
     const e = env();
-    const res = await handle(new Request(`${ORIGIN}/`), e);
+    const res = await handle(new Request(`${ORIGIN}/classic`), e);
     const csp = res.headers.get('content-security-policy');
     expect(csp).toMatch(/script-src [^;]*'wasm-unsafe-eval' blob: https:\/\/fleet\.test\/browserpod\/ https:\/\/fleet\.test\/cfworker2browser\/( |;)/);
     expect(csp).toMatch(/connect-src 'self' wss:\/\/chat\.test https:\/\/fleet\.test\/browserpod\/ /);
     expect(csp).toEndWith('; worker-src blob: https://fleet.test/cfworker2browser/');
     expect(csp).not.toContain("'unsafe-eval'");
     expect(await res.text()).toContain('window.__POD__="https://fleet.test/browserpod/";');
-    const off = await handle(new Request(`${ORIGIN}/`), env({ BROWSER_POD_URL: '' }));
+    const off = await handle(new Request(`${ORIGIN}/classic`), env({ BROWSER_POD_URL: '' }));
     // Off: nothing of the browser computer is let in (the only addition is the inference frame, a separate feature, below).
     expect(off.headers.get('content-security-policy')).toBe(withFrame(cspWithPod('', ORIGIN), inferenceOrigin(env())));
     expect(off.headers.get('content-security-policy')).not.toContain('wasm');
@@ -251,7 +251,7 @@ describe('the page', () => {
 describe('the browser model frame (inference serves the model; chat frames that one origin)', () => {
   test('the CSP frames exactly inference\'s origin, and the page learns it', async () => {
     const e = env();
-    const res = await handle(new Request(`${ORIGIN}/`), e);
+    const res = await handle(new Request(`${ORIGIN}/classic`), e);
     const csp = res.headers.get('content-security-policy');
     expect(csp).toMatch(/^default-src 'none'; frame-src https:\/\/inf\.test;/);
     expect(csp.match(/frame-src [^;]*/)[0]).toBe('frame-src https://inf.test'); // one origin, no wildcard

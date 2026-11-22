@@ -41,4 +41,6 @@ bunx wrangler@4 secret put GITHUB_WEBHOOK_SECRET
 bunx wrangler@4 deploy
 ```
 
-MIT licence.
+## License
+
+MIT, see [LICENSE](LICENSE).

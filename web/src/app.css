@@ -1,0 +1,43 @@
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+.vv-root{position:fixed;left:0;right:0;top:var(--vv-top,0);height:var(--vv-h,100dvh);display:flex;flex-direction:column}
+.vv-root>*{flex:1;min-height:0}
+.vv-root textarea,.vv-root input,.vv-root [contenteditable]{font-size:16px}
+:root[data-keyboard="closed"] .vv-root{padding-bottom:env(safe-area-inset-bottom)}
+:root[data-keyboard="open"] .vv-root{padding-bottom:0}
+.caption{position:fixed;z-index:50;left:8px;right:8px;top:calc(var(--vv-top,0px) + 8px);padding:12px 14px;border-radius:12px;background:#1d3a8a;color:#fff;font-size:15px;line-height:1.35;box-shadow:0 6px 24px #0006}
+
+html[data-scheme=earth] body{background:#000}
+html[data-scheme=earth] body::before{content:"";position:fixed;z-index:0;pointer-events:none;width:80vh;height:80vh;left:calc(90vw - 40vh);top:21vh;border-radius:50%;background:radial-gradient(circle at 72% 28%,rgba(255,255,255,.16),rgba(255,255,255,0) 38%),radial-gradient(circle at 70% 30%,rgba(0,0,0,0) 34%,rgba(0,0,0,.94) 74%),url(https://unpkg.com/three-globe@2.45.6/example/img/earth-blue-marble.jpg) 30% 50%/auto 100%,radial-gradient(circle at 68% 32%,#2a5f96,#0d2a4a 55%,#02060d);box-shadow:0 0 70px rgba(110,160,255,.22)}
+@media (max-width:860px){html[data-scheme=earth] body::before{width:68vh;height:68vh;left:calc(50vw - 34vh);top:65vh}}
+html[data-scheme=earth] #root{position:relative;z-index:1}
+html[data-scheme=earth] .astryx-app-shell,html[data-scheme=earth] div:has(.earth-content){background:transparent!important}
+html[data-scheme=earth] .astryx-app-shell-header{background:rgba(0,0,0,.55)!important}
+/* The phone chat drawer is solid in Earth too, so the page does not show through its list. */
+html[data-scheme=earth] .astryx-app-shell .astryx-mobile-nav-drawer[class]{background:#0b0b0c!important}
+.earth-talk{position:fixed;inset:0;z-index:50;background:#000;color:#EDEDEE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.earth-orb{width:min(70vw,320px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 28%,rgba(255,255,255,.18),rgba(255,255,255,0) 40%),radial-gradient(circle at 32% 30%,rgba(0,0,0,0) 40%,rgba(0,0,0,.92) 78%),url(https://unpkg.com/three-globe@2.45.6/example/img/earth-blue-marble.jpg) 45% 50%/auto 100%,radial-gradient(circle at 35% 30%,#2a5f96,#0d2a4a 55%,#02060d);box-shadow:0 0 70px rgba(90,150,255,.28);animation:orb 3s ease-in-out infinite}
+@keyframes orb{50%{transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){.earth-orb{animation:none}}
+html[data-scheme=earth] .astryx-app-shell [class~="x10l6tqk"]{background:transparent!important}
+
+.earthc{display:none}
+html[data-scheme=earth] .earthc{display:block;position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s}
+html[data-scheme=earth].earthon .earthc{opacity:1}
+html[data-scheme=earth].earthon body::before{opacity:0}
+html[data-scheme=earth] body::before{transition:opacity 1.2s}
+
+/* Earth stays the backdrop, but dimmed so text always reads; once a chat starts it sinks almost to black. */
+html[data-scheme=earth] .astryx-app-shell [class~="x10l6tqk"]{background:rgba(0,0,0,.5)!important;transition:background .6s}
+html[data-scheme=earth].chatting .astryx-app-shell [class~="x10l6tqk"]{background:rgba(0,0,0,.9)!important}
+html[data-scheme=earth] .earth-content{text-shadow:0 1px 3px #000,0 0 12px #000}
+
+html[data-scheme=earth] .chips button{background:rgba(0,0,0,.72)!important;color:#fff!important}
+html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{background:#121214!important;max-height:min(70vh,420px);overflow:auto}
+
+.earth-talk .earth-orb{border:0;padding:0;cursor:pointer}
+.earth-talk.listening .earth-orb{box-shadow:0 0 60px rgba(120,180,255,.5)}
+.earth-talk.speaking .earth-orb{animation:orb .7s ease-in-out infinite alternate}
+.earth-talk.idle .earth-orb{filter:saturate(.55) brightness(.75)}
+/* Some phone browsers give the message box their own dark form colour, which showed as a darker strip behind "Describe the website or app to build…". The box is part of the composer, so it stays see-through. */
+.astryx-chat-composer-input,.astryx-chat-composer-input [contenteditable],.astryx-chat-composer-input textarea{background:transparent!important;background-color:transparent!important;-webkit-appearance:none;appearance:none;box-shadow:none!important}
+@media (pointer:coarse){.earth-content button,.astryx-app-shell-header button{min-height:44px;min-width:44px}}

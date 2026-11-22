@@ -172,6 +172,19 @@ export const VERCEL_URL = 'https://ai-gateway.vercel.sh/v1/chat/completions';
 export const VERCEL_MODEL = 'alibaba/qwen3.8-27b';
 export const vercelCap = (env) => (env.VERCEL_AI_KEY ? Math.max(0, Math.floor(Number(env.VERCEL_DAILY_REQUESTS) || 0)) : 0);
 const WOLF_REST_MS = 10 * 60 * 1000;
+// Wolf's free beta has one shared daily budget. Once it says the budget is used up, asking again every 10 minutes only
+// adds a failed call (and a "rerouted" row) to every request until midnight, so rest until it resets at 00:00 UTC.
+export function wolfRestUntil(error, nowMs) {
+  if (/daily|resets at 00:00/i.test(String(error || ''))) {
+    const d = new Date(nowMs);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+  }
+  return nowMs + WOLF_REST_MS;
+}
+// Cloudflare Workers Free allows 50 outgoing calls per request. Past that every model, search and fetch fails at once,
+// so trying the next backup only fails again, and the page said "the free AI is busy" when nothing was busy.
+export const SUBREQUESTS_RE = /too many subrequests/i;
+export const SUBREQUESTS_USED = 'This task used up the 50 web calls the free plan allows for one request. Send the next step as a new message (or ask it in smaller parts) and chat carries on.';
 export const OPENROUTER_TRIES = 6; // free OpenRouter models tried in turn before the next backup
 // A short name a person can read: 'google/gemma-4-31b-it:free' -> 'gemma-4-31b-it'.
 export const shortModel = (id) => String(id || '').split('/').pop().replace(/:free$/, '').replace(/^@cf\/.*\//, '');
@@ -379,8 +392,12 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
     const rest = skipped ? Math.max(1, Math.ceil((wolfOutUntil - now()) / 60000)) : 0;
     // The page shows each switch while it happens ("Flisk Wolf is busy, switching to ..."), so a slow free answer is never a silent wait.
     const say = (text) => { try { o.onReroute?.(text); } catch {} };
-    let prev = 'Flisk Wolf';
-    const switchTo = (name) => { say(`${prev} is busy, switching to ${name}`); prev = name; };
+    // A skipped Wolf was not asked, so the first switch says it is resting, not "busy" (it said both, on every step).
+    let prev = skipped ? '' : 'Flisk Wolf';
+    const switchTo = (name) => { say(prev ? `${prev} is busy, switching to ${name}` : `Flisk Wolf is resting after a limit, using ${name}`); prev = name; };
+    // Out of subrequests: no backup can be reached either, and the trace call itself is a subrequest, so stop here.
+    const outOfCalls = (r) => SUBREQUESTS_RE.test(String(r?.error || ''));
+    const noCalls = () => { log(tried); return { error: SUBREQUESTS_USED, kind: 'subrequests' }; };
     const rerouted = (by, model) => {
       if (by === 'wolf') return;
       const why = [skipped ? `wolf skipped: resting ${rest} more min after a limit` : '', ...tried].filter(Boolean).join('; ') || 'wolf did not answer';
@@ -390,9 +407,9 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
       const r = await wolf(messages, { effort: o.effort });
       if (!r.error) return { ...r, by: 'wolf' };
       tried.push(`wolf: ${r.error}`);
-      if (r.kind === 'limit') wolfOutUntil = now() + WOLF_REST_MS;
+      if (outOfCalls(r)) return noCalls();
+      if (r.kind === 'limit') wolfOutUntil = wolfRestUntil(r.error, now());
     }
-    if (skipped) say('Flisk Wolf is resting after a limit, using a free backup model');
     if (env.OPENROUTER_KEY) {
       const ids = (await freeOpenRouterModels(fetchImpl)).slice(0, OPENROUTER_TRIES);
       for (const id of ids) {
@@ -400,6 +417,7 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
         const r = await oneModel(env, fetchImpl, { ai: 'openrouter', url: OPENROUTER_URL, model: id, key: env.OPENROUTER_KEY, referer: true })(messages);
         if (!r.error) { rerouted('openrouter', id); return { ...r, by: id }; }
         tried.push(`${id}: ${r.error}`);
+        if (outOfCalls(r)) return noCalls();
         if (dailyFreeUsed(r)) break; // the key's daily free allowance is shared by every free model
       }
     }
@@ -408,7 +426,7 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
       const r = await workers(messages, { onDelta: o.onDelta });
       if (!r.error) { rerouted('workers-ai', WORKERS_AI_FALLBACK); return { ...r, by: WORKERS_AI_FALLBACK }; }
       tried.push(`workers-ai: ${r.error}`);
-      return null;
+      return outOfCalls(r) ? noCalls() : null;
     };
     const viaBackups = async () => {
       if (vercelCap(env) && !(overVercel && (await overVercel(vercelCap(env))))) {
@@ -416,12 +434,14 @@ export function modelFrom(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', fr
         const v = await oneModel(env, fetchImpl, { ai: 'vercel', url: env.VERCEL_URL || VERCEL_URL, model: env.VERCEL_MODEL || VERCEL_MODEL, key: env.VERCEL_AI_KEY, ms: 60_000 })(messages);
         if (!v.error) { rerouted('vercel', env.VERCEL_MODEL || VERCEL_MODEL); return { ...v, by: 'vercel' }; }
         tried.push(`vercel: ${v.error}`);
+        if (outOfCalls(v)) return noCalls();
       }
       if (env.NO_POLLINATIONS !== '1') {
         switchTo(BACKUP_NAMES.pollinations);
         const p = await oneModel(env, fetchImpl, { ai: 'pollinations', url: env.POLLINATIONS_TEXT_URL || POLLINATIONS_TEXT_URL, model: 'openai', key: '-', referer: true, ms: POLLINATIONS_MS })(messages);
         if (!p.error) { rerouted('pollinations', 'openai'); return { ...p, by: 'pollinations' }; }
         tried.push(`pollinations: ${p.error}`);
+        if (outOfCalls(p)) return noCalls();
       }
       return null;
     };
