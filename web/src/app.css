@@ -119,62 +119,89 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 .one-row > div > div:last-child > div:first-child{grid-column:3;grid-row:1;align-self:end}
 .one-row > div > div:last-child > div:last-child{grid-column:4;grid-row:1;align-self:end}
 
-/* + menu scenes, 100 x 30 px. Colour is currentColor, hierarchy is opacity; with reduced motion each scene plays once and rests on its final picture. */
-.demo{flex:none;color:currentColor;overflow:visible}
-.demo rect,.demo circle,.demo path{transform-box:fill-box}
-.demo path{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-/* dictate: you speak, the words land */
-.d-bar{fill:currentColor;transform-origin:center;animation:d-bar .6s ease-in-out infinite alternate}
-@keyframes d-bar{0%{transform:scaleY(.18)}100%{transform:scaleY(1)}}
-.d-voice{animation:d-voice 3.6s ease-in-out infinite}
-@keyframes d-voice{0%,5%{opacity:.15}12%,48%{opacity:1}58%,100%{opacity:.15}}
-.d-arrow{opacity:0;animation:d-arrow 3.6s ease-in-out infinite}
-@keyframes d-arrow{0%,40%{opacity:0;transform:translateX(-5px)}52%,88%{opacity:.9;transform:none}100%{opacity:0}}
-.d-text rect{fill:currentColor;transform-origin:left center;transform:scaleX(0);animation:d-line 3.6s cubic-bezier(.3,.7,.2,1) infinite}
-.d-text rect:nth-child(2){animation-delay:.18s}.d-text rect:nth-child(3){animation-delay:.36s}
-.d-text .d-caret{opacity:0;animation:d-caret 3.6s steps(1) infinite}
-@keyframes d-line{0%,46%{transform:scaleX(0);opacity:1}64%,90%{transform:scaleX(1);opacity:.85}100%{transform:scaleX(1);opacity:0}}
-@keyframes d-caret{0%,66%{opacity:0}68%,74%{opacity:1}76%,82%{opacity:0}84%,90%{opacity:1}92%,100%{opacity:0}}
-/* talk: you speak, it answers back, turn about */
-.t-barL,.t-barR{fill:currentColor;transform-origin:center;transform:scaleY(.15);opacity:.35}
-.t-barL{animation:t-L 4s ease-in-out infinite}.t-barR{animation:t-R 4s ease-in-out infinite}
-@keyframes t-L{0%{transform:scaleY(.15);opacity:.35}6%{transform:scaleY(.9);opacity:1}14%{transform:scaleY(.35)}22%{transform:scaleY(1)}30%{transform:scaleY(.5)}42%{transform:scaleY(.9);opacity:1}48%,100%{transform:scaleY(.15);opacity:.35}}
-@keyframes t-R{0%,50%{transform:scaleY(.15);opacity:.35}56%{transform:scaleY(1);opacity:1}64%{transform:scaleY(.4)}72%{transform:scaleY(.95)}80%{transform:scaleY(.45)}90%{transform:scaleY(.8);opacity:1}98%,100%{transform:scaleY(.15);opacity:.35}}
-.t-orb{fill:currentColor;transform-origin:center;animation:t-orb 4s ease-in-out infinite}
-@keyframes t-orb{0%,100%{transform:scale(.8);opacity:.9}25%{transform:scale(.95)}50%{transform:scale(.8)}75%{transform:scale(1.05)}}
-.t-ring{fill:none;stroke:currentColor;stroke-width:1;transform-origin:center;opacity:0;animation:t-ring 2s ease-out infinite}.t-r2{animation-delay:1s}
-@keyframes t-ring{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.6);opacity:0}}
-/* attach: files drop in, a count lands, the clip closes it */
-.a-card path{stroke-width:1.4}
-.a-card{opacity:0;animation:a-card 4s cubic-bezier(.2,1.3,.4,1) infinite}
-@keyframes a-card{0%{opacity:0;translate:0 -22px}12%{opacity:1;translate:0 2px}18%{translate:0 0}78%{opacity:1;translate:0 0}90%,100%{opacity:0;translate:0 6px}}
-.a-badge{fill:none;stroke:currentColor;stroke-width:1.5;transform-origin:center;transform:scale(0);animation:a-badge 4s cubic-bezier(.3,1.6,.5,1) infinite}
-.a-tick{stroke-dasharray:16;stroke-dashoffset:16;animation:a-tick 4s ease-out infinite}
-.a-clip{opacity:.9;transform-origin:center;animation:a-clip 4s ease-in-out infinite}
-@keyframes a-badge{0%,44%{transform:scale(0)}54%,86%{transform:scale(1)}94%,100%{transform:scale(0)}}
-@keyframes a-tick{0%,54%{stroke-dashoffset:16}66%,86%{stroke-dashoffset:0}94%,100%{stroke-dashoffset:16}}
-@keyframes a-clip{0%,50%{transform:rotate(0)}58%{transform:rotate(-14deg)}66%,100%{transform:rotate(0)}}
-/* computers: the task looks at each machine, one takes it and works */
-.c-pc path,.c-scr{stroke:currentColor;stroke-width:1.4;fill:none;opacity:.55}
-.c-led{fill:currentColor;opacity:.3}
-.c-fill{fill:currentColor;transform-origin:left center;transform:scaleX(0);opacity:0}
-.c-rail{stroke-dasharray:1 3;opacity:.4}
-.c-task{fill:currentColor;animation:c-task 4.4s cubic-bezier(.5,0,.2,1) infinite}
-@keyframes c-task{0%{transform:translateX(0)}18%{transform:translateX(0)}30%{transform:translateX(31px)}40%{transform:translateX(31px)}52%{transform:translateX(31px)}92%{transform:translateX(31px)}100%{transform:translateX(31px)}}
-.c-pc0 .c-led{animation:c-busy 4.4s steps(1) infinite}
-@keyframes c-busy{0%,10%{opacity:.3}12%,18%{opacity:1}20%,100%{opacity:.3}}
-.c-pc1 .c-scr{animation:c-pick 4.4s ease-out infinite}
-.c-pc1 .c-led{animation:c-on 4.4s ease-out infinite}
-.c-pc1 .c-fill{animation:c-work 4.4s cubic-bezier(.4,0,.2,1) infinite}
-@keyframes c-pick{0%,36%{opacity:.55}46%,88%{opacity:1;stroke-width:2}96%,100%{opacity:.55;stroke-width:1.4}}
-@keyframes c-on{0%,40%{opacity:.3}48%,88%{opacity:1}96%,100%{opacity:.3}}
-@keyframes c-work{0%,44%{transform:scaleX(0);opacity:0}48%{opacity:.9}84%{transform:scaleX(1);opacity:.9}94%,100%{transform:scaleX(1);opacity:0}}
-/* model: a spark thinks, then the answer streams in */
-.m-spark{fill:currentColor;stroke:none;transform-origin:center;animation:m-spark 3.8s ease-in-out infinite}
-@keyframes m-spark{0%,100%{transform:scale(.8) rotate(0);opacity:.8}25%{transform:scale(1.15) rotate(45deg);opacity:1}50%{transform:scale(.9) rotate(90deg)}75%{transform:scale(1.1) rotate(135deg)}}
-.m-lines rect{fill:currentColor;opacity:.85;transform-origin:left center;transform:scaleX(0);animation:m-line 3.8s steps(14,end) infinite}
-.m-lines .m-l2{animation-delay:.35s}.m-lines .m-l3{animation-delay:.7s}
-@keyframes m-line{0%,12%{transform:scaleX(0)}40%,86%{transform:scaleX(1);opacity:.85}96%,100%{transform:scaleX(1);opacity:0}}
-.m-caret{fill:currentColor;animation:m-caret 3.8s steps(1) infinite}
-@keyframes m-caret{0%,10%{opacity:1;transform:translate(0,-13px)}12%{opacity:0}25%{opacity:1;transform:translate(60px,-13px)}36%{opacity:0}38%{opacity:1;transform:translate(36px,-6px)}48%{opacity:0}50%,52%{opacity:1;transform:translate(50px,0)}60%{opacity:0}62%,64%{opacity:1}72%,100%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.demo *{animation-iteration-count:1!important}.demo .a-card,.demo .d-text rect,.demo .m-lines rect,.demo .c-fill{opacity:.85;transform:none}.demo .a-badge{transform:none}.demo .a-tick{stroke-dashoffset:0}}
+/* + menu scenes: a tiny working UI per row, one 5 s timeline, spring easing. Rests at 100 x 30, zooms on hover.
+   Colour is currentColor and hierarchy is opacity, so it follows every theme. */
+.demo-wrap{position:relative;display:inline-block;width:100px;height:30px;flex:none}
+.demo{position:absolute;right:0;top:0;transform-origin:right center;transition:transform .38s cubic-bezier(.2,.9,.2,1),box-shadow .38s;overflow:visible;color:currentColor;border-radius:var(--radius,4px)}
+.astryx-item:hover .demo,.astryx-item:focus-visible .demo,.astryx-item:focus-within .demo,.astryx-item[data-highlighted] .demo,.astryx-item[aria-selected=true] .demo{transform:scale(2.7);z-index:30;box-shadow:0 10px 30px -8px rgba(0,0,0,.35)}
+.demo *{transform-box:fill-box}
+.demo .bg{fill:Canvas;stroke:currentColor;stroke-opacity:.16}
+.demo path,.demo circle,.demo rect.zone{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.demo .cur{fill:currentColor;stroke:Canvas;stroke-width:1;opacity:0}
+.demo{--e:cubic-bezier(.34,1.56,.64,1)}
+/* dictate: a cursor presses the mic, it listens, the words land */
+.demo-dictate .cur{animation:dc 5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes dc{0%{opacity:0;transform:translate(170px,48px)}4%{opacity:1}15%{transform:translate(25px,34px)}20%{transform:translate(25px,34px) scale(.85)}25%,52%{opacity:1;transform:translate(25px,34px)}62%,100%{opacity:0;transform:translate(40px,48px)}}
+.demo-dictate .mic{animation:dmic 5s var(--e) infinite;transform-origin:center}
+.demo-dictate .mic circle{fill:currentColor;fill-opacity:0}
+@keyframes dmic{0%,17%{transform:scale(1)}21%{transform:scale(.86)}27%,100%{transform:scale(1)}}
+.demo-dictate .rip{opacity:0;transform-origin:center;animation:drip 2.2s ease-out infinite;animation-delay:1s}.demo-dictate .rip.r2{animation-delay:1.8s}
+@keyframes drip{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.3);opacity:0}}
+.demo-dictate .wv{fill:currentColor;stroke:none;transform-origin:center;animation:dwv 5s ease-in-out infinite;transform:scaleY(0)}
+@keyframes dwv{0%,20%{transform:scaleY(0)}24%{transform:scaleY(1)}28%{transform:scaleY(.4)}33%{transform:scaleY(1)}38%{transform:scaleY(.5)}43%{transform:scaleY(.95)}48%{transform:scaleY(.35)}52%{transform:scaleY(.8)}56%,100%{transform:scaleY(0)}}
+.demo-dictate .ln{fill:currentColor;stroke:none;transform-origin:left center;transform:scaleX(0);animation:dln 5s steps(16,end) infinite}
+.demo-dictate .l2{animation-delay:.18s}.demo-dictate .l3{animation-delay:.36s}
+@keyframes dln{0%,52%{transform:scaleX(0);opacity:.85}68%,90%{transform:scaleX(1);opacity:.85}97%,100%{transform:scaleX(1);opacity:0}}
+.demo-dictate .caret{fill:currentColor;stroke:none;animation:dcaret 5s steps(1) infinite;opacity:0}
+@keyframes dcaret{0%,66%{opacity:0;transform:translate(0,0)}67%{opacity:1;transform:translate(90px,0)}72%{opacity:0}74%,78%{opacity:1;transform:translate(90px,0)}80%,84%{opacity:0}86%,90%{opacity:1}92%,100%{opacity:0}}
+/* talk: you speak, the orb listens, then it answers back */
+.demo-talk .you,.demo-talk .ai{fill:currentColor;stroke:none;transform-origin:center;transform:scaleY(.12);opacity:.35}
+.demo-talk .you{animation:tyou 5s ease-in-out infinite}.demo-talk .ai{animation:tai 5s ease-in-out infinite}
+@keyframes tyou{0%{transform:scaleY(.12);opacity:.35}5%{transform:scaleY(1);opacity:1}11%{transform:scaleY(.3)}17%{transform:scaleY(.9)}24%{transform:scaleY(.4)}31%{transform:scaleY(1)}38%{transform:scaleY(.45)}44%{transform:scaleY(.8);opacity:1}49%,100%{transform:scaleY(.12);opacity:.35}}
+@keyframes tai{0%,50%{transform:scaleY(.12);opacity:.35}55%{transform:scaleY(1);opacity:1}61%{transform:scaleY(.35)}68%{transform:scaleY(.95)}75%{transform:scaleY(.4)}82%{transform:scaleY(.9)}89%{transform:scaleY(.5);opacity:1}96%,100%{transform:scaleY(.12);opacity:.35}}
+.demo-talk .orb{fill:currentColor;stroke:none;transform-origin:center;animation:torb 5s var(--e) infinite}
+@keyframes torb{0%{transform:scale(.85)}10%{transform:scale(1.1)}20%{transform:scale(.9)}35%{transform:scale(1.05)}49%{transform:scale(.85)}56%{transform:scale(1.25)}66%{transform:scale(.95)}78%{transform:scale(1.2)}90%{transform:scale(.95)}100%{transform:scale(.85)}}
+.demo-talk .ri,.demo-talk .ro{opacity:0}.demo-talk .ri{animation:tri 5s linear infinite}.demo-talk .ro{animation:tro 5s linear infinite}
+.demo-talk .ri circle,.demo-talk .ro circle{transform-origin:center;stroke-width:1.2}
+.demo-talk .ri circle{animation:rin 1.2s ease-in infinite}.demo-talk .ro circle{animation:rout 1.2s ease-out infinite}.demo-talk .g2{animation-delay:.6s!important}
+@keyframes tri{0%,2%{opacity:0}6%,46%{opacity:.8}50%,100%{opacity:0}}@keyframes tro{0%,52%{opacity:0}56%,92%{opacity:.8}96%,100%{opacity:0}}
+@keyframes rin{0%{transform:scale(3);opacity:0}100%{transform:scale(1.2);opacity:.8}}@keyframes rout{0%{transform:scale(1.2);opacity:.8}100%{transform:scale(3);opacity:0}}
+.demo-talk .lab{opacity:.25}
+/* attach: a cursor drags a file over the drop zone, three chips pop in, a tick closes it */
+.demo-attach .fc{transform:translate(14px,16px);animation:afc 5s cubic-bezier(.4,0,.2,1) infinite}
+.demo-attach .cur{animation:ac 5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes afc{0%{opacity:0;transform:translate(14px,24px) scale(.9)}6%{opacity:1;transform:translate(14px,16px) scale(1)}12%{transform:translate(14px,14px) scale(1.08) rotate(-3deg)}42%{transform:translate(132px,16px) scale(1.08) rotate(3deg)}48%{transform:translate(138px,20px) scale(.55) rotate(0);opacity:1}54%,100%{opacity:0;transform:translate(138px,20px) scale(.2)}}
+@keyframes ac{0%{opacity:0;transform:translate(24px,40px)}6%{opacity:1;transform:translate(28px,40px)}12%{transform:translate(28px,34px) scale(.9)}42%{transform:translate(146px,34px) scale(.9)}50%{opacity:1;transform:translate(150px,44px) scale(1)}60%,100%{opacity:0;transform:translate(160px,52px)}}
+.demo-attach .zone{stroke-dasharray:4 4;stroke-opacity:.45;transform-origin:center;animation:azone 5s var(--e) infinite}
+@keyframes azone{0%,28%{stroke-opacity:.35;transform:scale(1)}40%,48%{stroke-opacity:1;transform:scale(1.04)}56%,100%{stroke-opacity:.35;transform:scale(1)}}
+.demo-attach .plus{stroke-opacity:.45;animation:aplus 5s ease infinite}@keyframes aplus{0%,44%{opacity:1}50%,100%{opacity:0}}
+.demo-attach .chip{opacity:0;transform-origin:center;animation:achip 5s var(--e) infinite;stroke-width:1.4}.demo-attach .chip path{stroke-width:1.4}
+@keyframes achip{0%,50%{opacity:0;scale:.2}58%{opacity:1;scale:1}88%{opacity:1;scale:1}96%,100%{opacity:0;scale:1}}
+.demo-attach .ok{opacity:0;transform-origin:center;animation:aok 5s var(--e) infinite}.demo-attach .tk{stroke-dasharray:10;stroke-dashoffset:10;animation:atk 5s ease-out infinite}
+@keyframes aok{0%,70%{opacity:0;scale:0}76%,88%{opacity:1;scale:1}96%,100%{opacity:0}}@keyframes atk{0%,74%{stroke-dashoffset:10}82%,88%{stroke-dashoffset:0}96%,100%{stroke-dashoffset:10}}
+/* computers: the task reaches the router, which picks the cheapest free machine; it lights up and works */
+.demo-computers .task{transform-origin:center;animation:ctask 5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes ctask{0%{opacity:0;transform:translateX(-14px)}8%,30%{opacity:1;transform:none}38%,100%{opacity:.35}}
+.demo-computers .hub{transform-origin:center;animation:chub 5s var(--e) infinite}
+@keyframes chub{0%,30%{transform:scale(1);stroke-opacity:.5}38%{transform:scale(1.5);stroke-opacity:1}46%,90%{transform:scale(1);stroke-opacity:1}100%{stroke-opacity:.5}}
+.demo-computers .pt{stroke-opacity:.2;stroke-dasharray:3 3}
+.demo-computers .q2{stroke-opacity:.2;stroke-dasharray:60;stroke-dashoffset:60;animation:cq2 5s ease-out infinite}
+@keyframes cq2{0%,40%{stroke-dashoffset:60;stroke-opacity:.9}52%,90%{stroke-dashoffset:0;stroke-opacity:.9}100%{stroke-opacity:.2;stroke-dashoffset:60}}
+.demo-computers .card{stroke:currentColor;stroke-opacity:.35;stroke-width:1.2;fill:none}
+.demo-computers .trk{fill:currentColor;stroke:none;opacity:.12}.demo-computers .bar{fill:currentColor;stroke:none;transform-origin:left center;opacity:.8}
+.demo-computers .led{fill:currentColor;stroke:none;opacity:.25}
+.demo-computers .pc0 .bar{transform:scaleX(.92)}.demo-computers .pc0 .led{animation:cbusy 5s steps(1) infinite}
+.demo-computers .pc0{opacity:.55}.demo-computers .pc2{opacity:.55}.demo-computers .pc2 .bar{transform:scaleX(.18)}
+@keyframes cbusy{0%,55%{opacity:.25}60%,100%{opacity:1}}
+.demo-computers .pc1 .bar{transform:scaleX(0);animation:cwork 5s cubic-bezier(.4,0,.2,1) infinite}
+.demo-computers .pc1 .led{animation:cled 5s ease infinite}.demo-computers .pc1 .card{animation:ccard 5s ease infinite}
+@keyframes cwork{0%,56%{transform:scaleX(0)}86%,92%{transform:scaleX(1)}100%{transform:scaleX(1);opacity:0}}
+@keyframes cled{0%,52%{opacity:.25}58%,92%{opacity:1}100%{opacity:.25}}
+@keyframes ccard{0%,52%{stroke-opacity:.35;stroke-width:1.2}60%,92%{stroke-opacity:1;stroke-width:2}100%{stroke-opacity:.35;stroke-width:1.2}}
+.demo-computers .job{fill:currentColor;stroke:none;offset-path:path("M44 30L76 30L114 30");offset-distance:0%;opacity:0;animation:cjob 5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes cjob{0%,6%{offset-distance:0%;opacity:0}12%{offset-distance:0%;opacity:1}32%{offset-distance:46%;opacity:1}38%,44%{offset-distance:46%;opacity:1}58%{offset-distance:100%;opacity:1}62%,100%{offset-distance:100%;opacity:0}}
+/* model: a highlight springs between models and each one streams its own answer */
+.demo-model .hl{fill:currentColor;fill-opacity:.1;stroke:currentColor;stroke-opacity:.5;stroke-width:1.2;animation:mhl 5s var(--e) infinite}
+@keyframes mhl{0%,28%{transform:translateX(0)}34%,62%{transform:translateX(56px)}68%,96%{transform:translateX(112px)}100%{transform:translateX(0)}}
+.demo-model .pill{opacity:.45}.demo-model .pill circle{fill:currentColor;stroke:none}.demo-model .pill rect{fill:currentColor;stroke:none}
+.demo-model .p0{animation:mp0 5s ease infinite}.demo-model .p1{animation:mp1 5s ease infinite}.demo-model .p2{animation:mp2 5s ease infinite}
+@keyframes mp0{0%,30%{opacity:1}34%,96%{opacity:.4}100%{opacity:1}}@keyframes mp1{0%,30%{opacity:.4}34%,64%{opacity:1}68%,100%{opacity:.4}}@keyframes mp2{0%,64%{opacity:.4}68%,96%{opacity:1}100%{opacity:.4}}
+.demo-model .tx{fill:currentColor;stroke:none;transform-origin:left center;transform:scaleX(0);opacity:.8}
+.demo-model .s0 .tx{animation:ms0 5s steps(14,end) infinite}.demo-model .s1 .tx{animation:ms1 5s steps(14,end) infinite}.demo-model .s2 .tx{animation:ms2 5s steps(14,end) infinite}
+.demo-model .tx.b{animation-delay:.25s!important}.demo-model .tx.c{animation-delay:.5s!important}
+@keyframes ms0{0%{transform:scaleX(0)}22%,30%{transform:scaleX(1)}31%,100%{transform:scaleX(0)}}
+@keyframes ms1{0%,34%{transform:scaleX(0)}56%,63%{transform:scaleX(1)}64%,100%{transform:scaleX(0)}}
+@keyframes ms2{0%,68%{transform:scaleX(0)}90%,96%{transform:scaleX(1)}97%,100%{transform:scaleX(0)}}
+.demo-model .spk{fill:currentColor;stroke:none;transform-origin:center;animation:mspk 5s var(--e) infinite}
+@keyframes mspk{0%,28%{transform:rotate(0) scale(1)}34%{transform:rotate(90deg) scale(1.3)}40%,62%{transform:rotate(90deg) scale(1)}68%{transform:rotate(180deg) scale(1.3)}74%,96%{transform:rotate(180deg) scale(1)}100%{transform:rotate(360deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.demo *{animation-iteration-count:1!important}.demo .ln,.demo .tx,.demo .bar,.demo .chip{transform:none;opacity:.85}.demo .wv,.demo .you,.demo .ai{transform:none}.demo .tk{stroke-dashoffset:0}.demo .ok{opacity:1}}

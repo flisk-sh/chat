@@ -1,43 +1,54 @@
-// A 100 x 30 px scene at the end of each + menu row: a short loop that shows what the row does. SVG and CSS only.
-const bar = (n) => Array.from({length: n}, (_, i) => i);
+// A scene at the end of each + menu row: a tiny working UI that plays one short story on a 5 s timeline, with a cursor and spring
+// easing. It rests at 100 x 30 px and zooms to about 2.6x while the row is hovered or focused. SVG and CSS only.
+const n = (k) => Array.from({length: k}, (_, i) => i);
+const Cursor = ({cls}) => <path className={'cur ' + cls} d="M0 0v13l3.4-3 2.6 5.6 2.2-1L5.6 9H10Z" />;
 
 export function Demo({kind}) {
   return (
-    <svg className={'demo demo-' + kind} viewBox="0 0 100 30" width="100" height="30" aria-hidden="true" focusable="false">
-      {kind === 'dictate' && (<>
-        <g className="d-voice">{bar(9).map((i) => <rect key={i} className="d-bar" style={{animationDuration: (0.45 + (i * 37) % 5 * 0.08) + 's', animationDelay: -(i * 0.11) + 's'}} x={3 + i * 4.4} y="5" width="2.4" height="20" rx="1.2" />)}</g>
-        <path className="d-arrow" d="M44 11l5 4-5 4" />
-        <g className="d-text"><rect x="55" y="7" width="40" height="3.4" rx="1.7" /><rect x="55" y="13.3" width="30" height="3.4" rx="1.7" /><rect x="55" y="19.6" width="36" height="3.4" rx="1.7" /><rect className="d-caret" x="93" y="19" width="1.8" height="5" /></g>
-      </>)}
-      {kind === 'talk' && (<>
-        <g className="t-you">{bar(5).map((i) => <rect key={i} className="t-barL" style={{animationDelay: (i * 0.07) + 's'}} x={8 + i * 5} y="6" width="2.6" height="18" rx="1.3" />)}</g>
-        <circle className="t-ring" cx="50" cy="15" r="5" /><circle className="t-ring t-r2" cx="50" cy="15" r="5" />
-        <circle className="t-orb" cx="50" cy="15" r="5.5" />
-        <g className="t-ai">{bar(5).map((i) => <rect key={i} className="t-barR" style={{animationDelay: (i * 0.07) + 's'}} x={67 + i * 5} y="6" width="2.6" height="18" rx="1.3" />)}</g>
-      </>)}
-      {kind === 'attach' && (<>
-        {bar(3).map((i) => (
-          <g key={i} className="a-card" style={{animationDelay: (i * 0.42) + 's', transform: 'translate(' + (6 + i * 15) + 'px,4px)'}}>
-            <path d="M0 2.5Q0 0 2.5 0H9l6 6v15.5Q15 24 12.5 24h-10Q0 24 0 21.5Z" /><path d="M9 0v6h6" /><path d="M3.5 13h8M3.5 17h5.5" />
-          </g>
-        ))}
-        <circle className="a-badge" cx="62" cy="15" r="8" /><path className="a-tick" d="M58.4 15.2l2.6 2.7 4.8-5.6" />
-        <path className="a-clip" d="M82 21V10a5 5 0 0 1 10 0v12a3.2 3.2 0 0 1-6.4 0V11.5" />
-      </>)}
-      {kind === 'computers' && (<>
-        {bar(3).map((i) => (
-          <g key={i} className={'c-pc c-pc' + i} style={{transform: 'translate(' + (6 + i * 31) + 'px,3px)'}}>
-            <rect className="c-scr" x="0" y="0" width="26" height="16" rx="2" /><path d="M13 16v4M7 20h12" />
-            <rect className="c-fill" x="3" y="12" width="20" height="2" rx="1" /><circle className="c-led" cx="22" cy="3.4" r="1.4" />
-          </g>
-        ))}
-        <path className="c-rail" d="M6 27H94" /><circle className="c-task" cx="6" cy="27" r="2.6" />
-      </>)}
-      {kind === 'model' && (<>
-        <path className="m-spark" d="M12 4c.6 5.4 2.6 7.4 8 8-5.4.6-7.4 2.6-8 8-.6-5.4-2.6-7.4-8-8 5.4-.6 7.4-2.6 8-8Z" />
-        <g className="m-lines"><rect className="m-l1" x="30" y="6" width="62" height="3.6" rx="1.8" /><rect className="m-l2" x="30" y="13.2" width="48" height="3.6" rx="1.8" /><rect className="m-l3" x="30" y="20.4" width="56" height="3.6" rx="1.8" /></g>
-        <rect className="m-caret" x="30" y="19.6" width="2" height="5.2" />
-      </>)}
-    </svg>
+    <span className="demo-wrap" aria-hidden="true">
+      <svg className={'demo demo-' + kind} viewBox="0 0 200 60" width="100" height="30" focusable="false">
+        <rect className="bg" x="1" y="1" width="198" height="58" rx="5" />
+        {kind === 'dictate' && (<>
+          <circle className="rip" cx="24" cy="30" r="10" /><circle className="rip r2" cx="24" cy="30" r="10" />
+          <g className="mic"><circle cx="24" cy="30" r="10" /><path d="M24 25v6M20.5 29.2a3.5 3.5 0 0 0 7 0M24 33.2v2.3" /></g>
+          <g>{n(9).map((i) => <rect key={i} className="wv" style={{animationDelay: (i * 0.06) + 's', '--h': (10 + (i * 7) % 5 * 4) + 'px'}} x={44 + i * 5} y="22" width="2.6" height="16" rx="1.3" />)}</g>
+          <rect className="ln l1" x="94" y="19" width="92" height="5" rx="2.5" /><rect className="ln l2" x="94" y="29" width="70" height="5" rx="2.5" /><rect className="ln l3" x="94" y="39" width="82" height="5" rx="2.5" />
+          <rect className="caret" x="94" y="38" width="2" height="7" />
+          <Cursor cls="dc" />
+        </>)}
+        {kind === 'talk' && (<>
+          <g className="ri"><circle cx="100" cy="30" r="9" /><circle cx="100" cy="30" r="9" className="g2" /></g>
+          <g className="ro"><circle cx="100" cy="30" r="9" /><circle cx="100" cy="30" r="9" className="g2" /></g>
+          <circle className="orb" cx="100" cy="30" r="8" />
+          <g>{n(7).map((i) => <rect key={i} className="you" style={{animationDelay: (i * 0.05) + 's'}} x={14 + i * 6} y="18" width="3" height="24" rx="1.5" />)}</g>
+          <g>{n(7).map((i) => <rect key={i} className="ai" style={{animationDelay: (i * 0.05) + 's'}} x={146 + i * 6} y="18" width="3" height="24" rx="1.5" />)}</g>
+          <path className="lab" d="M10 10h20M170 50h20" />
+        </>)}
+        {kind === 'attach' && (<>
+          <rect className="zone" x="116" y="9" width="76" height="42" rx="5" />
+          <path className="plus" d="M154 24v12M148 30h12" />
+          {n(3).map((i) => <g key={i} className="chip" style={{animationDelay: (i * 0.14) + 's', transform: 'translate(' + (124 + i * 22) + 'px,19px)'}}><path d="M0 3Q0 0 3 0h7l6 6v15q0 3-3 3H3q-3 0-3-3Z" /><path d="M3.5 13h9M3.5 17.5h6" /></g>)}
+          <circle className="ok" cx="180" cy="17" r="5" /><path className="tk" d="M177.4 17l2 2 3.4-4" />
+          <g className="fc"><path d="M0 3Q0 0 3 0h12l7 7v19q0 3-3 3H3q-3 0-3-3Z" /><path d="M15 0v7h7M5 15h12M5 20.5h8" /></g>
+          <Cursor cls="ac" />
+        </>)}
+        {kind === 'computers' && (<>
+          <g className="task"><rect x="8" y="23" width="36" height="14" rx="7" /><path d="M16 30h14" /></g>
+          <circle className="hub" cx="76" cy="30" r="4.5" />
+          <path className="pt" d="M44 30H71.5" />
+          <path className="pt q1" d="M80.5 30L112 14.5" /><path className="pt q2" d="M80.5 30H112" /><path className="pt q3" d="M80.5 30L112 45.5" />
+          {[0, 1, 2].map((i) => (
+            <g key={i} className={'pc pc' + i}><rect className="card" x="114" y={7 + i * 16.5} width="78" height="13" rx="3" /><circle className="led" cx="121" cy={13.5 + i * 16.5} r="2" /><rect className="trk" x="128" y={11.5 + i * 16.5} width="56" height="4" rx="2" /><rect className="bar" x="128" y={11.5 + i * 16.5} width="56" height="4" rx="2" /></g>
+          ))}
+          <circle className="job" r="3.2" />
+        </>)}
+        {kind === 'model' && (<>
+          <rect className="hl" x="8" y="8" width="52" height="13" rx="6.5" />
+          {['wolf', 'claude', 'gpt'].map((k, i) => <g key={k} className={'pill p' + i}><circle cx={18 + i * 56} cy="14.5" r="3" /><rect x={25 + i * 56} y="12.7" width="24" height="3.6" rx="1.8" /></g>)}
+          {n(3).map((m) => <g key={m} className={'st s' + m}><rect className="tx a" x="12" y="30" width="170" height="4.4" rx="2.2" /><rect className="tx b" x="12" y="38.5" width="136" height="4.4" rx="2.2" /><rect className="tx c" x="12" y="47" width="156" height="4.4" rx="2.2" /></g>)}
+          <path className="spk" d="M186 12c.4 3.4 1.6 4.6 5 5-3.4.4-4.6 1.6-5 5-.4-3.4-1.6-4.6-5-5 3.4-.4 4.6-1.6 5-5Z" />
+        </>)}
+      </svg>
+    </span>
   );
 }
