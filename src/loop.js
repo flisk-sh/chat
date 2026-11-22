@@ -137,8 +137,32 @@ export function homePath(path) {
   return String(path).replace(/^\/(?:home\/[^/]+|root)(?=\/|$)/, '~');
 }
 
+// Some models write a function call, {"name": "say", "text": "..."} or {"name": "widget": {...}} (not even valid JSON), instead of
+// {"say": "..."}. Rewrites that to the one shape every other part of the loop reads; any other text comes back unchanged.
+const ACTION_NAMES = 'say|run|write|read|publish|worker|image|site|video|system|share|search|widget';
+const NAME_WRAPPER = new RegExp(`^(\\s*(?:\`\`\`(?:json)?\\s*)?)\\{\\s*"name"\\s*:\\s*"(${ACTION_NAMES})"\\s*([,:])`);
+const NAME_PAYLOAD = { say: ['text', 'content', 'message', 'say'], run: ['command', 'run'], read: ['path', 'read'], publish: ['path', 'publish'], worker: ['path', 'worker'], search: ['query', 'search'] };
+export function unwrapName(text) {
+  const s = String(text ?? '');
+  const m = NAME_WRAPPER.exec(s);
+  if (!m) return s;
+  const [head, pre, name, sep] = m;
+  if (sep === ':') return `${pre}{"${name}":${s.slice(head.length)}`; // {"name":"say":"..."}: the value follows the name
+  const end = s.lastIndexOf('}');
+  let a;
+  try { a = JSON.parse(s.slice(pre.length, end + 1)); } catch { return s; }
+  const { name: _n, ...rest } = a;
+  let payload = rest.arguments ?? rest.parameters ?? rest.input;
+  if (typeof payload === 'string' && /^\s*\{/.test(payload) && name !== 'say') { try { payload = JSON.parse(payload); } catch { /* keep the text */ } }
+  if (payload === undefined) {
+    const key = (NAME_PAYLOAD[name] || []).find((k) => rest[k] !== undefined);
+    payload = key ? rest[key] : Object.keys(rest).length ? rest : undefined;
+  }
+  return payload === undefined ? s : `${pre}${JSON.stringify({ [name]: payload })}`;
+}
+
 export function parseAction(text) {
-  let s = String(text ?? '').trim();
+  let s = unwrapName(String(text ?? '').trim()).trim();
 
   // Strip common tool-call / DSML / XML wrappers the free model sometimes emits.
   s = s
@@ -147,6 +171,7 @@ export function parseAction(text) {
     .replace(/<\/?parameter[^>]*>/gi, '')
     .replace(/<\|[^|]+\|>/g, '')
     .trim();
+  s = unwrapName(s);
 
   const start = s.indexOf('{');
   const end = s.lastIndexOf('}');
@@ -217,7 +242,7 @@ const PLUMBING_START = /^\s*(?:```(?:json)?\s*)?\{\s*"(say|run|write|read|publis
 const TOOL_TAGS = /<\|DSML\|>[\s\S]*?<\|\/DSML\|>|<\/?(?:invoke|parameter|tool_call|function_call)[^>]*>|<\|[^|]+\|>/gi;
 export function guardAnswer(text) {
   const orig = String(text ?? '');
-  let t = orig.replace(TOOL_TAGS, '').trim();
+  let t = unwrapName(orig.replace(TOOL_TAGS, '').trim());
   for (let i = 0; i < 3 && PLUMBING_START.test(t); i++) {
     const m = /^\s*(?:```(?:json)?\s*)?\{\s*"say"/.test(t);
     if (!m) { t = ''; break; } // another action: there are no words in it
@@ -370,6 +395,11 @@ export function noteDeadLinks(text, hadComputer) {
   return `${text}\n\n(The localhost addresses above were on this task's computer, which has stopped now, so they will not open for you. Ask me to publish the page if you want a link.)`;
 }
 
+// One address, however it is spelled: host in lower case, no #fragment, no trailing slash.
+export function webKey(url) {
+  try { const u = new URL(String(url)); u.hash = ''; return (u.origin + u.pathname.replace(/\/+$/, '') + u.search).toLowerCase(); } catch { return String(url).trim().toLowerCase(); }
+}
+
 export function cleanHistory(history) {
   if (!Array.isArray(history)) return [];
   return history
@@ -379,7 +409,9 @@ export function cleanHistory(history) {
       // A file attached on an earlier turn was on that turn's computer only; say so, so the model asks for it again.
       const names = Array.isArray(m.files) ? m.files.filter((n) => typeof n === 'string').slice(0, 3).map((n) => n.slice(0, 80)) : [];
       const note = m.role === 'user' && names.length ? `\n[Attached then: ${names.join(', ')}. Not on this computer any more: ask the user to attach it again if you need it.]` : '';
-      return { role: m.role, content: m.content.slice(0, 1500) + note };
+      // An earlier answer that still carries model plumbing would teach the model to write it again.
+      const body = m.role === 'assistant' ? guardAnswer(m.content).text || m.content : m.content;
+      return { role: m.role, content: body.slice(0, 1500) + note };
     });
 }
 
@@ -476,6 +508,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   // then another) once read until the run ran out of calls and ended on "the free AI is busy".
   const MAX_WEB_READS = 6;
   let webReads = 0;
+  const webSeen = new Set(); // the same address is read once per task: a repeat gives the model nothing new
   // Each reroute row once per run: the same "Flisk Wolf is resting" on every step filled the page with copies.
   const rerouteSeen = new Set();
   const reroute = (text) => { if (rerouteSeen.has(text)) return; rerouteSeen.add(text); emit({ type: 'reroute', text }); };
@@ -682,7 +715,15 @@ export async function runTask({ grade = null, stream = false, decision = null, c
             messages.push({ role: 'user', content: `That is ${MAX_WEB_READS} pages read, the most one request can read. Answer now with "say" from what you have read, and say what you could not open.` });
             continue;
           }
-          if (w.widget.id === 'web') webReads++;
+          if (w.widget.id === 'web') {
+            const key = webKey(w.input.url);
+            if (webSeen.has(key)) {
+              messages.push({ role: 'user', content: `You already read ${w.input.url}: its text is above. Use it, or read a different page. Next action as JSON only.` });
+              continue;
+            }
+            webSeen.add(key);
+            webReads++;
+          }
           const r = await w.widget.run(w.input, { fetch: fetchImpl, citable });
           if (r.error && SUBREQUESTS_RE.test(r.error)) {
             emit({ type: 'error', error: SUBREQUESTS_USED, kind: 'subrequests' });
