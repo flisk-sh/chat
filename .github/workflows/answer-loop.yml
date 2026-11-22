@@ -30,7 +30,7 @@ jobs:
       EDITOR_MODEL: ${{ vars.EDITOR_MODEL }}
       EVAL_SAMPLES: ${{ vars.EVAL_SAMPLES || '2' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
