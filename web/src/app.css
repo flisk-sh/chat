@@ -110,3 +110,11 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 .greet { font-size: 1.15rem; line-height: 1.35; margin: 0; }
 /* ?voice=1 note (#364): low on the page above the composer, and taps go through it to the page. */
 .caption.voice-note{top:auto;bottom:calc(100vh - var(--vv-top,0px) - var(--vv-h,100vh) + 132px);left:50%;right:auto;transform:translateX(-50%);white-space:nowrap;pointer-events:none;font-weight:600;background:#111}
+
+/* The composer is one row: + , the text, send. Astryx stacks header, input and footer; here they share a grid row. */
+.one-row > div{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:end;column-gap:var(--spacing-1,4px);row-gap:0;padding:var(--spacing-1,4px) var(--spacing-2,8px)!important}
+.one-row > div > div:first-child{grid-column:1;grid-row:1;align-self:end}
+.one-row > div > div:nth-child(2){grid-column:2;grid-row:1}
+.one-row > div > div:last-child{display:contents!important}
+.one-row > div > div:last-child > div:first-child{grid-column:3;grid-row:1;align-self:end}
+.one-row > div > div:last-child > div:last-child{grid-column:4;grid-row:1;align-self:end}

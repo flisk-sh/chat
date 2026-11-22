@@ -442,7 +442,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={
-          <ChatComposer value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
+          <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder="Ask anything, or describe what to make…"
             input={<ChatComposerInput enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
