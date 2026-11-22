@@ -118,3 +118,23 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 .one-row > div > div:last-child{display:contents!important}
 .one-row > div > div:last-child > div:first-child{grid-column:3;grid-row:1;align-self:end}
 .one-row > div > div:last-child > div:last-child{grid-column:4;grid-row:1;align-self:end}
+
+/* + menu demos: 100 x 30 px, CSS only, still under reduced motion */
+.demo{display:inline-flex;align-items:center;justify-content:center;width:100px;height:30px;gap:3px;color:currentColor;opacity:.75;flex:none;overflow:hidden}
+.demo-dictate i{width:3px;height:6px;border-radius:var(--radius,2px);background:currentColor;animation:demo-wave 1s ease-in-out infinite}
+@keyframes demo-wave{0%,100%{height:5px}50%{height:26px}}
+.demo-talk{position:relative}.demo-talk b{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid currentColor;border-radius:50%;animation:demo-ring 1.8s ease-out infinite}
+.demo-talk b:nth-child(2){animation-delay:.6s}.demo-talk b:nth-child(3){animation-delay:1.2s}
+@keyframes demo-ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.8);opacity:0}}
+.demo-attach s{width:20px;height:26px;border:1.5px solid currentColor;border-radius:var(--radius,2px);text-decoration:none;animation:demo-drop 2.4s ease-in-out infinite}
+.demo-attach s:nth-child(2){animation-delay:.25s}.demo-attach s:nth-child(3){animation-delay:.5s}
+@keyframes demo-drop{0%,15%{transform:translateY(-14px);opacity:0}35%,85%{transform:none;opacity:1}100%{opacity:0}}
+.demo-computers u{width:24px;height:18px;border:1.5px solid currentColor;border-radius:var(--radius,2px);text-decoration:none;position:relative}
+.demo-computers u::after{content:"";position:absolute;right:3px;top:3px;width:5px;height:5px;border-radius:50%;background:currentColor;animation:demo-blink 1.6s ease-in-out infinite}
+.demo-computers u:nth-child(2)::after{animation-delay:.5s}.demo-computers u:nth-child(3)::after{animation-delay:1s}
+@keyframes demo-blink{0%,100%{opacity:.2}50%{opacity:1}}
+.demo-model{flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding-left:10px}
+.demo-model em{display:block;height:4px;border-radius:var(--radius,2px);background:currentColor;font-style:normal;animation:demo-type 2.2s ease-in-out infinite}
+.demo-model em:nth-child(1){width:80px}.demo-model em:nth-child(2){width:60px;animation-delay:.3s}.demo-model em:nth-child(3){width:70px;animation-delay:.6s}
+@keyframes demo-type{0%{clip-path:inset(0 100% 0 0)}60%,100%{clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){.demo *,.demo::after{animation:none!important}}

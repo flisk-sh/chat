@@ -2,6 +2,7 @@ import {useState, useEffect, useRef, useCallback} from 'react';
 import {Tip, ExplainContext} from './Tip.jsx';
 import {Brand} from './Brand.jsx';
 import {Oracle} from './Oracle.jsx';
+import {Demo} from './MenuDemos.jsx';
 import {ModelDialog, ComputerDialog, brandOf} from './Pickers.jsx';
 import {BOOT, runTask, podOk, getPod, runInBrowser, keyFor, modelFor, lsGet, orStartLogin, orFinishLogin, loadChats, saveChats, deleteChat, vaultReady} from './api.js';
 import {markEngaged} from './engaged.js';
@@ -452,11 +453,11 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
                 <Tip text="More: voice, attach files, computers, AI model. The AI works out whether you want an answer, a website, a video or a picture."><span><DropdownMenu
                   button={{label: 'More', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
                   items={[
-                    {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, onClick: dictate},
-                    {label: 'Voice talk', description: 'Talk out loud with the Flisk Oracle', icon: SpeakerWaveIcon, onClick: () => setTalk(true)},
-                    {label: 'Attach files', description: 'Up to 3 files, 5 MB in all', icon: PaperClipIcon, onClick: () => fileIn.current && fileIn.current.click()},
-                    {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, onClick: () => setPcOpen(true)},
-                    {label: 'Choose AI model', description: 'Flisk Wolf is free; or use your own Claude, OpenAI or OpenRouter key', icon: KeyIcon, onClick: () => setMdlOpen(true)},
+                    {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, endContent: <Demo kind="dictate" />, onClick: dictate},
+                    {label: 'Voice talk', description: 'Talk out loud with the Flisk Oracle', icon: SpeakerWaveIcon, endContent: <Demo kind="talk" />, onClick: () => setTalk(true)},
+                    {label: 'Attach files', description: 'Up to 3 files, 5 MB in all', icon: PaperClipIcon, endContent: <Demo kind="attach" />, onClick: () => fileIn.current && fileIn.current.click()},
+                    {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, endContent: <Demo kind="computers" />, onClick: () => setPcOpen(true)},
+                    {label: 'Choose AI model', description: 'Flisk Wolf is free; or use your own Claude, OpenAI or OpenRouter key', icon: KeyIcon, endContent: <Demo kind="model" />, onClick: () => setMdlOpen(true)},
                   ]} /></span></Tip>
                 {files.map((f, i) => <Badge key={f.name + i} label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} />)}
                 {dictating && <Button label="Stop and write what I said" variant="primary" size="sm" icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} />}
