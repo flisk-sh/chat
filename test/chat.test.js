@@ -7,6 +7,7 @@ import { modelLabel, resolveModel } from '../src/model.js';
 import { EARTH_JS, shortCount, THREE_SRC, USERS, USERS_DATE } from '../src/earth.js';
 import { makeSession } from '../src/session.js';
 import { fakeD1 } from './d1.js';
+import { COGITO_TYPE, cogitoStream, fromFrame } from '../src/cogito.js';
 
 const SCHEMA = readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
 const ORIGIN = 'https://chat.test';
@@ -1259,4 +1260,44 @@ test('the pitch is shown in every theme, including voice and focus', () => {
   const page = appPageUi({ login: null, connected: [] });
   expect(page).not.toMatch(/data-theme=voice\] \.pitch[^{]*\{display:none/);
   expect(page).not.toMatch(/data-theme=focus\] \.pitch[^{]*\{display:none/);
+});
+
+describe('cogito frames on /api/run (opt-in)', () => {
+  const task = { task: 'make a site' };
+  const script = () => ['{"write":{"path":"/tmp/site/index.html","content":"<html>x</html>"}}', '{"publish":"/tmp/site/index.html"}', '{"say":"Done"}'];
+
+  test('without the Accept header nothing changes', async () => {
+    const e = env();
+    const res = await post(e, world({ replies: script() }), '/api/run', task, await authed(e));
+    expect(res.headers.get('content-type')).toBe('application/x-ndjson');
+    expect((await events(res)).every((x) => typeof x.type === 'string')).toBe(true);
+  });
+
+  test('with it: hello first, state frames, every event kept, same events come back', async () => {
+    const e = env();
+    const legacy = await events(await post(e, world({ replies: script() }), '/api/run', task, await authed(e)));
+    const res = await post(env(), world({ replies: script() }), '/api/run', task, await authed(env()), { accept: COGITO_TYPE });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe(COGITO_TYPE);
+    expect(res.headers.get('vary')).toBe('Accept');
+    const frames = await events(res);
+    expect(frames[0].h).toMatchObject({ v: 1, lvl: 1, ret: 'logged', fmt: 'ndjson' });
+    expect(frames.filter((f) => f.s).map((f) => f.s)).toContain('working');
+    expect(frames.at(-1).d).toBe(1);
+    // Decoding the frames gives chat's own events back: same order, same types, nothing lost.
+    const back = frames.map(fromFrame).filter(Boolean);
+    expect(back.map((x) => x.type)).toEqual(legacy.map((x) => x.type));
+    expect(back.find((x) => x.published).published).toMatch(/^https:\/\/chat\.test\/s\/[a-f0-9]{16}$/);
+  });
+
+  test('cogitoStream: state frames only on change, deltas become t, done keeps ms and error', () => {
+    const t = cogitoStream({ id: 'r_test' });
+    const out = [{ type: 'thinking', step: 1 }, { type: 'thinking', step: 2 }, { type: 'delta', text: 'Hi' }, { type: 'delta', text: '!' }, { type: 'done', ms: 12, error: 'x' }]
+      .flatMap((ev) => t.encode(ev).trim().split('\n').map((l) => JSON.parse(l)));
+    expect(out.filter((f) => f.s).map((f) => f.s)).toEqual(['thinking', 'writing']);
+    expect(out.filter((f) => 't' in f).map((f) => f.t).join('')).toBe('Hi!');
+    expect(out.at(-1)).toEqual({ d: 1, ms: 12, err: 'x' });
+    expect(JSON.parse(t.hello()).h.id).toBe('r_test');
+    expect(fromFrame({ s: 'thinking' })).toBeNull();
+  });
 });

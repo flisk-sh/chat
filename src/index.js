@@ -22,6 +22,7 @@ import { sitePhoto } from './photo.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { sentenceSplitter, splitReply } from './talk-stream.js';
+import { COGITO_TYPE, cogitoStream, wantsCogito } from './cogito.js';
 import { placeFrom, warmWeather, weatherNote } from './weather.js';
 import { ALEXA_PER_DAY, MAX_VOICE, alexaHandle, sign as alexaSign } from './alexa.js';
 import { withSecurityHeaders } from './security-headers.js';
@@ -761,7 +762,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const w = writable.getWriter();
       const enc = new TextEncoder();
       let needPod = false, buffered = [];
-      const send = (e) => w.write(enc.encode(JSON.stringify(e) + '\n')).catch(() => {});
+      // Opt-in: a client that asks for cogito frames gets them (src/cogito.js); everyone else gets chat's own events as before.
+      const tr = wantsCogito(request) ? cogitoStream() : null;
+      if (tr) w.write(enc.encode(tr.hello())).catch(() => {});
+      const send = (e) => w.write(enc.encode(tr ? tr.encode(e) : JSON.stringify(e) + '\n')).catch(() => {});
       // Without a computer the steps are held until we know the task needs none; plain answers are then sent all at once.
       const emit = (e) => { if (!noPod || e.type === 'delta') return send(e); if (needPod) return; if (e.type === 'pod_starting') { needPod = true; buffered = []; return; } buffered.push(e); };
       const computer = noPod ? { ...fleet, start: async () => ({ error: ['needs', 'a computer'].join(' ') }) } : fleet;
@@ -787,7 +791,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
           await w.close().catch(() => {});
         });
       if (waitUntil) waitUntil(job);
-      return new Response(readable, { headers: { 'content-type': 'application/x-ndjson', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
+      return new Response(readable, { headers: { 'content-type': tr ? COGITO_TYPE : 'application/x-ndjson', 'cache-control': 'no-store', 'x-accel-buffering': 'no', ...(tr ? { vary: 'Accept' } : {}) } });
     }
   }
   return html(messagePage('Page not found', 'Nothing lives at this address.'), 404);
