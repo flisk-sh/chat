@@ -1290,6 +1290,12 @@ describe('cogito frames on /api/run (opt-in)', () => {
     expect(back.find((x) => x.published).published).toMatch(/^https:\/\/chat\.test\/s\/[a-f0-9]{16}$/);
   });
 
+  test('the built page knows ?cogito=1 (guards a stale next-app.generated.js)', async () => {
+    const { NEXT_JS } = await import('../src/next-app.generated.js');
+    expect(NEXT_JS).toContain(COGITO_TYPE);
+    expect(NEXT_JS).toContain('cogito');
+  });
+
   test('cogitoStream: state frames only on change, deltas become t, done keeps ms and error', () => {
     const t = cogitoStream({ id: 'r_test' });
     const out = [{ type: 'thinking', step: 1 }, { type: 'thinking', step: 2 }, { type: 'delta', text: 'Hi' }, { type: 'delta', text: '!' }, { type: 'done', ms: 12, error: 'x' }]
