@@ -194,7 +194,7 @@ describe('safety', () => {
   test('the home page and the app page escape the login and their scripts parse', async () => {
     const e = env();
     const w = world();
-    const home = await (await handle(new Request(`${ORIGIN}/`), e, { fetchImpl: w.fetchImpl })).text();
+    const home = await (await handle(new Request(`${ORIGIN}/classic`), e, { fetchImpl: w.fetchImpl })).text();
     expect(home).toContain('Sign in with GitHub');
     expect(home).toContain('id="ask"');
     // Signing in is optional: a visitor gets a private anonymous session, so the page is usable.
@@ -217,7 +217,7 @@ describe('safety', () => {
     expect(home).toContain("pick=[kind]");
     expect(home).toContain("pop.addEventListener('keydown'");
     for (const m of home.matchAll(/<script>([\s\S]*?)<\/script[^>]*>/gi)) expect(() => new Function(m[1])).not.toThrow();
-    const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
+    const app = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: await authed(e, 'a-b') } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('@a-b');
     for (const m of app.matchAll(/<script>([\s\S]*?)<\/script[^>]*>/gi)) expect(() => new Function(m[1])).not.toThrow();
   });
@@ -322,7 +322,7 @@ describe('the two pickers', () => {
   test('the page offers both pickers, lists connected computers as tickable and the rest as connect links', async () => {
     const e = env();
     const w = world();
-    const app = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: await authed(e) } }), e, { fetchImpl: w.fetchImpl })).text();
+    const app = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: await authed(e) } }), e, { fetchImpl: w.fetchImpl })).text();
     expect(app).toContain('id="ai"');
     expect(app).toContain('Cheapest first, automatic');
     expect(app).toContain('name="sb" value="daytona"');
@@ -402,7 +402,7 @@ test('the page reads its models from inference /v1/catalog through the binding',
   expect(models.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'new-one']);
   const page = appPageUi({ login: 'ann', connected: [], models });
   expect(page).toContain('"id":"new-one"');
-  expect(page.replace('<script src="https://flisk.si/assets/bar.js" defer></script>', '').replace('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>', '').split('</script>').length).toBe(2);
+  expect(page.replace('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>', '').replace('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>', '').split('</script>').length).toBe(2);
   expect(await loadCatalog({}, 2e13)).toBe(DEFAULT_MODELS);
 });
 
@@ -534,7 +534,7 @@ test('a square is chosen only by a click or tap; hover just outlines it, and onl
   expect(page).toContain(".zchip:not(.ok)");
 });
 
-import { cleanFiles, runTask as runTask2 } from '../src/loop.js';
+import { cleanFiles, putFile, runTask as runTask2 } from '../src/loop.js';
 import { explainModelError, modelFrom as modelFrom2 } from '../src/model.js';
 
 describe('model errors a person can act on', () => {
@@ -567,6 +567,34 @@ describe('attached files', () => {
   test('cleanFiles flattens names, drops junk and caps the count', () => {
     const f = cleanFiles([{ name: '../../etc/passwd', content: 'x' }, { name: 'a b.csv', content: '1,2' }, { name: 'bad.bin', content: '***', b64: true }, { name: '', content: 'y' }, { name: 'c', content: 'c' }, { name: 'd', content: 'd' }]);
     expect(f.map((x) => x.path)).toEqual(['passwd', 'a_b.csv']);
+  });
+  test('a file up to 5 MB is kept, the total of all files is 5 MB, and bigger ones are dropped', () => {
+    const mb = (n) => 'A'.repeat(Math.ceil((n * 1024 * 1024 * 4) / 3 / 4) * 4);
+    expect(cleanFiles([{ name: 'a.bin', content: mb(4.9), b64: true }]).map((x) => x.path)).toEqual(['a.bin']);
+    expect(cleanFiles([{ name: 'a.bin', content: mb(5.5), b64: true }])).toEqual([]);
+    expect(cleanFiles([{ name: 'a.bin', content: mb(3), b64: true }, { name: 'b.bin', content: mb(3), b64: true }]).map((x) => x.path)).toEqual(['a.bin']);
+    expect(cleanFiles([{ name: 'big.txt', content: 'é'.repeat(3_000_000) }])).toEqual([]);
+  });
+  test('a big file goes to the computer in parts under fleet\'s 256 KB and is joined there', async () => {
+    const writes = []; const runs = [];
+    const computer = { write: async (id, path, content) => (writes.push([path, content]), { status: 200, data: {} }), run: async (id, cmd) => (runs.push(cmd), { data: { exitCode: 0, stdout: '', stderr: '' } }) };
+    const content = 'QUJD'.repeat(150_000); // 600k base64 characters
+    const r = await putFile(computer, 'p', { path: 'big.bin', content, b64: true });
+    expect(r.error).toBeUndefined();
+    expect(writes.map((w) => w[0])).toEqual(['big.bin.part0', 'big.bin.part1', 'big.bin.part2']);
+    expect(writes.every((w) => w[1].length <= 256 * 1024 && w[1].length % 4 === 0)).toBe(true);
+    expect(writes.map((w) => w[1]).join('')).toBe(content);
+    expect(runs).toEqual(["cat 'big.bin.part0' 'big.bin.part1' 'big.bin.part2' | base64 -d > 'big.bin' && rm 'big.bin.part0' 'big.bin.part1' 'big.bin.part2'"]);
+  });
+  test('a big text file is cut by characters so no multi-byte character is split, and a failed join is reported', async () => {
+    const writes = [];
+    const computer = { write: async (id, path, content) => (writes.push(content), { status: 200 }), run: async () => ({ data: { exitCode: 1, stderr: 'disk full' } }) };
+    const content = '😀'.repeat(100_000); // 400 KB of 4-byte characters
+    const r = await putFile(computer, 'p', { path: 'big.txt', content, b64: false });
+    expect(writes.length).toBeGreaterThan(1);
+    expect(writes.every((w) => new TextEncoder().encode(w).length <= 256 * 1024 && !/[\ud800-\udbff]$/.test(w))).toBe(true);
+    expect(writes.join('')).toBe(content);
+    expect(r.error).toContain('disk full');
   });
   test('files are written to the computer before the first step and the model is told', async () => {
     const writes = [];
@@ -626,6 +654,7 @@ test('the model box keeps the full OpenRouter list, never sends an empty model, 
   expect(page).toContain('fixModel(byoModel.value.trim()).model||byoModel.value.trim()');
   expect(page).not.toContain("Did you mean: '+f.near.join(', ')+'?';byWarn");
   expect(page).not.toContain("errMsg(f.name+' is over 150 KB.')");
+  expect(page).toContain("f.size>5*1024*1024");
 });
 
 test('a reopened chat rebuilds the website and video cards from the links in its answer', async () => {
@@ -793,7 +822,7 @@ test('localhost links in an answer get a note that the computer has stopped', as
 describe('search visibility', () => {
   test('the home page can be indexed, published sites and the API cannot', async () => {
     const e = env();
-    const home = await (await handle(new Request(`${ORIGIN}/`), e, {})).text();
+    const home = await (await handle(new Request(`${ORIGIN}/classic`), e, {})).text();
     expect(home).toContain('content="index,follow"');
     expect(home).not.toContain('content="noindex"');
     const robots = await (await handle(new Request(`${ORIGIN}/robots.txt`), e, {})).text();
@@ -804,13 +833,25 @@ describe('search visibility', () => {
     expect(map.status).toBe(200);
     expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
   });
+
+  test('robots.txt and sitemap.xml are cached without changing their contents', async () => {
+    const e = env();
+    const robots = await handle(new Request(`${ORIGIN}/robots.txt`), e, {});
+    expect(robots.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(robots.headers.get('content-type')).toBe('text/plain');
+    expect(await robots.text()).toContain('Sitemap: https://chat.flisk.si/sitemap.xml');
+    const map = await handle(new Request(`${ORIGIN}/sitemap.xml`), e, {});
+    expect(map.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(map.headers.get('content-type')).toBe('application/xml');
+    expect(await map.text()).toContain('<loc>https://chat.flisk.si/</loc>');
+  });
 });
 
 // Every Flisk site shows the shared Flisk bar at the top; the page loads it and the CSP lets its script and icons through.
 test('pages load the shared Flisk bar and the CSP allows it', async () => {
-  const res = await handle(new Request(`${ORIGIN}/`), env());
+  const res = await handle(new Request(`${ORIGIN}/classic`), env());
   const html = await res.text();
-  expect(html).toContain('<script src="https://flisk.si/assets/bar.js" defer></script>');
+  expect(html).toContain('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>');
   const csp = res.headers.get('content-security-policy');
   expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.si/);
   expect(csp).toMatch(/img-src [^;]*https:\/\/flisk\.si/);
@@ -818,7 +859,7 @@ test('pages load the shared Flisk bar and the CSP allows it', async () => {
 
 // Flisk Analytics: the script sits in <head>, and the CSP lets it load and lets its beacon reach the analytics app.
 test('pages load Flisk Analytics and the CSP allows its script and beacon', async () => {
-  const res = await handle(new Request(`${ORIGIN}/`), env());
+  const res = await handle(new Request(`${ORIGIN}/classic`), env());
   const html = await res.text();
   const head = html.slice(html.indexOf('<head>'), html.indexOf('</head>'));
   expect(head).toContain('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>');
@@ -1020,7 +1061,7 @@ describe('a build ends with a public link', () => {
 // The composer shows only + and Send; the rest opens from +.
 describe('composer plus', () => {
   test('a + button opens a small menu with the model, computers, voice, attach and the start chips', async () => {
-    const html = await (await handle(new Request(`${ORIGIN}/`), env())).text();
+    const html = await (await handle(new Request(`${ORIGIN}/classic`), env())).text();
     expect(html).toContain('id="plus"');
     expect(html).toContain('html:not(.plus) .plusmenu');
     expect(html).toContain('id="plusmenu"');
@@ -1036,19 +1077,19 @@ describe('looks', () => {
       const res = await handle(new Request(`${ORIGIN}${url}`, cookie ? { headers: { cookie } } : {}), env());
       return { look: look(await res.text()), set: res.headers.get('set-cookie') || '' };
     };
-    expect((await get('/?flisk_theme=ivory')).look).toBe('ivory');
-    expect((await get('/?flisk_theme=cool-glow')).look).toBe('glow');
-    expect((await get('/?flisk_theme=graphite')).look).toBe('classic');
-    expect((await get('/?flisk_theme=paper-tool')).look).toBe('focus');
-    expect((await get('/?flisk_theme=ivory', 'chat_theme=glow')).look).toBe('ivory');
-    const shared = await get('/', 'flisk_theme=graphite');
+    expect((await get('/classic?flisk_theme=ivory')).look).toBe('ivory');
+    expect((await get('/classic?flisk_theme=cool-glow')).look).toBe('glow');
+    expect((await get('/classic?flisk_theme=graphite')).look).toBe('classic');
+    expect((await get('/classic?flisk_theme=paper-tool')).look).toBe('focus');
+    expect((await get('/classic?flisk_theme=ivory', 'chat_theme=glow')).look).toBe('ivory');
+    const shared = await get('/classic', 'flisk_theme=graphite');
     expect(shared.look).toBe('classic');
     expect(shared.set).toContain('chat_theme=classic');
-    expect((await get('/', 'chat_theme=focus; flisk_theme=graphite')).look).toBe('focus');
-    expect((await get('/?flisk_theme=%3Cscript%3E')).set).toContain('chat_theme=');
+    expect((await get('/classic', 'chat_theme=focus; flisk_theme=graphite')).look).toBe('focus');
+    expect((await get('/classic?flisk_theme=%3Cscript%3E')).set).toContain('chat_theme=');
   });
   test('each new look also styles the chat screen: your messages, answers and steps', async () => {
-    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
+    const html = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
     for (const t of ['ivory', 'glow', 'focus', 'voice']) {
       expect(html).toContain(`html[data-theme=${t}] .u{`);
       expect(html).toMatch(new RegExp(`html\\[data-theme=${t}\\] (#talk>\\.a|\\.a|\\.steps)`));
@@ -1057,7 +1098,7 @@ describe('looks', () => {
   });
   test('a new visitor gets the Earth look and keeps it in a cookie', async () => {
     for (let i = 0; i < 3; i++) {
-      const res = await handle(new Request(`${ORIGIN}/`), env());
+      const res = await handle(new Request(`${ORIGIN}/classic`), env());
       const html = await res.text();
       expect(look(html)).toBe('earth');
       expect(html).toContain('<canvas id="earth" class="earthc" aria-hidden="true"></canvas>');
@@ -1066,7 +1107,7 @@ describe('looks', () => {
     expect(appPageUi({ theme: 'nope' })).toContain('data-theme="earth"');
   });
   test('a saved look is used and not set again', async () => {
-    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=focus' } }), env());
+    const res = await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=focus' } }), env());
     const html = await res.text();
     expect(look(html)).toBe('focus');
     expect(html).toContain('<html lang="en" data-theme="focus" class="nt">');
@@ -1075,13 +1116,13 @@ describe('looks', () => {
     for (const label of ['Classic', 'Ivory', 'Soft glow', 'Focus', 'Voice first', 'Earth']) expect(html).toContain(`>${label}</option>`);
   });
   test('the classic look has no extra class, and an unknown look gets a new one', async () => {
-    const classic = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=classic' } }), env())).text();
+    const classic = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=classic' } }), env())).text();
     expect(classic).toContain('<html lang="en" data-theme="classic">');
-    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=evil"x' } }), env());
+    const res = await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=evil"x' } }), env());
     expect(res.headers.get('set-cookie')).toContain('chat_theme=earth;');
   });
   test('the Earth look draws the globe and the users list, and the CSP lets only three.js and its textures in', async () => {
-    const res = await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=earth' } }), env());
+    const res = await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=earth' } }), env());
     const html = await res.text();
     expect(html).toContain('<html lang="en" data-theme="earth" class="nt">');
     expect(res.headers.get('set-cookie') || '').not.toContain('chat_theme');
@@ -1140,12 +1181,12 @@ describe('looks', () => {
     expect(shortCount(802)).toBe('802');
   });
   test('the users list is hidden in every other look', async () => {
-    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
+    const html = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=ivory' } }), env())).text();
     expect(html).toContain('.earthc{display:none}.ex{display:none}');
     expect(html).toContain('html[data-theme=earth] .welcome .ex{display:block');
   });
   test('every look keeps every feature on the page', async () => {
-    const html = await (await handle(new Request(`${ORIGIN}/`, { headers: { cookie: 'chat_theme=voice' } }), env())).text();
+    const html = await (await handle(new Request(`${ORIGIN}/classic`, { headers: { cookie: 'chat_theme=voice' } }), env())).text();
     for (const id of ['newchat', 'q', 'hist', 'attach', 'mpbtn', 'mic', 'voice', 'orbbtn', 'go', 'vorb', 'slot', 'look']) expect(html).toContain(`id="${id}"`);
     expect(html).toContain('Try saying');
     expect(html).toContain('data-act="voice"');

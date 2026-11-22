@@ -65,6 +65,8 @@ describe('a bigger app is one Flisk project in ~/app', () => {
     expect(cmd).toContain('flisk create app --frontend vanilla --language node --yes');
     expect(cmd).toContain('flisk resource contacts --type backend --language node --local --stack app --path contacts --port 4101 --yes');
     expect(cmd).toContain('flisk resource deals --type backend --language node --local --stack app --path deals --port 4102 --yes');
+    expect(cmd).toContain('/tmp/install.log');
+    expect(cmd).toContain('npm install -g @flisk-sh/flisk');
     expect(START_COMMAND).toContain('npm install');
     expect(START_COMMAND).toContain('exec flisk up');
     for (const c of [cmd, START_COMMAND, waitCommand(s, 3002), smokeCommand(s, 3002)]) {

@@ -350,9 +350,14 @@ export const BUN_INSTALL = 'command -v bun >/dev/null || curl -fsSL https://bun.
 const portOf = (f) => `$(sed -n 's/.*"port": *\\([0-9]*\\).*/\\1/p' ${f} | head -1)`;
 
 // Installs Flisk if needed, makes the project and one backend resource per part, and prints the website's and API's ports.
+// A flaky network on the computer must not end the build: try the installer three times, then npm, and keep the output so a failure says why.
+export const FLISK_INSTALL =
+  'command -v flisk >/dev/null || { for i in 1 2 3; do curl -fsSL https://flisk.sh/install.sh | sh >> /tmp/install.log 2>&1; command -v flisk >/dev/null && break; export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; command -v flisk >/dev/null && break; sleep $((i * 2)); done; }; ' +
+  'command -v flisk >/dev/null || npm install -g @flisk-sh/flisk >> /tmp/install.log 2>&1';
+
 export const scaffoldCommand = (spec) =>
-  `${PATHS}; command -v flisk >/dev/null || curl -fsSL https://flisk.sh/install.sh | sh >/dev/null 2>&1; ${BUN_INSTALL}; ${PATHS}; ` +
-  `command -v flisk >/dev/null || { echo 'Flisk did not install'; exit 2; }; ` +
+  `${PATHS}; ${FLISK_INSTALL}; ${BUN_INSTALL}; ${PATHS}; ` +
+  `command -v flisk >/dev/null || { echo 'Flisk did not install:'; tail -8 /tmp/install.log 2>/dev/null; exit 2; }; ` +
   `cd ~ && { [ ! -e app ] || { echo '~/app already exists: the bigger app needs a fresh ~/app (run "rm -rf ~/app" first to replace it)'; exit 2; }; }; ` +
   `flisk create app --frontend vanilla --language node --yes > /tmp/create.log 2>&1 || { tail -20 /tmp/create.log; exit 2; }; cd ~/app && ` +
   spec.services.map((x) => `{ flisk resource ${x.name} --type backend --language node --local --stack app --path ${x.name} --port ${x.port} --yes >> /tmp/create.log 2>&1 || { echo 'flisk resource ${x.name} failed:'; tail -10 /tmp/create.log; exit 2; }; }`).join(' && ') +

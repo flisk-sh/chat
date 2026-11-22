@@ -10,6 +10,7 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, searchWeb } from './search.js';
+import { nextPage, nextCsp } from './next-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, PROVIDER_NAMES, reviewsPage, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
@@ -361,9 +362,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     return new Response(null, { status: 404, headers: { 'cache-control': 'public, max-age=3600' } });
   }
   if (request.method === 'GET' && path === '/favicon.ico') return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nDisallow: /s/\nDisallow: /v/\nDisallow: /i/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain' } });
+  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nDisallow: /s/\nDisallow: /v/\nDisallow: /i/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/.well-known/security.txt') return new Response(SECURITY_TXT, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://chat.flisk.si/</loc></url></urlset>', { headers: { 'content-type': 'application/xml' } });
+  if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://chat.flisk.si/</loc></url></urlset>', { headers: { 'content-type': 'application/xml', 'cache-control': 'public, max-age=86400' } });
 
   // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.
   if (request.method === 'GET' && path === '/health') {
@@ -508,7 +509,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const refund = async (force = false) => chosen.free && (force || !m.answered()) && refundQuota(env, 'chat', { anon, id: await who(login) });
     return { m, refund };
   };
-  if (request.method === 'GET' && path === '/') {
+  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic')) {
+    // The new Astryx page is the home page; the previous page stays at /classic.
+    const isNext = path !== '/classic';
     const [models, names] = await Promise.all([loadCatalog(env), loadFleetNames(env, fetchImpl)]);
     const { theme, cookie } = pickTheme(request);
     // The session cookie goes first and the look cookie last.
@@ -524,9 +527,11 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const geo = /^[A-Z]{2}$/.test(String(request.cf?.country || '')) ? request.cf.country : '';
     const page = (opts) => {
       const inf = inferenceOrigin(env);
+      const csp = withFrame(cspWithPod(pod, origin), inf);
+      if (isNext) return html(nextPage({ ...opts, models, theme, here, pod, inf, names }), 200, { 'content-security-policy': nextCsp(csp) });
       let body = appPage({ ...opts, models, theme, here, pod, inf, names });
       if (geo === 'UA') body = body.replace('<head>', `<head><script>window.__GEO="UA"</script>`);
-      return html(body, 200, { 'content-security-policy': withFrame(cspWithPod(pod, origin), inf) });
+      return html(body, 200, { 'content-security-policy': csp });
     };
     if (!session) {
       if (!env.SESSION_SECRET) return withLook(page({ login: null, connected: [] }));
