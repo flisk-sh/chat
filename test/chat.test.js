@@ -1307,3 +1307,22 @@ describe('cogito frames on /api/run (opt-in)', () => {
     expect(fromFrame({ s: 'thinking' })).toBeNull();
   });
 });
+
+describe('no computer: status reaches the visitor while the model works', () => {
+  test('"thinking" is sent before the model answers, steps and the answer still wait', async () => {
+    const e = env();
+    const w = world({ connected: false, replies: ['{"say":"391."}'] });
+    let release; const gate = new Promise((r) => (release = r));
+    let modelAnswered = false;
+    const fetchImpl = async (url, init) => { if (new URL(url).host === 'inf.test') { await gate; modelAnswered = true; } return w.fetchImpl(url, init); };
+    const res = await handle(new Request(`${ORIGIN}/api/run`, { method: 'POST', headers: { cookie: await authed(e), origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ task: 'what is 17 times 23?' }) }), e, { fetchImpl });
+    const reader = res.body.getReader(), dec = new TextDecoder(); let text = '';
+    while (!text.includes('"thinking"')) { const { value, done } = await reader.read(); if (done) break; text += dec.decode(value); }
+    expect(text).toContain('"type":"thinking"');
+    expect(modelAnswered).toBe(false);          // the visitor already saw "thinking" with the model still running
+    expect(text).not.toContain('"type":"answer"');
+    release();
+    for (;;) { const { value, done } = await reader.read(); if (done) break; text += dec.decode(value); }
+    expect(text).toContain('"type":"answer"');
+  });
+});

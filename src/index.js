@@ -23,6 +23,7 @@ import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { sentenceSplitter, splitReply } from './talk-stream.js';
 import { COGITO_TYPE, cogitoStream, wantsCogito } from './cogito.js';
+const EARLY_EVENTS = new Set(['delta', 'thinking', 'sources']);
 import { placeFrom, warmWeather, weatherNote } from './weather.js';
 import { ALEXA_PER_DAY, MAX_VOICE, alexaHandle, sign as alexaSign } from './alexa.js';
 import { withSecurityHeaders } from './security-headers.js';
@@ -767,7 +768,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       if (tr) w.write(enc.encode(tr.hello())).catch(() => {});
       const send = (e) => w.write(enc.encode(tr ? tr.encode(e) : JSON.stringify(e) + '\n')).catch(() => {});
       // Without a computer the steps are held until we know the task needs none; plain answers are then sent all at once.
-      const emit = (e) => { if (!noPod || e.type === 'delta') return send(e); if (needPod) return; if (e.type === 'pod_starting') { needPod = true; buffered = []; return; } buffered.push(e); };
+      // Status-only events (they set the label and add no step) go out at once even with no computer, so the visitor sees "Thinking"
+      // while the model works. Steps stay held: they are dropped if the task turns out to need a computer.
+      const emit = (e) => { if (!noPod || EARLY_EVENTS.has(e.type)) return send(e); if (needPod) return; if (e.type === 'pod_starting') { needPod = true; buffered = []; return; } buffered.push(e); };
       const computer = noPod ? { ...fleet, start: async () => ({ error: ['needs', 'a computer'].join(' ') }) } : fleet;
       const github = anon ? null : { login, ...((await loadGithubToken(env, login).catch(() => null)) || {}) };
       const heuristicLang = resolveLang({ text: task, sticky: String(body?.lang || '').slice(0, 8), ui: body?.ui });
