@@ -159,7 +159,7 @@ export function ModelDialog({open, onClose, models, value, onUse}) {
         </div>
         <div style={{flexShrink: 0, paddingTop: 8, borderTop: '1px solid var(--color-border-subtle, #8883)'}}>
           <HStack gap={2} justify="end">
-            <Button label="Cancel" variant="ghost" onClick={onClose} />
+            <Tip title="Cancel" text="Closes this window and keeps what you had before."><span><Button label="Cancel" variant="ghost" onClick={onClose} /></span></Tip>
             <Button label={draft.free ? 'Use ' + draft.name : 'Save and use'} variant="primary" onClick={useIt} />
           </HStack>
         </div>
@@ -211,7 +211,7 @@ export function ComputerDialog({open, onClose, connected, onConnected, picked, s
             {connected.includes(c.id) && <Button label={picked.includes(c.id) ? 'Only on ' + c.label + ' (tap to undo)' : 'Run only on ' + c.label} size="sm" variant={picked.includes(c.id) ? 'primary' : 'secondary'} onClick={() => toggle(c.id)} />}
           </VStack>
         ))}
-        <HStack justify="end"><Button label="Done" variant="primary" onClick={onClose} /></HStack>
+        <HStack justify="end"><Tip title="Done" text="Closes this window. Your choices are already saved."><span><Button label="Done" variant="primary" onClick={onClose} /></span></Tip></HStack>
       </VStack>
     </Dialog>
   );

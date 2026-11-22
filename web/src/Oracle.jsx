@@ -4,6 +4,7 @@ import {useState, useEffect, useRef} from 'react';
 import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
 import {BOOT} from './api.js';
+import {Tip} from './Tip.jsx';
 
 const b64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(r.error); r.readAsDataURL(blob); });
 const sentences = (t) => (String(t).match(/[^.!?…\n]+[.!?…]*\s*/g) || [String(t)]).reduce((a, s) => { const l = a[a.length - 1]; if (l && l.length + s.length < 180) a[a.length - 1] = l + s; else a.push(s); return a; }, []).map((s) => s.trim()).filter(Boolean);
@@ -129,7 +130,7 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
       <Text type="supporting" color="secondary" role="status">{msg}</Text>
       {you && <Text type="supporting" color="secondary">You: {you}</Text>}
       {say && <Text>{say}</Text>}
-      <Button label="End talk" variant="secondary" onClick={close} />
+      <Tip title="End talk" scene="talk" text="Stops listening and closes the voice chat with the Flisk Oracle."><span><Button label="End talk" variant="secondary" onClick={close} /></span></Tip>
     </div>
   );
 }

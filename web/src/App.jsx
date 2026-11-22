@@ -185,9 +185,9 @@ function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
     <HStack gap={1}>
       {BOOT.login ? <Tip text="Free tasks run on Flisk Wolf. The count resets every day."><span><Badge label={BOOT.anon ? 'Guest' : '@' + BOOT.login} /></span></Tip> : <Button label="Sign in" size="sm" variant="primary" href="/auth/start" />}
       {BOOT.anon && <Tip text="Sign in with GitHub to keep your chats and get more free tasks."><Button label="Sign in" size="sm" variant="secondary" href="/auth/start" /></Tip>}
-      <Tip text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={onExplain} /></Tip>
-      <Tip text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={onLook} /></Tip>
-      <Tip text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onModel} /></Tip>
+      <Tip passThrough text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={onExplain} /></Tip>
+      <Tip title="Look of the page" text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={onLook} /></Tip>
+      <Tip title="AI model and keys" scene="model" text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onModel} /></Tip>
     </HStack>
   );
 }
@@ -218,7 +218,8 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [pcOpen, setPcOpen] = useState(false);
   const [explain, setExplain] = useState(false);
   const [caption, setCaption] = useState('');
-  const [mode, setMode] = useState(() => lsGet('chat_mode') || 'build');
+  // The composer has no mode picker: the Jev router decides from the words whether it is a question, a site, a picture or a video.
+  const mode = 'ask';
   const [turns, setTurns] = useState([]); // [{task, files, t}]
   useEffect(() => { document.documentElement.classList.toggle('chatting', turns.length > 0); }, [turns.length]);
   const [busy, setBusy] = useState(false);
@@ -385,7 +386,6 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     if (p && BOOT.login) run(p, {files: Array.isArray(pf) ? pf.slice(0, 3) : []}).catch(() => {});
     else if (p) setValue(p);
   }, []);
-  useEffect(() => { try { localStorage.setItem('chat_mode', mode); } catch (e) { /* storage blocked */ } }, [mode]);
   useEffect(() => { try { sessionStorage.setItem('chat_model', sel.id); } catch (e) { /* storage blocked */ } }, [sel]);
 
   const attach = async (list) => {
@@ -408,7 +408,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const side = (
         <SideNav collapsible
           header={<HStack gap={2} align="center"><Brand name="wolf" size={28} /><Text type="emphasized">Flisk Chat</Text></HStack>}
-          topContent={<VStack gap={2}><Tip text="Start a fresh chat. Your old chats stay in the list."><Button label="New chat" variant="secondary" icon={<Icon icon={PlusIcon} size="sm" />} isFullWidth onClick={newChat} /></Tip>
+          topContent={<VStack gap={2}><Tip title="New chat" scene="model" text="Start a fresh chat. Your old chats stay in the list."><Button label="New chat" variant="secondary" icon={<Icon icon={PlusIcon} size="sm" />} isFullWidth onClick={newChat} /></Tip>
             <Tip text="Find an older chat by a word you remember."><Button label={filter ? 'Clear search' : 'Search your chats'} variant="ghost" icon={<Icon icon={MagnifyingGlassIcon} size="sm" />} isFullWidth onClick={() => setFilter(filter ? '' : (prompt('Search your chats for:') || ''))} /></Tip></VStack>}
           footer={<HStack gap={2} align="center"><Avatar name={BOOT.login || 'Guest'} size="sm" /><Text type="supporting">{BOOT.login ? '@' + BOOT.login : 'Not signed in'}</Text></HStack>}>
           <SideNavSection title="Your chats">
@@ -450,7 +450,12 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
             }} />}
             headerActions={
               <HStack gap={1} wrap="wrap" align="center">
-                <Tip text="More: voice, attach files, computers, AI model. The AI works out whether you want an answer, a website, a video or a picture."><span><DropdownMenu
+                <Tip title="The + menu" text="Everything extra lives here. The AI works out whether you want an answer, a website, a video or a picture, so there is no mode to pick." scenes={[
+                  {kind: 'dictate', label: 'Dictate', text: 'Speak your task, it turns into text.'},
+                  {kind: 'talk', label: 'Voice talk', text: 'Talk out loud with the Flisk Oracle.'},
+                  {kind: 'attach', label: 'Attach files', text: 'Drop up to 3 files, 5 MB in all.'},
+                  {kind: 'computers', label: 'Choose computers', text: 'Pick which of your computers may run it.'},
+                  {kind: 'model', label: 'Choose AI model', text: 'Flisk Wolf is free, or use your own key.'}]}><span><DropdownMenu
                   button={{label: 'More', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
                   items={[
                     {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, endContent: <Demo kind="dictate" />, onClick: dictate},
@@ -459,14 +464,14 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
                     {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, endContent: <Demo kind="computers" />, onClick: () => setPcOpen(true)},
                     {label: 'Choose AI model', description: 'Flisk Wolf is free; or use your own Claude, OpenAI or OpenRouter key', icon: KeyIcon, endContent: <Demo kind="model" />, onClick: () => setMdlOpen(true)},
                   ]} /></span></Tip>
-                {files.map((f, i) => <Badge key={f.name + i} label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} />)}
-                {dictating && <Button label="Stop and write what I said" variant="primary" size="sm" icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} />}
+                {files.map((f, i) => <Tip key={f.name + i} title="Attached file" scene="attach" text={'Sent with your message: ' + f.name + '.'} more="Tap it to take it off again."><span><Badge label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} /></span></Tip>)}
+                {dictating && <Tip title="Listening" scene="dictate" text="Stops listening and writes what you said into the box."><span><Button label="Stop and write what I said" variant="primary" size="sm" icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} /></span></Tip>}
               </HStack>
             }
             footerActions={
               <HStack gap={1}>
-                {brandOf(sel.provider) !== 'wolf' && <Tip brand={brandOf(sel.provider)} title="Which AI answers" text="Which AI answers. Flisk Wolf is free; your own key is sent per request and never stored." more="Tap to switch, paste your key, or pick a model. Claude and OpenAI use your own key, so you pay them directly."><span><Button label={sel.name} variant="ghost" size="sm" icon={<Brand name={brandOf(sel.provider)} />} onClick={() => setMdlOpen(true)} /></span></Tip>}
-                {picked.length > 0 && <Tip brand="fleet" title="Where your app runs" text="Where your app runs. Fleet picks the cheapest of your connected computers." more="Tap to connect Daytona, Upstash, E2B or Isorun with a key."><span><Button label={pcLabel} variant="ghost" size="sm" icon={<Brand name={picked[0] || 'fleet'} />} onClick={() => setPcOpen(true)} /></span></Tip>}
+                {brandOf(sel.provider) !== 'wolf' && <Tip brand={brandOf(sel.provider)} title="Which AI answers" scene="model" text="Which AI answers. Flisk Wolf is free; your own key is sent per request and never stored." more="Tap to switch, paste your key, or pick a model. Claude and OpenAI use your own key, so you pay them directly."><span><Button label={sel.name} variant="ghost" size="sm" icon={<Brand name={brandOf(sel.provider)} />} onClick={() => setMdlOpen(true)} /></span></Tip>}
+                {picked.length > 0 && <Tip brand="fleet" title="Where your app runs" scene="computers" text="Where your app runs. Fleet picks the cheapest of your connected computers." more="Tap to connect Daytona, Upstash, E2B or Isorun with a key."><span><Button label={pcLabel} variant="ghost" size="sm" icon={<Brand name={picked[0] || 'fleet'} />} onClick={() => setPcOpen(true)} /></span></Tip>}
               </HStack>
             }
           />

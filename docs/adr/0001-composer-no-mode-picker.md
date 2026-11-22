@@ -17,3 +17,8 @@ The chat composer shows only a + menu, the input and send. The Ask / Build / Sea
 - Voice talk is now one tap deeper (+ then Voice talk). The Oracle screen and its "Only me" to "Whole room" slider are unchanged. That slider is the one real 0 to 100 control, which is why a bare speaker icon must never look like it.
 - Corner radius follows the repo rule (`bun run check:radius`: every radius is `var(--radius)`, 0 or 50%); the design uses only Astryx components, so it inherits the theme radius.
 - `src/page.js` (/classic) is unchanged.
+
+
+## Follow-up
+
+The page now always sends `ask`; the saved `chat_mode` is no longer read. Explain mode was widened: a press on any explained control opens an animated modal card (a live scene of the control inside), and press-and-hold opens the same card outside Explain mode.
