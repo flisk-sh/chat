@@ -1,0 +1,14 @@
+{
+  "name": "flisk-chat-wrapper",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A phone shell that opens chat.flisk.si, so the agent testers can use chat like a user on a phone.",
+  "scripts": {
+    "build": "[ -d android ] || npx cap add android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/cli": "^7.4.0",
+    "@capacitor/core": "^7.4.0"
+  }
+}

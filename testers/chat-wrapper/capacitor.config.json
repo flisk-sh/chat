@@ -1,0 +1,6 @@
+{
+  "appId": "si.flisk.chat",
+  "appName": "Flisk Chat",
+  "webDir": "www",
+  "server": { "url": "https://chat.flisk.si", "androidScheme": "https" }
+}

@@ -1,0 +1,352 @@
+[
+  {
+    "id": "anna",
+    "platform": "android",
+    "profile": "Retired teacher, 68, low patience with jargon, uses large text.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "en-GB",
+    "geo": [
+      51.5072,
+      -0.1276
+    ],
+    "device": {
+      "name": "Small phone, Android 11",
+      "profile": "Nexus 5",
+      "android_api": 30,
+      "font_scale": 1.3,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "malik",
+    "platform": "android",
+    "profile": "Student, 21, skips every text, taps fast, dark mode everywhere.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "en-US",
+    "geo": [
+      40.7128,
+      -74.006
+    ],
+    "device": {
+      "name": "Pixel 7, Android 14",
+      "profile": "pixel_7",
+      "android_api": 34,
+      "font_scale": 1.0,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "layla",
+    "platform": "android",
+    "profile": "Pharmacist, 39, reads Arabic, expects every screen to flow right to left.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ar-EG",
+    "geo": [
+      30.0444,
+      31.2357
+    ],
+    "device": {
+      "name": "Pixel 6, Android 13",
+      "profile": "pixel_6",
+      "android_api": 33,
+      "font_scale": 1.15,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "kenji",
+    "platform": "android",
+    "profile": "Office worker, 29, reads Japanese, uses the app one-handed on the train.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ja-JP",
+    "geo": [
+      35.6762,
+      139.6503
+    ],
+    "device": {
+      "name": "Pixel 4, Android 11",
+      "profile": "pixel_4",
+      "android_api": 30,
+      "font_scale": 1.0,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "grace",
+    "platform": "android",
+    "profile": "Retired nurse, 74, low vision, uses Android's largest font size (200%).",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "en-US",
+    "geo": [
+      41.8781,
+      -87.6298
+    ],
+    "device": {
+      "name": "Pixel 7, Android 14, 200% font",
+      "profile": "pixel_7",
+      "android_api": 34,
+      "font_scale": 2.0,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "lucia",
+    "platform": "android",
+    "profile": "Teacher, 47, uses the family tablet, reads Spanish.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "es-ES",
+    "geo": [
+      40.4168,
+      -3.7038
+    ],
+    "device": {
+      "name": "Pixel Tablet, Android 14",
+      "profile": "pixel_tablet",
+      "android_api": 34,
+      "font_scale": 1.0,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "ravi",
+    "platform": "android",
+    "profile": "Shop owner, 44, reads Hindi, new to apps, careful with every button.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "hi-IN",
+    "geo": [
+      28.6139,
+      77.209
+    ],
+    "device": {
+      "name": "Small phone, Android 10",
+      "profile": "Nexus 5X",
+      "android_api": 29,
+      "font_scale": 1.15,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "olga",
+    "platform": "android",
+    "profile": "Translator, 36, reads Russian, spots clumsy wording and cut-off labels.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ru-RU",
+    "geo": [
+      55.7558,
+      37.6173
+    ],
+    "device": {
+      "name": "Pixel 5, Android 12",
+      "profile": "pixel_5",
+      "android_api": 31,
+      "font_scale": 1.0,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "felipe",
+    "platform": "android",
+    "profile": "Delivery rider, 27, reads Portuguese, cheap phone, taps fast between deliveries.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "pt-BR",
+    "geo": [
+      -23.5505,
+      -46.6333
+    ],
+    "device": {
+      "name": "Pixel 3a, Android 12",
+      "profile": "pixel_3a",
+      "android_api": 31,
+      "font_scale": 1.15,
+      "theme": "light"
+    }
+  },
+  {
+    "id": "mehmet",
+    "platform": "android",
+    "profile": "Engineer, 33, reads Turkish, types names with İ, ş and ğ, tries odd input.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "tr-TR",
+    "geo": [
+      41.0082,
+      28.9784
+    ],
+    "device": {
+      "name": "Pixel 8, Android 15",
+      "profile": "pixel_8",
+      "android_api": 35,
+      "font_scale": 1.0,
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "clara",
+    "platform": "ios",
+    "profile": "Designer, 34, notices every misaligned pixel, refuses location access.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "fr-FR",
+    "geo": [
+      48.8566,
+      2.3522
+    ],
+    "device": {
+      "simulator": "iPhone SE (3rd generation)",
+      "ios": 18,
+      "text_size": "large",
+      "theme": "light"
+    }
+  },
+  {
+    "id": "jonas",
+    "platform": "ios",
+    "profile": "Engineer, 45, uses an iPad with a large accessibility text size.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "de-DE",
+    "geo": [
+      52.52,
+      13.405
+    ],
+    "device": {
+      "simulator": "iPad Air 11-inch (M2)",
+      "ios": 18,
+      "text_size": "accessibility-extra-large",
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "noah",
+    "platform": "ios",
+    "profile": "Sales rep, 41, big iPhone, the largest standard text size, always in a hurry.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "en-US",
+    "geo": [
+      30.2672,
+      -97.7431
+    ],
+    "device": {
+      "simulator": "iPhone 16 Pro Max",
+      "ios": 18,
+      "text_size": "extra-extra-extra-large",
+      "theme": "light"
+    }
+  },
+  {
+    "id": "yuki",
+    "platform": "ios",
+    "profile": "Student, 20, reads Japanese, dark mode, expects a polished app.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ja-JP",
+    "geo": [
+      34.6937,
+      135.5023
+    ],
+    "device": {
+      "simulator": "iPhone 16",
+      "ios": 18,
+      "text_size": "medium",
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "amira",
+    "platform": "ios",
+    "profile": "Product manager, 31, reads Arabic, expects a mirrored right-to-left layout.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ar-SA",
+    "geo": [
+      24.7136,
+      46.6753
+    ],
+    "device": {
+      "simulator": "iPhone 16 Pro",
+      "ios": 18,
+      "text_size": "large",
+      "theme": "light"
+    }
+  },
+  {
+    "id": "mateo",
+    "platform": "ios",
+    "profile": "Musician, 26, reads Spanish, holds an iPad mini in one hand.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "es-MX",
+    "geo": [
+      19.4326,
+      -99.1332
+    ],
+    "device": {
+      "simulator": "iPad mini (A17 Pro)",
+      "ios": 18,
+      "text_size": "large",
+      "theme": "light"
+    }
+  },
+  {
+    "id": "sven",
+    "platform": "ios",
+    "profile": "Retired engineer, 80, reads Swedish, the largest accessibility text on a small iPhone.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "sv-SE",
+    "geo": [
+      59.3293,
+      18.0686
+    ],
+    "device": {
+      "simulator": "iPhone SE (3rd generation)",
+      "ios": 18,
+      "text_size": "accessibility-extra-extra-extra-large",
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "giulia",
+    "platform": "ios",
+    "profile": "Lawyer, 55, reads Italian, larger accessibility text, reads every word.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "it-IT",
+    "geo": [
+      41.9028,
+      12.4964
+    ],
+    "device": {
+      "simulator": "iPhone 16 Plus",
+      "ios": 18,
+      "text_size": "accessibility-medium",
+      "theme": "light"
+    }
+  },
+  {
+    "id": "minjun",
+    "platform": "ios",
+    "profile": "Architect, 33, reads Korean, big iPad with small text, likes dense layouts.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "ko-KR",
+    "geo": [
+      37.5665,
+      126.978
+    ],
+    "device": {
+      "simulator": "iPad Pro 13-inch (M4)",
+      "ios": 18,
+      "text_size": "small",
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "wei",
+    "platform": "ios",
+    "profile": "Accountant, 45, reads Simplified Chinese, careful, checks every number.",
+    "goal": "As this person, ask Flisk Chat for something real they would want help with (in their language), follow up once, and judge whether the answer was useful and the screen easy to use. Signed out.",
+    "locale": "zh-CN",
+    "geo": [
+      31.2304,
+      121.4737
+    ],
+    "device": {
+      "simulator": "iPhone 16e",
+      "ios": 18,
+      "text_size": "extra-large",
+      "theme": "light"
+    }
+  }
+]
