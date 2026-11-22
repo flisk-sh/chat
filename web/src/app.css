@@ -208,3 +208,7 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 
 /* One row: the text area sits on the pill's own colour, not on a darker scrim of its own. */
 html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input [class] { background: transparent !important; }
+
+/* Same 32px row for the +, the text and send: one line is centred, and with more lines the buttons stay level with the last line. */
+.one-row > div > div:first-child, .one-row > div > div:last-child > div{min-height:32px;display:flex!important;align-items:center;justify-content:center}
+.one-row .astryx-chat-composer-input{box-sizing:border-box;min-height:32px;padding-block:5px!important;display:flex;flex-direction:column;justify-content:center}
