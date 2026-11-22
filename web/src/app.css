@@ -205,3 +205,6 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 .demo-model .spk{fill:currentColor;stroke:none;transform-origin:center;animation:mspk 5s var(--e) infinite}
 @keyframes mspk{0%,28%{transform:rotate(0) scale(1)}34%{transform:rotate(90deg) scale(1.3)}40%,62%{transform:rotate(90deg) scale(1)}68%{transform:rotate(180deg) scale(1.3)}74%,96%{transform:rotate(180deg) scale(1)}100%{transform:rotate(360deg) scale(1)}}
 @media (prefers-reduced-motion:reduce){.demo *{animation-iteration-count:1!important}.demo .ln,.demo .tx,.demo .bar,.demo .chip{transform:none;opacity:.85}.demo .wv,.demo .you,.demo .ai{transform:none}.demo .tk{stroke-dashoffset:0}.demo .ok{opacity:1}}
+
+/* One row: the text area sits on the pill's own colour, not on a darker scrim of its own. */
+.one-row .astryx-chat-composer-input, .one-row .astryx-chat-composer-input * { background-color: transparent !important; }
