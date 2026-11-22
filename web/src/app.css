@@ -212,3 +212,7 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 /* Same 32px row for the +, the text and send: one line is centred, and with more lines the buttons stay level with the last line. */
 .one-row > div > div:first-child, .one-row > div > div:last-child > div{min-height:32px;display:flex!important;align-items:center;justify-content:center}
 .one-row .astryx-chat-composer-input{box-sizing:border-box;min-height:32px;padding-block:5px!important;display:flex;flex-direction:column;justify-content:center}
+
+/* Choose computers dialog: the Fleet auto button wraps under its text instead of being cut to "Fleet a…" on a phone. */
+.computers-fleet-row{flex-wrap:wrap}
+.computers-fleet-text{flex:1 1 160px;min-width:0}

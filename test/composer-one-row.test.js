@@ -43,3 +43,10 @@ test('the placeholder fits one line on a 320px phone (17 characters or fewer)', 
   const placeholder = app.match(/placeholder="([^"]+)"/)[1];
   expect([...placeholder].length).toBeLessThanOrEqual(17);
 });
+
+test('the computers dialog lets the Fleet auto button wrap and keeps Connect and Get key on one row', () => {
+  const pickers = read('web/src/Pickers.jsx');
+  expect(pickers).toContain('computers-fleet-row');
+  expect(css).toContain('.computers-fleet-text{flex:1 1 160px;min-width:0}');
+  expect(pickers.indexOf("'Connecting…' : 'Connect'")).toBeLessThan(pickers.indexOf('label="Get key"'));
+});
