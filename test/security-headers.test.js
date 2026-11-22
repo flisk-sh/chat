@@ -37,7 +37,7 @@ describe('security headers', () => {
     const res = withSecurityHeaders(new Response('x', { headers: { 'x-frame-options': 'DENY', 'strict-transport-security': 'max-age=31536000', 'content-security-policy': "default-src 'none'" } }));
     expect(res.headers.get('x-frame-options')).toBe('DENY');
     expect(res.headers.get('strict-transport-security')).toBe('max-age=31536000; includeSubDomains');
-    expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'self'");
+    expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; frame-ancestors 'self' https://analytics.flisk.si");
     expect(res.headers.get('permissions-policy')).toBe('camera=(), microphone=(), geolocation=()');
   });
   test('a CSP that already has frame-ancestors is left alone', () => {
