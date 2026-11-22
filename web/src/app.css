@@ -216,3 +216,7 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 /* Choose computers dialog: the Fleet auto button wraps under its text instead of being cut to "Fleet a…" on a phone. */
 .computers-fleet-row{flex-wrap:wrap}
 .computers-fleet-text{flex:1 1 160px;min-width:0}
+
+/* The placeholder is absolutely placed at the input's top edge, 5px above the real text line and caret. Pin it to the same 5px inset so the text sits level with the + and send. */
+.one-row .astryx-chat-composer-input{position:relative}
+.one-row .astryx-chat-composer-input > div:first-child:not(:only-child){top:5px!important;bottom:5px!important;height:22px}

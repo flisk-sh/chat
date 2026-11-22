@@ -50,3 +50,8 @@ test('the computers dialog lets the Fleet auto button wrap and keeps Connect and
   expect(css).toContain('.computers-fleet-text{flex:1 1 160px;min-width:0}');
   expect(pickers.indexOf("'Connecting…' : 'Connect'")).toBeLessThan(pickers.indexOf('label="Get key"'));
 });
+
+test('the placeholder shares the text line, so the text is level with the + and send', () => {
+  expect(css).toContain('.one-row .astryx-chat-composer-input > div:first-child:not(:only-child){top:5px!important;bottom:5px!important;height:22px}');
+  expect(css).toContain('.one-row .astryx-chat-composer-input{position:relative}');
+});
