@@ -156,7 +156,8 @@ function oneModel(env = {}, fetchImpl = fetch, chosen = { ai: 'wolf', free: true
 // small Workers AI model on our own account (capped per day). Only when every one fails does the visitor see an error,
 // and it says the free AI is busy, not why.
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-export const OPENROUTER_PREFERRED = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-super-vl:free'];
+// Nemotron first: both Gemma models were busy on most asks, so every chat paid for two failed calls before its first answer.
+export const OPENROUTER_PREFERRED = ['nvidia/nemotron-3.5-lightning:free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-super-vl:free'];
 // Was @cf/meta/llama-3.1-8b-instruct-fast: hidden from the Workers AI catalog, and its fp8 twin is set for deprecation on 2026-11-20.
 // Mistral Small 3.1 24B has no deprecation date, runs on the free plan, does not spend the answer thinking, and writes good Ukrainian.
 export const WORKERS_AI_FALLBACK = '@cf/mistralai/mistral-small-3.1-24b-instruct';

@@ -88,7 +88,7 @@ test('a chosen own key never falls back', async () => {
 
 test('the OpenRouter list keeps only live free chat models, ours first', async () => {
   const ids = await freeOpenRouterModels(async () => catalog());
-  expect(ids).toEqual(['google/gemma-4-31b-it:free', 'nvidia/nemotron-3.5-lightning:free']);
+  expect(ids).toEqual(['nvidia/nemotron-3.5-lightning:free', 'google/gemma-4-31b-it:free']);
 });
 
 // "Log in with OpenRouter": the person's own key on a free model.
@@ -293,12 +293,12 @@ test('the Workers AI fallback gets length and format rules in its system message
 });
 
 test('each switch to a backup is told to the page while it happens', async () => {
-  const w = world({ or: { 'nvidia/nemotron-3.5-lightning:free': () => answer('nemotron here') } });
+  const w = world({ or: { 'google/gemma-4-31b-it:free': () => answer('gemma here') } });
   const notes = [];
   const r = await modelFrom(w.env, w.fetchImpl)(msgs, { onReroute: (t) => notes.push(t) });
-  expect(r.text).toBe('nemotron here');
-  expect(notes).toEqual(['Flisk Wolf is busy, switching to gemma-4-31b-it (OpenRouter, free)', 'gemma-4-31b-it (OpenRouter, free) is busy, switching to nemotron-3.5-lightning (OpenRouter, free)']);
-  expect(modelShown(r.by)).toBe('nemotron-3.5-lightning (OpenRouter, free)');
+  expect(r.text).toBe('gemma here');
+  expect(notes).toEqual(['Flisk Wolf is busy, switching to nemotron-3.5-lightning (OpenRouter, free)', 'nemotron-3.5-lightning (OpenRouter, free) is busy, switching to gemma-4-31b-it (OpenRouter, free)']);
+  expect(modelShown(r.by)).toBe('gemma-4-31b-it (OpenRouter, free)');
 });
 
 test('Wolf answering says nothing about switching, and is not named', async () => {
