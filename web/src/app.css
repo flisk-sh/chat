@@ -219,4 +219,7 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 
 /* The placeholder is absolutely placed at the input's top edge, 5px above the real text line and caret. Pin it to the same 5px inset so the text sits level with the + and send. */
 .one-row .astryx-chat-composer-input{position:relative}
-.one-row .astryx-chat-composer-input > div:first-child:not(:only-child){top:5px!important;bottom:5px!important;height:22px}
+.one-row .astryx-chat-composer-input > div:first-child:not(:only-child){top:0!important;bottom:0!important;margin-block:auto;height:22px}
+/* On touch screens + and send are 44px tall: the text cell stretches to that row, so the text centres on them (it sat 6px low). */
+.one-row > div > div:nth-child(2){align-self:stretch}
+.one-row > div > div:nth-child(2) > .astryx-chat-composer-input{flex:1 1 auto}
