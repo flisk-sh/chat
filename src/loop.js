@@ -203,7 +203,28 @@ export function parseAction(text) {
     return { type: 'bad', text: String(text) };
   }
 
+  // A "say" the model wrote as nearly-JSON (a raw newline or a bare quote inside the string, or cut off mid-word) fails JSON.parse.
+  // Never show the braces and keys to a person: cut the words out, or ask the model again when there are none.
+  const salvaged = salvageSay(s);
+  if (salvaged) return salvaged;
+
   return { type: 'say', text: s || '(no answer)' };
+}
+
+// Pulls the words out of a broken {"say": "..."} reply. Returns null when the text is not a say action at all.
+export function salvageSay(s) {
+  const m = /^\s*(?:```(?:json)?\s*)?\{\s*"say(?:"\s*:\s*"?)?/.exec(s);
+  if (!m) return null;
+  if (s.split('"say"').length > 2) return null; // two answers in one reply stay as written
+  let body = s.slice(m[0].length);
+  if (!/"say"\s*:/.test(m[0])) return { type: 'bad', text: s, why: 'That reply was cut off before any words. Answer again as {"say": "..."}.' };
+  body = body.replace(/\s*```\s*$/, '').replace(/"?\s*\}?\s*$/, '');
+  const text = body
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\(["\\/])/g, '$1')
+    .trim();
+  if (!text) return { type: 'bad', text: s, why: 'That reply had no words. Answer again as {"say": "..."}.' };
+  return { type: 'say', text, salvaged: true };
 }
 
 const IMAGE_SITE = /pollinations|picsum\.photos|source\.unsplash|loremflickr|placekitten|placeimg/i;
@@ -402,7 +423,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   const steps = [];
   const links = [];
   // What went wrong or right, counted for the build analytics (src/index.js recordRun): why a build came out weak.
-  const stats = { big: isBigApp(task), bad: 0, empty: 0, provider: 0, errors: 0, refused: 0, refusedWhy: null, podMs: 0, system: false, shared: false, copy: false, firstAction: null, failed: null };
+  const stats = { big: isBigApp(task), bad: 0, empty: 0, provider: 0, errors: 0, refused: 0, refusedWhy: null, salvaged: 0, podMs: 0, system: false, shared: false, copy: false, firstAction: null, failed: null };
   let refusedImage = 0;
   let gradeRetried = false;
   const t0 = Date.now();
@@ -531,6 +552,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
       const action = parseAction(reply.text);
       if (typeof action.path === 'string') action.path = homePath(action.path);
       if (action.type === 'bad') stats.bad++;
+      if (action.salvaged) stats.salvaged++;
       if (stats.firstAction === null && action.type !== 'bad') stats.firstAction = action.type;
       if (action.type === 'bad' && !last) {
         emit({ type: 'retry' });

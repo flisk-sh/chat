@@ -45,6 +45,9 @@ export function runEvents(result, problem, route = '/api/run', lang = '') {
   // A computer that took long to start, a rule that refused the model once, a reply that only describes the model: each is a problem to see.
   const podMs = result.stats?.podMs || 0;
   if (podMs > 30_000) out.push({ route, kind: 'slow', why: `a computer took ${Math.round(podMs / 1000)} s to start`, detail, ms: podMs });
+  // The model's reply was not valid JSON and the words were cut out of it (a person saw the answer, not the braces). Seeing how often tells which model breaks.
+  if (result.stats?.salvaged) out.push({ route, kind: 'unexpected', why: `reply was not valid JSON, words salvaged (${result.stats.salvaged}x)`, detail, ms });
+  if (result.stats?.bad >= 2) out.push({ route, kind: 'unexpected', why: `model sent ${result.stats.bad} unusable replies in one task`, detail, ms });
   if (result.stats?.refused === 1) out.push({ route, kind: 'unexpected', why: `chat refused the model once: ${result.stats.refusedWhy}`.slice(0, 200), detail, ms });
   if (/^\s*Flisk Wolf, a free model[^.]*\.?\s*$/i.test(result.answer || '')) out.push({ route, kind: 'unexpected', why: 'the answer says nothing useful', detail, ms });
   // One step or none is a plain answer: 30 s is already slow. Only longer tasks (a site, a computer) get the per-step allowance.
