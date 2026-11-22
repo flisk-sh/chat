@@ -64,3 +64,8 @@ test('touch screens get 44px tap targets', async () => {
   expect(css).toContain('pointer:coarse');
   expect(css).toContain('min-height:44px');
 });
+
+test('the computers dialog uses a short key placeholder that fits', async () => {
+  const src = await Bun.file(new URL('../web/src/Pickers.jsx', import.meta.url)).text();
+  expect(src).toContain('placeholder="Paste key"');
+});

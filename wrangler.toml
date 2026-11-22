@@ -1,6 +1,6 @@
 # chat.flisk.si: sign in with GitHub, type a task, a model plans it, a computer from fleet does it.
 name = "flisk-chat"
-main = "src/index.js"
+main = "src/worker.js"
 compatibility_date = "2026-10-01"
 routes = [{ pattern = "chat.flisk.si", custom_domain = true }]
 

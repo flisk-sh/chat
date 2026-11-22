@@ -203,7 +203,7 @@ export function ComputerDialog({open, onClose, connected, onConnected, picked, s
             </HStack>
             {!connected.includes(c.id) && (
               <HStack gap={2} align="end" wrap="wrap">
-                <KeyField label={c.label + ' key'} hideLabel value={keys[c.id] || ''} onChange={(v) => setKeys({...keys, [c.id]: v})} placeholder={'Paste your ' + c.label + ' key'} error={errs[c.id]} />
+                <KeyField label={c.label + ' key'} hideLabel value={keys[c.id] || ''} onChange={(v) => setKeys({...keys, [c.id]: v})} placeholder="Paste key" error={errs[c.id]} />
                 <Button label="Get key" variant="secondary" size="sm" href={c.url} target="_blank" />
                 <Button label={busy === c.id ? 'Connecting…' : 'Connect'} variant="primary" size="sm" isDisabled={!!busy} onClick={() => connect(c)} />
               </HStack>

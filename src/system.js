@@ -201,6 +201,7 @@ export const indexHtml = (spec) => {
 <style>
 :root{--bg:#faf9f6;--card:#fff;--ink:#171714;--dim:#6b6a63;--line:#e6e3da;--ok:#23794a;--bad:#b42318;font:15px/1.5 ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--bg)}
 *{box-sizing:border-box}body{margin:0}header{border-bottom:1px solid var(--line);background:var(--card)}
+.skip-link{position:absolute;left:-9999px;top:0;z-index:100;padding:10px 14px;background:var(--card);color:var(--ink);border:1px solid var(--line)}.skip-link:focus{left:12px;top:12px;outline:2px solid var(--ok);outline-offset:2px}
 .wrap{max-width:1040px;margin:0 auto;padding:0 16px}h1{font-size:22px;letter-spacing:-.02em;margin:0;padding:18px 0 10px}
 nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px}nav button{border:1px solid transparent;background:none;padding:6px 12px;border-radius:0;font:inherit;color:var(--dim);cursor:pointer;white-space:nowrap}
 nav button[aria-current=true]{border-color:var(--line);background:var(--bg);color:var(--ink);font-weight:600}
@@ -222,8 +223,9 @@ button.plain{font:inherit;padding:8px 14px;border:1px solid var(--line);backgrou
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <header><div class="wrap"><h1 id="title"></h1><nav id="tabs"></nav></div></header>
-<main class="wrap" id="view"></main>
+<main class="wrap" id="main"></main>
 <script type="module">
 const APP = ${data};
 const $ = (s) => document.querySelector(s);
@@ -246,7 +248,7 @@ $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('button
 const groupKey = (p) => (p.fields.find((f) => /^(status|stage|state|phase)$/.test(f.key)) || {}).key || '';
 const title = (p, r) => String(r[p.fields[0].key] || 'Untitled');
 async function overview() {
-  const view = $('#view');
+  const view = $('#main');
   view.innerHTML = '<h2>Overview</h2><p class="does">Every part of ' + esc(APP.title) + ', how many records it holds and whether it answers.</p><div class="cards" id="cards">Loading...</div><div id="more"></div>';
   try {
     const rows = await api('summary');
@@ -267,9 +269,9 @@ async function overview() {
   $('#more').innerHTML = (splits ? '<h3>Pipeline</h3><div class="cards">' + splits + '</div>' : '') +
     '<h3>Recent activity</h3>' + (recent.length ? '<div class="table"><table><tbody>' + recent.map(({ p, r }) => '<tr data-go="' + esc(p.name) + '"><td class="x">' + esc(p.name.replace(/-/g, ' ')) + '</td><td>' + esc(title(p, r)) + '</td><td class="x dim">' + esc(String(r.createdAt || '').slice(0, 10)) + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="empty">Nothing yet. Add a record in any tab and it shows here.</div>');
 }
-$('#view').addEventListener('click', (e) => { const c = e.target.closest('[data-go]'); if (c) location.hash = c.dataset.go; });
+$('#main').addEventListener('click', (e) => { const c = e.target.closest('[data-go]'); if (c) location.hash = c.dataset.go; });
 async function part(p) {
-  const view = $('#view');
+  const view = $('#main');
   const g = groupKey(p);
   let rows = [], editing = null, q = '', mode = 'table';
   view.innerHTML = '<h2>' + esc(p.name.replace(/-/g, ' ')) + '</h2><p class="does">' + esc(p.does) + '</p>' +

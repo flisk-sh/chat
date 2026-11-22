@@ -31,6 +31,13 @@ import { runEvents, sendTrace } from './trace.js';
 import { answeredModel, freeModelOpts, limitOf, overDailyLimit, overQuota, refundQuota, taskLimitBody } from './limits.js';
 export * from './limits.js';
 
+// RFC 9116 contact for security researchers, published at /.well-known/security.txt.
+const SECURITY_TXT = `Contact: https://github.com/flisk-sh/chat/security/advisories/new
+Expires: 2027-06-01T00:00:00Z
+Preferred-Languages: en
+Canonical: https://chat.flisk.si/.well-known/security.txt
+`;
+
 export const MAX_SITE_BYTES = 200 * 1024;
 export const SITES_PER_LOGIN = 5;
 export const VIDEOS_PER_LOGIN = 5;
@@ -358,6 +365,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   }
   if (request.method === 'GET' && path === '/favicon.ico') return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nDisallow: /s/\nDisallow: /v/\nDisallow: /i/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain', 'cache-control': 'public, max-age=86400' } });
+  if (request.method === 'GET' && path === '/.well-known/security.txt') return new Response(SECURITY_TXT, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://chat.flisk.si/</loc></url></urlset>', { headers: { 'content-type': 'application/xml', 'cache-control': 'public, max-age=86400' } });
 
   // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.

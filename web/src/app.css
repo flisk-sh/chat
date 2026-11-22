@@ -41,3 +41,10 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 /* Some phone browsers give the message box their own dark form colour, which showed as a darker strip behind "Describe the website or app to build…". The box is part of the composer, so it stays see-through. */
 .astryx-chat-composer-input,.astryx-chat-composer-input [contenteditable],.astryx-chat-composer-input textarea{background:transparent!important;background-color:transparent!important;-webkit-appearance:none;appearance:none;box-shadow:none!important}
 @media (pointer:coarse){.earth-content button,.astryx-app-shell-header button{min-height:44px;min-width:44px}}
+
+/* Phone chat header: one row (menu, mode, Sign in, more). It never wraps onto a second line. */
+.chat-head:has(.chat-head-end){flex-wrap:nowrap!important;gap:var(--spacing-1)!important}
+.chat-head .chat-head-end{flex-shrink:0}
+/* 320-360px phones: tighter mode buttons and edges, so the more button stays on screen. */
+@media (max-width:360px){.chat-head:has(.chat-head-end){padding-left:var(--spacing-2)!important;padding-right:var(--spacing-2)!important}.chat-head .astryx-segmented-control-item{padding-left:7px!important;padding-right:7px!important}.chat-head .chat-head-end a{padding-left:10px!important;padding-right:10px!important}}
+[role=dialog] .astryx-field,[role=dialog] input{min-width:0}

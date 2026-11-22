@@ -1,6 +1,14 @@
 {
   "name": "flisk-chat",
+  "description": "Ask for a task or a website, plan it with an AI model, and run it with a computer.",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flisk-sh/chat.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "license": "MIT",
   "scripts": {

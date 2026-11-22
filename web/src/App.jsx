@@ -6,7 +6,8 @@ import {ModelDialog, ComputerDialog, brandOf} from './Pickers.jsx';
 import {BOOT, runTask, keyFor, modelFor, lsGet, orStartLogin, orFinishLogin, loadChats, saveChats, vaultReady} from './api.js';
 import {newTurn, applyEv, nextSteps, chatTitle, shownText} from './events.js';
 import {QuestionMarkCircleIcon} from '@heroicons/react/24/outline';
-import {AppShell} from '@astryxdesign/core/AppShell';
+import {AppShell, useAppShellMobile} from '@astryxdesign/core/AppShell';
+import {MoreMenu} from '@astryxdesign/core/MoreMenu';
 import {MobileNav, MobileNavToggle} from '@astryxdesign/core/MobileNav';
 import {SideNav, SideNavItem, SideNavSection, SideNavRenderContext} from '@astryxdesign/core/SideNav';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
@@ -100,6 +101,40 @@ function LimitCard({info, task, onPick}) {
         <Button label="Ask on Discord" variant="ghost" size="sm" href="https://discord.gg/flisk" target="_blank" />
       </HStack>
     </VStack></Card>
+  );
+}
+
+const LOOKS = {earth: 'Earth', light: 'Light', dark: 'Dark', system: 'Same as your phone'};
+const nextLook = (s) => (s === 'earth' ? 'light' : s === 'light' ? 'dark' : s === 'dark' ? 'system' : 'earth');
+
+// The right end of the chat header. On a phone it is one row: Sign in stays in sight and Explain, the look and the AI model
+// move into Astryx's MoreMenu, which opens as a bottom sheet on touch screens. Wider screens keep every button in the row.
+function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
+  const {isMobile} = useAppShellMobile();
+  const guest = BOOT.login && BOOT.anon;
+  const signIn = !BOOT.login || BOOT.anon;
+  if (isMobile) {
+    return (
+      <HStack gap={1} align="center" className="chat-head-end">
+        {signIn && <Button label="Sign in" size="sm" variant="primary" href="/auth/start" />}
+        {BOOT.login && !BOOT.anon && <Badge label={'@' + BOOT.login} />}
+        <MoreMenu label="More: explain, look, AI model" size="sm" presentation="adaptive" alignment="end" items={[
+          ...(guest ? [{label: 'You are a guest', description: 'Sign in with GitHub to keep your chats and get more free tasks', isDisabled: true}, {type: 'divider'}] : []),
+          {label: explain ? 'Leave explain mode' : 'Explain', description: 'Tap anything to read what it does, without running it', icon: QuestionMarkCircleIcon, onClick: onExplain},
+          {label: 'Look: ' + (LOOKS[scheme] || scheme), description: 'Tap to switch to ' + LOOKS[nextLook(scheme)], icon: SunIcon, onClick: onLook},
+          {label: 'AI model and keys', description: 'Flisk Wolf is free, or add your own key', icon: Cog6ToothIcon, onClick: onModel},
+        ]} />
+      </HStack>
+    );
+  }
+  return (
+    <HStack gap={1}>
+      {BOOT.login ? <Tip text="Free tasks run on Flisk Wolf. The count resets every day."><span><Badge label={BOOT.anon ? 'Guest' : '@' + BOOT.login} /></span></Tip> : <Button label="Sign in" size="sm" variant="primary" href="/auth/start" />}
+      {BOOT.anon && <Tip text="Sign in with GitHub to keep your chats and get more free tasks."><Button label="Sign in" size="sm" variant="secondary" href="/auth/start" /></Tip>}
+      <Tip text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={onExplain} /></Tip>
+      <Tip text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={onLook} /></Tip>
+      <Tip text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onModel} /></Tip>
+    </HStack>
   );
 }
 
@@ -291,15 +326,9 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     {/* A custom top bar gets no automatic menu button, so it is placed here: without it phones cannot reach New chat or the chat list. */}
     <AppShell height="fill" mobileNav={{hasToggle: false, isOpen: navOpen, onOpenChange: setNavOpen, content: drawer}}
       topNav={
-      <HStack gap={2} align="center" justify="space-between" wrap="wrap" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
+      <HStack gap={2} align="center" justify="space-between" wrap="wrap" className="chat-head" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
         <HStack gap={1} align="center"><MobileNavToggle /><Tip text="Ask: just answers. Build: makes websites and apps on a computer. Search: looks things up on the web."><span style={{display: 'inline-flex', flexShrink: 0}}><SegmentedControl label="Mode" value={['ask', 'build', 'search'].includes(mode) ? mode : ''} onChange={setMode}><SegmentedControlItem value="ask" label="Ask" /><SegmentedControlItem value="build" label="Build" /><SegmentedControlItem value="search" label="Search" /></SegmentedControl></span></Tip></HStack>
-        <HStack gap={1}>
-          {BOOT.login ? <Tip text="Free tasks run on Flisk Wolf. The count resets every day."><span><Badge label={BOOT.anon ? 'Guest' : '@' + BOOT.login} /></span></Tip> : <Button label="Sign in" size="sm" variant="primary" href="/auth/start" />}
-          {BOOT.anon && <Tip text="Sign in with GitHub to keep your chats and get more free tasks."><Button label="Sign in" size="sm" variant="secondary" href="/auth/start" /></Tip>}
-          <Tip text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={() => { setExplain((e) => !e); setCaption(''); }} /></Tip>
-          <Tip text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={() => setScheme(scheme === 'earth' ? 'light' : scheme === 'light' ? 'dark' : scheme === 'dark' ? 'system' : 'earth')} /></Tip>
-          <Tip text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={() => setMdlOpen(true)} /></Tip>
-        </HStack>
+        <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onModel={() => setMdlOpen(true)} />
       </HStack>
       }
       sideNav={side}>

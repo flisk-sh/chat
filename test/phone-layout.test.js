@@ -130,3 +130,16 @@ test('the message box has no background of its own, so phones show no dark strip
   const css = readFileSync(new URL('../web/src/app.css', import.meta.url), 'utf8');
   expect(css).toMatch(/\.astryx-chat-composer-input \[contenteditable\][^{]*\{background:transparent!important/);
 });
+
+test('on a phone the chat header is one row: Sign in stays in sight, the rest goes in the Astryx more menu', () => {
+  const app = readFileSync(new URL('../web/src/App.jsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../web/src/app.css', import.meta.url), 'utf8');
+  const phone = app.slice(app.indexOf('if (isMobile) {'), app.indexOf('return (\n    <HStack gap={1}>'));
+  expect(app).toContain("const {isMobile} = useAppShellMobile();");
+  expect(phone).toContain('label="Sign in"');
+  expect(phone).toContain('<MoreMenu');
+  expect(phone).toContain('presentation="adaptive"');
+  for (const item of ["'Leave explain mode' : 'Explain'", "'Look: '", "'AI model and keys'"]) expect(phone).toContain(item);
+  expect(css).toContain('.chat-head:has(.chat-head-end){flex-wrap:nowrap!important');
+  expect(css).toContain('@media (max-width:360px){.chat-head:has(.chat-head-end)');
+});
