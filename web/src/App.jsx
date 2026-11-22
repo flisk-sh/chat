@@ -18,7 +18,6 @@ import {Button} from '@astryxdesign/core/Button';
 import {Icon} from '@astryxdesign/core/Icon';
 import {Card} from '@astryxdesign/core/Card';
 import {Badge} from '@astryxdesign/core/Badge';
-import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {Avatar} from '@astryxdesign/core/Avatar';
 import {Markdown} from '@astryxdesign/core/Markdown';
 import {DropdownMenu} from '@astryxdesign/core/DropdownMenu';
@@ -435,7 +434,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     <AppShell height="fill" mobileNav={{hasToggle: false, isOpen: navOpen, onOpenChange: setNavOpen, content: drawer}}
       topNav={
       <HStack gap={2} align="center" justify="space-between" wrap="wrap" className="chat-head" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
-        <HStack gap={1} align="center"><MobileNavToggle /><Tip text="Ask: just answers. Build: makes websites and apps on a computer. Search: looks things up on the web."><span style={{display: 'inline-flex', flexShrink: 0}}><SegmentedControl label="Mode" value={['ask', 'build', 'search'].includes(mode) ? mode : ''} onChange={setMode}><SegmentedControlItem value="ask" label="Ask" /><SegmentedControlItem value="build" label="Build" /><SegmentedControlItem value="search" label="Search" /></SegmentedControl></span></Tip></HStack>
+        <HStack gap={1} align="center"><MobileNavToggle /></HStack>
         <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onModel={() => setMdlOpen(true)} />
       </HStack>
       }
@@ -444,25 +443,23 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={
           <ChatComposer value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
-            placeholder={mode === 'video' ? 'Describe the video…' : mode === 'computer' ? 'What should the computer do?' : mode === 'build' ? 'Describe the website or app to build…' : mode === 'search' ? 'What should I look up on the web?' : 'Ask anything…'}
+            placeholder="Ask anything, or describe what to make…"
             input={<ChatComposerInput enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
             }} />}
             headerActions={
-              <HStack gap={1} wrap="wrap">
-                {files.map((f, i) => <Badge key={f.name + i} label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} />)}
-                <Tip text="Add: attach files, pick computers, make a website or video, weather, chart."><span><DropdownMenu
-                  button={{label: 'Add', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
+              <HStack gap={1} wrap="wrap" align="center">
+                <Tip text="More: voice, attach files, computers, AI model. The AI works out whether you want an answer, a website, a video or a picture."><span><DropdownMenu
+                  button={{label: 'More', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
                   items={[
+                    {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, onClick: dictate},
+                    {label: 'Voice talk', description: 'Talk out loud with the Flisk Oracle', icon: SpeakerWaveIcon, onClick: () => setTalk(true)},
                     {label: 'Attach files', description: 'Up to 3 files, 5 MB in all', icon: PaperClipIcon, onClick: () => fileIn.current && fileIn.current.click()},
                     {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, onClick: () => setPcOpen(true)},
-                    {label: 'Make a website', description: 'One page with a public link, kept 7 days', icon: GlobeAltIcon, onClick: () => setMode('build')},
-                    {label: 'Make a video', description: 'Narrated video from a short script', icon: FilmIcon, onClick: () => setMode('video')},
-                    {label: 'Run on a computer', description: 'Commands on one of your computers', icon: ServerStackIcon, onClick: () => setMode('computer')},
                     {label: 'Choose AI model', description: 'Flisk Wolf is free; or use your own Claude, OpenAI or OpenRouter key', icon: KeyIcon, onClick: () => setMdlOpen(true)},
                   ]} /></span></Tip>
-                <Tip text="Hold your voice in: it turns your words into text, phrase by phrase."><Button label={dictating ? 'Stop and write what I said' : 'Speak your task'} variant={dictating ? 'primary' : 'ghost'} size="sm" isIconOnly icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} /></Tip>
-                <Tip text="Talk out loud with the Flisk Oracle. It listens, answers, and listens again."><Button label="Voice talk" variant="ghost" size="sm" isIconOnly icon={<Icon icon={SpeakerWaveIcon} size="sm" />} onClick={() => setTalk(true)} /></Tip>
+                {files.map((f, i) => <Badge key={f.name + i} label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} />)}
+                {dictating && <Button label="Stop and write what I said" variant="primary" size="sm" icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} />}
               </HStack>
             }
             footerActions={
