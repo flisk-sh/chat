@@ -11,7 +11,8 @@ const get = (p) => worker.fetch(new Request(`${ORIGIN}${p}`), env());
 // Chat's own pages already send stricter values (DENY, same-origin, frame-ancestors 'none'); those stay.
 const baseline = (res) => {
   expect(res.headers.get('x-content-type-options')).toBe('nosniff');
-  expect(res.headers.get('x-frame-options')).toMatch(/^(DENY|SAMEORIGIN)$/);
+  // Safari honours X-Frame-Options next to frame-ancestors, so only frame-ancestors may decide who frames us (the analytics heatmap).
+  expect(res.headers.get('x-frame-options')).toBeNull();
   expect(res.headers.get('strict-transport-security')).toBe('max-age=31536000; includeSubDomains');
   expect(res.headers.get('referrer-policy')).toMatch(/^(same-origin|strict-origin-when-cross-origin|no-referrer)$/);
   expect(res.headers.get('permissions-policy')).toBe('camera=(), microphone=(self), geolocation=()');

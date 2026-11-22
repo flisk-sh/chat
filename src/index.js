@@ -93,7 +93,6 @@ export async function loadCatalog(env, now = Date.now()) {
 
 const SECURITY = {
   'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
   'referrer-policy': 'same-origin',
   'strict-transport-security': 'max-age=31536000',
   // The Earth look loads three.js and its globe textures from these exact folders only (see earth.js).

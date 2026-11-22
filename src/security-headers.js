@@ -1,10 +1,11 @@
 // Baseline security headers for every response of this Worker (HTML, assets, API, errors).
 // A header a handler already set is kept (a stricter value stays); only gaps are filled.
 // Strict-Transport-Security gets includeSubDomains and the CSP gets frame-ancestors when they lack it.
+// No X-Frame-Options: Safari applies it even next to frame-ancestors, so it would block analytics.flisk.si's click heatmap preview.
+// frame-ancestors (self + analytics.flisk.si) is the one framing rule.
 
 const DEFAULTS = {
   'x-content-type-options': 'nosniff',
-  'x-frame-options': 'SAMEORIGIN',
   'strict-transport-security': 'max-age=31536000; includeSubDomains',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=()',
