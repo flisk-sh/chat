@@ -15,7 +15,7 @@ const baseline = (res) => {
   expect(res.headers.get('strict-transport-security')).toBe('max-age=31536000; includeSubDomains');
   expect(res.headers.get('referrer-policy')).toMatch(/^(same-origin|strict-origin-when-cross-origin|no-referrer)$/);
   expect(res.headers.get('permissions-policy')).toBe('camera=(), microphone=(self), geolocation=()');
-  expect(res.headers.get('content-security-policy')).toMatch(/frame-ancestors '(self|none)'/);
+  expect(res.headers.get('content-security-policy')).toMatch(/frame-ancestors ('self'|'none'|https:\/\/analytics\.flisk\.si)/);
 };
 
 describe('security headers', () => {

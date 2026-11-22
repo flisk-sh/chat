@@ -97,7 +97,7 @@ const SECURITY = {
   'referrer-policy': 'same-origin',
   'strict-transport-security': 'max-age=31536000',
   // The Earth look loads three.js and its globe textures from these exact folders only (see earth.js).
-  'content-security-policy': `default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://flisk.si https://flisk.sh ${THREE_SRC}; img-src 'self' data: blob: https://flisk.si ${TEXTURES.join(' ')}; media-src 'self' data: blob:; connect-src 'self' https://analytics.flisk.si https://openrouter.ai/api/v1/models https://openrouter.ai/api/v1/auth/keys; form-action 'self' https://github.com; frame-ancestors 'none'; base-uri 'none'`,
+  'content-security-policy': `default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://flisk.si https://flisk.sh ${THREE_SRC}; img-src 'self' data: blob: https://flisk.si ${TEXTURES.join(' ')}; media-src 'self' data: blob:; connect-src 'self' https://analytics.flisk.si https://openrouter.ai/api/v1/models https://openrouter.ai/api/v1/auth/keys; form-action 'self' https://github.com; frame-ancestors https://analytics.flisk.si; base-uri 'none'`,
 };
 // A visitor who has no look yet gets Earth and keeps it in a cookie; the switch under the box changes it.
 export const DEFAULT_THEME = 'earth';

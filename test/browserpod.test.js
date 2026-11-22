@@ -255,7 +255,7 @@ describe('the browser model frame (inference serves the model; chat frames that 
     const csp = res.headers.get('content-security-policy');
     expect(csp).toMatch(/^default-src 'none'; frame-src https:\/\/inf\.test;/);
     expect(csp.match(/frame-src [^;]*/)[0]).toBe('frame-src https://inf.test'); // one origin, no wildcard
-    expect(csp).toContain("frame-ancestors 'none'"); // chat itself still cannot be framed
+    expect(csp).toContain('frame-ancestors https://analytics.flisk.si'); // only analytics may frame chat, for the click heatmap
     expect(csp).not.toContain('huggingface'); // the weights and the engine are inference's business, never chat's page
     expect(await res.text()).toContain('window.__INF__="https://inf.test";');
   });
