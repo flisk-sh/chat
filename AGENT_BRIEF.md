@@ -30,8 +30,9 @@ iOS
   all lower case, a longer password, scroll, go back, another button) until you get through.
 - Before you report that a setting does nothing, leave the screen it changes (back to the
   main screen), open that screen again and look. Many apps read settings only when a screen opens.
-- Budget: about 30 actions, then write the report. Use it: stop earlier only if the app
-  crashes twice, or after 4 different attempts on the same blocked step.
+- Budget: 30 actions, then STOP and write the report (the run is cut off at about 70 turns and an unwritten report is lost).
+  If you are stuck on one screen for 4 actions, report that screen as the finding and move on.
+  Stop earlier only if the app crashes twice.
 - Write everything under `results/<persona>/`. Nothing else.
 
 ## The app: Flisk Chat (https://chat.flisk.si)

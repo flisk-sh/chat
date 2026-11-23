@@ -48,7 +48,7 @@ fi
 # 5. The agent: only the listed tools, nothing else (another model API if llm_base_url is set)
 source scripts/llm_env.sh || exit 1
 claude -p "Read $BRIEF and personas.json, then do the mission until the final report. PERSONA=$PERSONA PLATFORM=android APP_ID=$APP_ID. Device: ${DEVICE}, font scale x${FONT_SCALE:-1.0}, theme ${THEME:-light}, language $LOCALE. Report anything that does not fit this screen (cut text, off-screen buttons, broken layout)." \
-  --model "${MODEL:-sonnet}" --max-turns 400 --output-format json \
+  --model "${MODEL:-sonnet}" --max-turns "${MAX_TURNS:-70}" --output-format json \
   --allowedTools "Bash(adb:*),Bash(python3 scripts/android/screen.py:*),Bash(python3 scripts/android/type.py:*),Bash(sleep:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*),Read,Write,Edit" \
   > results/agent-output.json 2> results/agent-errors.txt
 CODE=$?
@@ -56,5 +56,11 @@ if [ -n "$REC" ]; then
   touch /tmp/stop-rec; adb shell pkill -INT screenrecord; sleep 4; kill "$REC" 2>/dev/null
   mkdir -p "results/$PERSONA/video"
   for f in $(adb shell ls /sdcard/ | tr -d '\r' | grep '^rec_'); do adb pull "/sdcard/$f" "results/$PERSONA/video/" >/dev/null 2>&1; done
+fi
+# A model that ignored its budget stops at the turn cap with no report: say so, so the run is not read as "no findings"
+if [ ! -s "results/$PERSONA/report.md" ]; then
+  mkdir -p "results/$PERSONA"
+  printf '# %s: no report\n\nThe agent stopped (exit %s) before writing its report, most likely at the turn cap (%s). Read the screenshots; this is not a clean run.\n' "$PERSONA" "$CODE" "${MAX_TURNS:-70}" > "results/$PERSONA/report.md"
+  printf '{"score": 0, "issues": [{"title": "Agent stopped before reporting (turn cap or model error)", "severity": "minor", "screen": "-", "screens": []}]}\n' > "results/$PERSONA/findings.json"
 fi
 echo "Agent finished (exit $CODE), $(ls "results/$PERSONA" | wc -l) files"

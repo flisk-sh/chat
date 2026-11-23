@@ -27,6 +27,10 @@ describe("phone agent testers", () => {
   it("drops the repo's skills before a non-Claude model runs the agent", () => {
     expect(read("scripts/llm_env.sh")).toMatch(/rm -rf \.claude\/skills/);
   });
+  it("caps the agent's turns and leaves a report when it is cut off", () => {
+    expect(read("scripts/android/run_agent.sh")).toContain('--max-turns "${MAX_TURNS:-70}"');
+    expect(read("scripts/android/run_agent.sh")).toContain("no report");
+  });
   it("setup.sh is valid bash", () => {
     expect(spawnSync("bash", ["-n", "setup.sh"], { cwd: new URL("..", import.meta.url).pathname }).status).toBe(0);
   });
