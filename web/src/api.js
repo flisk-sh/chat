@@ -48,15 +48,16 @@ export const modelFor = (prov) => lsGet('chat_model_' + prov);
 // ---- the task stream -------------------------------------------------------------------------------------------------
 // POST /api/run answers with one JSON event per line. Returns {status, body} when the server refuses (401 sign in, 409 needs a
 // computer, 429 daily limit, anything else), or {status:200} after the stream ended. onEv gets each event as it arrives.
-// Opt-in: open the page with ?cogito=1 and /api/run answers in cogito frames (github.com/flisk-sh/cogito) instead of chat's own
+// On by default; open the page with ?cogito=0 to turn it off. /api/run answers in cogito frames (github.com/flisk-sh/cogito) instead of chat's own
 // events. fromFrame turns each frame back into the event the page already understands (same as src/cogito.js), so nothing else changes.
 const COGITO = 'application/vnd.flisk.cogito+ndjson';
-export const cogitoOn = () => { try { return new URLSearchParams(location.search).get('cogito') === '1'; } catch (e) { return false; } };
+export const cogitoOn = () => { try { return new URLSearchParams(location.search).get('cogito') !== '0'; } catch (e) { return true; } };
 const fromFrame = (f) => ('x' in f ? f.x : 't' in f ? { type: 'delta', text: f.t } : 'd' in f ? { type: 'done', ms: f.ms, error: f.err } : null);
 export async function runTask(payload, onEv, signal) {
-  const co = cogitoOn();
-  const res = await fetch('/api/run', { signal, method: 'POST', headers: { 'content-type': 'application/json', accept: co ? COGITO : 'application/x-ndjson' }, body: JSON.stringify(payload) });
+  const res = await fetch('/api/run', { signal, method: 'POST', headers: { 'content-type': 'application/json', accept: cogitoOn() ? COGITO : 'application/x-ndjson' }, body: JSON.stringify(payload) });
   if (!res.ok || !res.body) return { status: res.status, body: await res.json().catch(() => ({})) };
+  // Decode by what came back, not by what was asked for: an older server or a proxy may answer in chat's own events.
+  const co = (res.headers.get('content-type') || '').includes(COGITO);
   const rd = res.body.getReader();
   const dec = new TextDecoder();
   let buf = '';

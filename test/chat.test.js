@@ -1262,7 +1262,7 @@ test('the pitch is shown in every theme, including voice and focus', () => {
   expect(page).not.toMatch(/data-theme=focus\] \.pitch[^{]*\{display:none/);
 });
 
-describe('cogito frames on /api/run (opt-in)', () => {
+describe('cogito frames on /api/run (server opt-in by Accept; the page asks by default)', () => {
   const task = { task: 'make a site' };
   const script = () => ['{"write":{"path":"/tmp/site/index.html","content":"<html>x</html>"}}', '{"publish":"/tmp/site/index.html"}', '{"say":"Done"}'];
 
@@ -1290,10 +1290,12 @@ describe('cogito frames on /api/run (opt-in)', () => {
     expect(back.find((x) => x.published).published).toMatch(/^https:\/\/chat\.test\/s\/[a-f0-9]{16}$/);
   });
 
-  test('the built page knows ?cogito=1 (guards a stale next-app.generated.js)', async () => {
+  test('the built page asks for cogito by default, ?cogito=0 turns it off, and it decodes by the answer (guards a stale next-app.generated.js)', async () => {
     const { NEXT_JS } = await import('../src/next-app.generated.js');
     expect(NEXT_JS).toContain(COGITO_TYPE);
     expect(NEXT_JS).toContain('cogito');
+    expect(NEXT_JS).toMatch(/get\([`"]cogito[`"]\)!==[`"]0[`"]/);
+    expect(NEXT_JS).toMatch(/get\([`"]content-type[`"]\)\|\|[`"][`"]\)\.includes\(\w+\)/);
   });
 
   test('cogitoStream: state frames only on change, deltas become t, done keeps ms and error', () => {
