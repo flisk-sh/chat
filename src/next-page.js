@@ -3,7 +3,7 @@
 // and hands it what the server knows about the visitor (the same facts the current page gets).
 import { NEXT_CSS, NEXT_CSS_PATH, NEXT_FONTS, NEXT_JS, NEXT_JS_PATH } from './next-app.generated.js';
 import { EARTH_JS } from './earth.js';
-import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, SEO_HEAD } from './page.js';
+import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, SEO_HEAD, loginHook } from './page.js';
 
 const LS = new RegExp('[\\u2028\\u2029]', 'g');
 const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
@@ -21,7 +21,7 @@ ${ICON_HEAD}
 <script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>
 <script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>
 <link rel="modulepreload" href="${NEXT_JS_PATH}"><link rel="stylesheet" href="${NEXT_CSS_PATH}">
-<style>${BAR_CSS}</style></head><body><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div id="root"></div>
+<style>${BAR_CSS}</style></head><body><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>
 <script type="module" src="${NEXT_JS_PATH}"></script>
 <script>${EARTH_JS}</script>

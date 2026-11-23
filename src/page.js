@@ -554,10 +554,13 @@ export const THEME_IDS = THEMES.map(([id]) => id);
 export const GITHUB_APP_URL = 'https://github.com/apps/flisk-chat';
 export const KEY_PAGES = { openrouter: ['OpenRouter', 'https://openrouter.ai/keys'], anthropic: ['Claude', 'https://console.anthropic.com/settings/keys'], openai: ['OpenAI', 'https://platform.openai.com/api-keys'] };
 
-export const reviewsPage = ({ login, saved, stored, limit, flash, error = '', form = {} }) =>
+// Hidden hook the org bar reads for the signed-in login. Empty for anonymous sessions, whose cookie login (anon-<16hex>) would pass the bar's login check.
+export const loginHook = (login, anon = false) => (login && !anon && !/^anon-/i.test(String(login)) ? `<span data-flisk-login hidden>${esc(login)}</span>` : '');
+
+export const reviewsPage = ({ login, anon = false, saved, stored, limit, flash, error = '', form = {} }) =>
   shell(
     'Settings · chat',
-    `<div class="set">
+    `${loginHook(login, anon)}<div class="set">
 <nav class="setnav" aria-label="Settings"><div class="brand">${LOGO}</div><a href="/">${icon('chat', 16)}Back to chat</a><a href="#github" class="cur">GitHub reviews</a><a href="#ai">AI for reviews</a><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Computers</a><a href="https://flisk.si" target="_blank" rel="noopener">Flisk</a><div class="who"><span>@${esc(login)}</span><a href="/auth/signout">Sign out</a></div></nav>
 <main id="main" class="setmain">
 <h1>Settings</h1>
@@ -1583,7 +1586,7 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
     .join('')}`;
   return shell(
     'Flisk Chat',
-    `<div class="earthstill" aria-hidden="true"></div><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div class="app">
+    `${loginHook(login, anon)}<div class="earthstill" aria-hidden="true"></div><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div class="app">
 <nav class="thx frail" aria-label="Menu"><a class="fl" href="/" aria-label="Chat home">${icon('chat', 30)}</a><button type="button" data-act="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New</button><button type="button" data-act="hist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Computers</a><button type="button" data-act="voice"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>Voice</button>${login && !anon ? `<a href="/reviews"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</a><a class="end" href="/auth/signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>` : `<a class="end" href="/auth/start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>Sign in</a>`}</nav>
 <aside id="side" class="side" aria-label="Chats">
 <div class="brand">${LOGO}<button type="button" id="sideclose" class="iconbtn only-m" aria-label="Close the menu">×</button></div>
