@@ -24,7 +24,8 @@ png = adb("exec-out", "screencap", "-p", raw=True)
 png = png[png.find(b"\x89PNG"):] if b"\x89PNG" in png else png  # foldables print a warning first
 img = Image.open(io.BytesIO(png)).convert("RGB")
 w, h = img.size
-img.resize((w // 2, h // 2)).save(out / f"{nn}.png")
+# 64 colours keeps text and layout readable at a third of the size: every screenshot is sent with each turn of the agent
+img.resize((w // 2, h // 2)).convert("P", palette=Image.ADAPTIVE, colors=64).save(out / f"{nn}.png", optimize=True)
 print(f"screenshot: {out}/{nn}.png (screen {w}x{h}; image is half size: multiply positions read on it by 2)")
 adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
 xml = adb("exec-out", "cat", "/sdcard/ui.xml")
