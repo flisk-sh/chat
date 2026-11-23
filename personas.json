@@ -10,9 +10,9 @@
       -0.1276
     ],
     "device": {
-      "name": "Small phone, Android 11",
+      "name": "Small phone, Android 14",
       "profile": "Nexus 5",
-      "android_api": 30,
+      "android_api": 34,
       "font_scale": 1.3,
       "theme": "light"
     }
@@ -46,9 +46,9 @@
       31.2357
     ],
     "device": {
-      "name": "Pixel 6, Android 13",
+      "name": "Pixel 6, Android 14",
       "profile": "pixel_6",
-      "android_api": 33,
+      "android_api": 34,
       "font_scale": 1.15,
       "theme": "light"
     }
@@ -64,9 +64,9 @@
       139.6503
     ],
     "device": {
-      "name": "Pixel 4, Android 11",
+      "name": "Pixel 4, Android 14",
       "profile": "pixel_4",
-      "android_api": 30,
+      "android_api": 34,
       "font_scale": 1.0,
       "theme": "dark"
     }
@@ -118,9 +118,9 @@
       77.209
     ],
     "device": {
-      "name": "Small phone, Android 10",
+      "name": "Small phone, Android 14",
       "profile": "Nexus 5X",
-      "android_api": 29,
+      "android_api": 34,
       "font_scale": 1.15,
       "theme": "light"
     }
@@ -136,9 +136,9 @@
       37.6173
     ],
     "device": {
-      "name": "Pixel 5, Android 12",
+      "name": "Pixel 5, Android 14",
       "profile": "pixel_5",
-      "android_api": 31,
+      "android_api": 34,
       "font_scale": 1.0,
       "theme": "dark"
     }
@@ -154,9 +154,9 @@
       -46.6333
     ],
     "device": {
-      "name": "Pixel 3a, Android 12",
+      "name": "Pixel 3a, Android 14",
       "profile": "pixel_3a",
-      "android_api": 31,
+      "android_api": 34,
       "font_scale": 1.15,
       "theme": "light"
     }

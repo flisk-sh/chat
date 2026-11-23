@@ -19,6 +19,9 @@ iOS
   paste from "CoreSimulatorBridge", tap Allow Paste. That alert comes from the tool, not the app.
 
 ## Rules
+- The emulator does not forward ping (ICMP): "Destination Host Unreachable" says nothing about the network. Never judge
+  connectivity with ping. If the screen is blank or white, wait 10 seconds, take another screenshot, then go back and
+  reopen the app once. Report a blank screen as a finding, with what you tried, but do not claim a cause you did not see.
 - Take a screenshot after EVERY action and look at it before the next one. Number them in order.
 - Never clear app data or reinstall. Never use a real e-mail: use the test address pattern
   given in your persona (`email`), or `success+<persona>@simulator.amazonses.com`.
