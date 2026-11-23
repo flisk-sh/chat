@@ -24,6 +24,9 @@ describe("phone agent testers", () => {
     for (const id of def) expect(ids.has(id)).toBe(true);
     for (const p of personas) expect(p.goal).toContain("Signed out");
   });
+  it("drops the repo's skills before a non-Claude model runs the agent", () => {
+    expect(read("scripts/llm_env.sh")).toMatch(/rm -rf \.claude\/skills/);
+  });
   it("setup.sh is valid bash", () => {
     expect(spawnSync("bash", ["-n", "setup.sh"], { cwd: new URL("..", import.meta.url).pathname }).status).toBe(0);
   });

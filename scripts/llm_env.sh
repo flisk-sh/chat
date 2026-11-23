@@ -17,6 +17,9 @@ if [ -n "${LLM_BASE_URL:-}" ]; then
   esac
   export ANTHROPIC_BASE_URL="${LLM_BASE_URL%/}" ANTHROPIC_AUTH_TOKEN="$LLM_API_KEY" ANTHROPIC_API_KEY=""
   unset CLAUDE_CODE_OAUTH_TOKEN
+  # The repo'"'"'s own .claude/skills (this testers skill included) is not for the agent: a small model reads "mobile-agent-testers"
+  # in its skill list, believes the job is that skill, "finishes" it from imagination in one turn and never touches the phone.
+  rm -rf .claude/skills
   # Claude Code also sends small background requests (titles, summaries) to its
   # "haiku" slot: the provider only knows MODEL, so every slot uses it
   for v in ANTHROPIC_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL \
