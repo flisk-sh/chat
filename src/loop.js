@@ -299,8 +299,9 @@ export function asksImage(task) {
   return { prompt: `${what}, ${real ? 'a photorealistic photo, natural light, sharp detail' : 'high detail'}`, caption: `Here is ${what}.` };
 }
 // The hack for when the drawing model has no budget left: the chat model writes the picture as SVG code (gradients, shadows,
-// highlights, layered shapes), which costs no drawing budget. The SVG is cleaned before it is kept: no script, no outside links.
-export const SVG_ASK = 'Draw the picture the user asks for as ONE SVG image, and reply with only the SVG code: no words, no code fence. Make it look realistic and three-dimensional, not flat: viewBox="0 0 800 800", a background with a gradient, every main shape filled with a linearGradient or radialGradient that goes from a light to a dark shade, soft shadows under objects (feGaussianBlur filter), bright highlights, darker shaded sides, fine detail such as fur strands, texture or reflections, and 40 or more shapes. No text, no script, no outside links.';
+// highlights, layered shapes), which costs no drawing budget. The ask is kept short: a 40-shape picture took the free model over
+// the 60 s limit on every try, so visitors got nothing. The SVG is cleaned before it is kept: no script, no outside links.
+export const SVG_ASK = 'Draw the picture the user asks for as ONE SVG image, and reply with only the SVG code: no words, no code fence. Keep it short so it is written fast: viewBox="0 0 800 800", a gradient background, 15 to 30 shapes, the main shapes filled with a linearGradient or radialGradient from a light to a dark shade, a soft shadow under the subject and a few bright highlights. No text, no script, no outside links.';
 export function cleanSvg(raw) {
   const m = /<svg[\s>][\s\S]*<\/svg>/i.exec(String(raw || ''));
   if (!m) return null;
@@ -524,6 +525,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
         const svg = cleanSvg(r?.text);
         if (svg) { pic = svgDataUrl(svg); break; }
         busy = r?.kind === 'busy';
+        if (r) console.warn('svg picture not usable:', r.kind || 'no svg in the reply', String(r.error || r.text || '').slice(0, 160).replace(/\s+/g, ' '));
         if (!busy || attempt === BUSY_WAITS.length) break;
         emit({ type: 'reroute', text: `Every free model is busy, trying again in ${Math.round(BUSY_WAITS[attempt] / 1000)} s` });
         await wait(BUSY_WAITS[attempt]);

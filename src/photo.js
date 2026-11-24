@@ -22,10 +22,15 @@ export async function takePhotoSlot(env, login, day = new Date().toISOString().s
 export const POLLINATIONS_IMAGE_URL = 'https://image.pollinations.ai/prompt/';
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
-export async function pollinationsPhoto(prompt, { fetchImpl = fetch, ms = PHOTO_MS, base = POLLINATIONS_IMAGE_URL } = {}) {
+export async function pollinationsPhoto(prompt, { fetchImpl = fetch, ms = PHOTO_MS, base = POLLINATIONS_IMAGE_URL, retryMs = 1500 } = {}) {
   try {
     const url = `${base}${encodeURIComponent(String(prompt).slice(0, 800))}?width=1024&height=1024&nologo=true&private=true`;
-    const res = await fetchImpl(url, { signal: AbortSignal.timeout(ms) });
+    // Pollinations limits free requests per address and Workers share addresses, so a 402, 429 or 503 is often gone a moment later: one retry.
+    let res = await fetchImpl(url, { signal: AbortSignal.timeout(ms) });
+    if ([402, 429, 503].includes(res.status)) {
+      await new Promise((r) => setTimeout(r, retryMs));
+      res = await fetchImpl(url, { signal: AbortSignal.timeout(ms) });
+    }
     const type = (res.headers.get('content-type') || '').split(';')[0].trim();
     if (!res.ok || !/^image\/(jpeg|png|webp)$/.test(type)) { console.warn('pollinations: no picture', res.status, type); return ''; }
     const bytes = new Uint8Array(await res.arrayBuffer());
