@@ -303,8 +303,17 @@ export function asksImage(task) {
 // the 60 s limit on every try, so visitors got nothing. The SVG is cleaned before it is kept: no script, no outside links.
 export const SVG_ASK = 'Draw the picture the user asks for as ONE SVG image, and reply with only the SVG code: no words, no code fence. Keep it short so it is written fast: viewBox="0 0 800 800", a gradient background, 15 to 30 shapes, the main shapes filled with a linearGradient or radialGradient from a light to a dark shade, a soft shadow under the subject and a few bright highlights. No text, no script, no outside links.';
 export function cleanSvg(raw) {
-  const m = /<svg[\s>][\s\S]*<\/svg>/i.exec(String(raw || ''));
-  if (!m) return null;
+  let m = /<svg[\s>][\s\S]*<\/svg>/i.exec(String(raw || ''));
+  // A free model often runs out of tokens before </svg>. Keep what is complete: cut back to the last whole element, close what is open.
+  if (!m) {
+    const open = /<svg[\s>][\s\S]*/i.exec(String(raw || '').replace(/```(?:svg|xml)?/gi, ''));
+    const end = open ? Math.max(open[0].lastIndexOf('/>'), open[0].lastIndexOf('</')) : -1;
+    if (end < 0) return null;
+    let part = open[0].slice(0, open[0].indexOf('>', end) + 1);
+    const unclosed = (tag) => Math.max(0, (part.match(new RegExp(`<${tag}[\\s>]`, 'gi')) || []).length - (part.match(new RegExp(`</${tag}>`, 'gi')) || []).length);
+    part += '</g>'.repeat(unclosed('g')) + '</defs>'.repeat(unclosed('defs')) + '</svg>';
+    m = [part];
+  }
   let svg = m[0];
   // One pass can leave a new tag or attribute behind (<scr<script>ipt>), so clean until nothing changes.
   for (let prev = ''; prev !== svg;) {
@@ -525,7 +534,7 @@ export async function runTask({ grade = null, stream = false, decision = null, c
         const svg = cleanSvg(r?.text);
         if (svg) { pic = svgDataUrl(svg); break; }
         busy = r?.kind === 'busy';
-        if (r) console.warn('svg picture not usable:', r.kind || 'no svg in the reply', String(r.error || r.text || '').slice(0, 160).replace(/\s+/g, ' '));
+        if (r) console.warn('svg picture not usable:', r.kind || 'no svg in the reply', `${String(r.text || '').length} chars, ends`, String(r.error || r.text || '').slice(-100).replace(/\s+/g, ' '));
         if (!busy || attempt === BUSY_WAITS.length) break;
         emit({ type: 'reroute', text: `Every free model is busy, trying again in ${Math.round(BUSY_WAITS[attempt] / 1000)} s` });
         await wait(BUSY_WAITS[attempt]);

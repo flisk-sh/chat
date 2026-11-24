@@ -273,4 +273,6 @@ function settingsClient() {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto); else auto();
 }
 
-export const SETTINGS_JS = `(${settingsClient.toString()})();`;
+// Wrangler bundles with keepNames, which puts __name(fn, 'x') calls inside settingsClient's text; the page has no __name, so the
+// gear threw "__name is not defined" and opened nothing. Give the snippet a do-nothing one in its own scope (as earth.js does).
+export const SETTINGS_JS = `;(function(){var __name=function(f){return f};(${settingsClient.toString()})();})();`;

@@ -159,6 +159,14 @@ describe('the pages', () => {
 describe('the browser script', () => {
   test('it is valid JavaScript and the styles close their braces', () => {
     expect(() => new Function(SETTINGS_JS)).not.toThrow();
+    // Wrangler's keepNames writes __name(fn, "x") into the function text; the page has no __name (the gear opened nothing, Nov 24).
+    const named = SETTINGS_JS.replace(/function settingsClient\(([^)]*)\)\s*\{/, (m) => `${m}__name(function(){}, "x");`);
+    expect(named).not.toBe(SETTINGS_JS);
+    const deep = () => new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => '' : deep()), apply: () => deep(), set: () => true });
+    let ran = 0;
+    expect(() => new Function('document', 'window', 'location', 'localStorage', named)(deep(), deep(), deep(), deep())).not.toThrow(ReferenceError);
+    ran++;
+    expect(ran).toBe(1);
     expect(SETTINGS_CSS.split('{').length).toBe(SETTINGS_CSS.split('}').length);
   });
   test('it is a modal dialog: role, aria-modal, labelled, Esc closes, Tab stays inside, the page behind is inert, focus comes back', () => {
