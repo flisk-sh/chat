@@ -259,4 +259,12 @@ describe('usage today', () => {
     expect(d.usage.map((u) => u.key)).toEqual(['tasks', 'pictures', 'talk']);
     expect((await handle(new Request('https://chat.test/settings/data', { headers: { 'sec-fetch-site': 'cross-site' } }), env)).status).toBe(403);
   });
+  test('the panel and the JSON read the same usage counters, so they never disagree', async () => {
+    const env = guestEnv();
+    const ask = (path) => handle(new Request('https://chat.test' + path, { headers: { 'sec-fetch-site': 'same-origin' } }), env);
+    const data = await (await ask('/settings/data')).json();
+    const panel = await (await ask('/settings/panel?section=usage')).text();
+    for (const u of data.usage.filter((x) => x.key === 'tasks')) expect(panel).toContain(`left of ${u.limit}`);
+    expect(data.usage.every((u) => u.used === 0 && u.limit > 0)).toBe(true);
+  });
 });
