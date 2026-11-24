@@ -122,6 +122,9 @@ function ErrorCard({t, onPick}) {
   );
 }
 
+// The one big sign-in button of the signed-out home page. The utm tag tells analytics which button brought the visit; /auth/start ignores it.
+const HERO_SIGNIN = '/auth/start?utm_source=chat&utm_medium=cta&utm_campaign=free-key';
+
 function LimitCard({info, task, onPick}) {
   const err = info.error ? (info.error.endsWith('.') ? info.error : info.error + '.') : 'You used all ' + (info.limit || '') + ' free tasks today.';
   const reset = resetText(info.resetsIn);
@@ -483,9 +486,9 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
             <ChatMessage sender="assistant" avatar={<Brand name="wolf" size={32} />}>
               <ChatMessageBubble variant="ghost"><VStack gap={1}>
                 <Heading level={1} className="greet">{!BOOT.login ? 'Make real websites and apps from a sentence' : guestHome ? 'Describe a website or app. Get a live link.' : 'What shall we make today?'}</Heading>
-                <Markdown density="compact">{BOOT.login ? (guestHome ? 'Free, no sign-up. Pick an example or type your own.' : 'Ask a question, or describe a website or app.') : 'Flisk Chat makes them on a computer that is yours. Sign in with GitHub to start. You can look around first.'}</Markdown>
+                <Markdown density="compact">{BOOT.login ? (guestHome ? 'Free, no sign-up. Pick an example or type your own.' : 'Ask a question, or describe a website or app.') : 'Flisk Chat makes them on a computer that is yours. You can look around first.'}</Markdown>
               </VStack></ChatMessageBubble>
-              {!BOOT.login && <ChatMessageBubble variant="ghost"><Button label="Sign in with GitHub" variant="primary" href="/auth/start" /></ChatMessageBubble>}
+              {!BOOT.login && <ChatMessageBubble variant="ghost"><VStack gap={1}><Button label="Start free with GitHub" variant="primary" href={HERO_SIGNIN} /><Text type="supporting">No card. Free to start.</Text></VStack></ChatMessageBubble>}
               <ChatMessageBubble variant="ghost"><HStack className="chips" gap={2} wrap="wrap">
                 {starters.map((c) => <Tip key={c.label || c.id} title={c.label} brand="flisk" text={'Tap to try: ' + (c.prompt || c.label)} more="Flisk does the work and shows you the result in this chat."><Button label={c.label} variant="secondary" size="sm" onClick={() => setValue(c.prompt || c.label)} /></Tip>)}
               </HStack></ChatMessageBubble>

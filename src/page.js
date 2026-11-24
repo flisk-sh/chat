@@ -540,7 +540,7 @@ const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:
 export const homePage = () =>
   shell(
     'Flisk Chat',
-    `<main id="main" class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website, an app or a whole system. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk's free model plans it, runs it on a real computer from your own sandbox account, and gives you the result and a live link. Bigger asks work too: several services that run together, started and checked on the computer.</p><a class="btn go" href="/auth/start">Sign in with GitHub</a></main>`,
+    `<main id="main" class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website or app. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk plans it, runs it on a real computer, and gives you the result and a live link.</p><a class="btn go" href="/auth/start?utm_source=chat&amp;utm_medium=cta&amp;utm_campaign=free-key">Start free with GitHub</a><p class="nocard" style="color:var(--dim);font-size:13px;margin:8px 0 0">No card. Free to start.</p></main>`,
   );
 
 export const messagePage = (title, text) =>

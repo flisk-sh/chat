@@ -53,6 +53,8 @@ export const UK = {
   'Sign in to run this': 'Увійдіть, щоб запустити',
   'One click with GitHub. Your task is kept and runs right after.': 'Один клік через GitHub. Ваше завдання збережеться й запуститься одразу після входу.',
   'Sign in with GitHub': 'Увійти через GitHub',
+  'Start free with GitHub': 'Почати безкоштовно через GitHub',
+  'No card. Free to start.': 'Без картки. Безкоштовний старт.',
   'Fleet: cheapest first': 'Fleet: спершу найдешевший',
   'Fleet, automatic': 'Fleet, автоматично',
   'Cheapest first, automatic': 'Спершу найдешевший, автоматично',
