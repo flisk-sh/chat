@@ -11,7 +11,7 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, searchWeb } from './search.js';
-import { appAsset, nextPage, nextCsp } from './next-page.js';
+import { appAsset, nextPage, nextCsp, embedCsp } from './next-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, PROVIDER_NAMES, reviewsPage, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
@@ -518,9 +518,11 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const refund = async (force = false) => chosen.free && (force || !m.answered()) && refundQuota(env, 'chat', { anon, id: await who(login) });
     return { m, refund };
   };
-  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic')) {
+  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic' || path === '/embed')) {
     // The new Astryx page is the home page; the previous page stays at /classic.
     const isNext = path !== '/classic';
+    // /embed is the chat as a window inside grow.flisk.si: same app, no side bar, no Earth, and only Grow may frame it.
+    const embed = path === '/embed';
     const [models, names] = await Promise.all([loadCatalog(env), loadFleetNames(env, fetchImpl)]);
     const { theme, cookie } = pickTheme(request);
     // The session cookie goes first and the look cookie last.
@@ -537,7 +539,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const page = (opts) => {
       const inf = inferenceOrigin(env);
       const csp = withFrame(cspWithPod(pod, origin), inf);
-      if (isNext) return html(nextPage({ ...opts, models, theme, here, pod, inf, names }), 200, { 'content-security-policy': nextCsp(csp) });
+      if (isNext) return html(nextPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed }), 200, { 'content-security-policy': embed ? embedCsp(nextCsp(csp)) : nextCsp(csp) });
       let body = appPage({ ...opts, models, theme, here, pod, inf, names });
       if (geo === 'UA') body = body.replace('<head>', `<head><script>window.__GEO="UA"</script>`);
       return html(body, 200, { 'content-security-policy': csp });

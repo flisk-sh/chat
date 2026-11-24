@@ -238,6 +238,23 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [filter, setFilter] = useState('');
   const hist = useRef([]);
   const memo = useRef({text: '', n: 0, busy: false});
+  // Embedded in grow.flisk.si: the page sends the plan it shows and some things worth asking. The plan seeds the chat's memory, so
+  // every answer knows it; the suggestions rotate in the box as the placeholder. Only Grow may send this.
+  const [hints, setHints] = useState([]);
+  const [hintAt, setHintAt] = useState(0);
+  useEffect(() => {
+    if (!BOOT.embed) return undefined;
+    const on = (e) => {
+      if (e.origin !== 'https://grow.flisk.si' || !e.data || e.data.type !== 'grow:context') return;
+      const c = String(e.data.context || '').slice(0, 1500);
+      if (c) memo.current = {...memo.current, text: c};
+      if (Array.isArray(e.data.suggestions)) setHints(e.data.suggestions.map((x) => String(x).slice(0, 80)).filter(Boolean).slice(0, 8));
+    };
+    addEventListener('message', on);
+    if (parent !== window) parent.postMessage({type: 'chat:ready'}, 'https://grow.flisk.si');
+    return () => removeEventListener('message', on);
+  }, []);
+  useEffect(() => { if (hints.length < 2) return undefined; const t = setInterval(() => setHintAt((n) => n + 1), 4000); return () => clearInterval(t); }, [hints]);
   const ctl = useRef(null);
   const fileIn = useRef(null);
   const ctx = {on: explain, show: setCaption};
@@ -439,18 +456,18 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     <input ref={fileIn} type="file" multiple hidden onChange={(e) => { attach(e.target.files); e.target.value = ''; }} />
     {/* A custom top bar gets no automatic menu button, so it is placed here: without it phones cannot reach New chat or the chat list. */}
     <AppShell height="fill" mobileNav={{hasToggle: false, isOpen: navOpen, onOpenChange: setNavOpen, content: drawer}}
-      topNav={
+      topNav={BOOT.embed ? undefined : 
       <HStack gap={2} align="center" justify="space-between" wrap="wrap" className="chat-head" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
         <HStack gap={1} align="center"><MobileNavToggle /></HStack>
         <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onModel={() => setMdlOpen(true)} />
       </HStack>
       }
-      sideNav={side}>
+      sideNav={BOOT.embed ? undefined : side}>
       <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
-            placeholder="Ask or build…"
+            placeholder="Ask or build…" {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
             }} />}

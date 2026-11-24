@@ -12,21 +12,23 @@ const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
 const BAR_CSS = '.vv-root{top:calc(var(--vv-top,0px) + var(--fbar,0px));height:calc(var(--vv-h,100dvh) - var(--fbar,0px))}';
 const BAR_JS = `(function(){var r=document.documentElement,h;function find(){return [].find.call(document.body.children,function(e){return /2147483000/.test(e.style.cssText)})}function set(){r.style.setProperty('--fbar',(h?h.offsetHeight:0)+'px')}function go(){h=find();if(!h)return setTimeout(go,100);set();if(window.ResizeObserver)new ResizeObserver(set).observe(h)}go()})();`;
 
-export function nextPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '' } = {}) {
-  const boot = { login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES };
+export function nextPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false } = {}) {
+  const boot = { embed, login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES };
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Flisk Chat</title>${SEO_HEAD}
 ${ICON_HEAD}
 <script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>
-<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>
+${embed ? '' : `<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>`}
 <link rel="modulepreload" href="${NEXT_JS_PATH}"><link rel="stylesheet" href="${NEXT_CSS_PATH}">
-<style>${BAR_CSS}</style></head><body><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div id="root"></div>${loginHook(login, anon)}
+<style>${embed ? '' : BAR_CSS}</style></head><body>${embed ? '' : '<canvas id="earth" class="earthc" aria-hidden="true"></canvas>'}<div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>
 <script type="module" src="${NEXT_JS_PATH}"></script>
-<script>${EARTH_JS}</script>
-<script>${BAR_JS}</script></body></html>`;
+${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>`}</body></html>`;
 }
+
+// The embedded chat can be framed by grow.flisk.si (and analytics, as everywhere); nothing else.
+export const embedCsp = (csp) => csp.replace(/frame-ancestors [^;]*/, 'frame-ancestors https://grow.flisk.si https://analytics.flisk.si');
 
 // The app's own files (JS, CSS, fonts) come from this origin, so the page policy allows 'self' for them.
 export const nextCsp = (csp) => csp.replace('script-src ', "script-src 'self' ").replace('style-src ', "style-src 'self' ").replace('font-src ', "font-src 'self' ");
