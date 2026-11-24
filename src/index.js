@@ -393,10 +393,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   }
   if ((request.method === 'GET' || request.method === 'HEAD') && path.startsWith('/_app/')) return appAsset(path) || new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
   if (request.method === 'GET' && path === '/favicon.ico') return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nDisallow: /s/\nDisallow: /v/\nDisallow: /i/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain', 'cache-control': 'public, max-age=86400' } });
+  if (request.method === 'GET' && path === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nAllow: /ja/$\nDisallow: /s/\nDisallow: /v/\nDisallow: /i/\nDisallow: /api/\nSitemap: https://chat.flisk.si/sitemap.xml\n', { headers: { 'content-type': 'text/plain', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/llms.txt') return new Response(LLMS_TXT, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/.well-known/security.txt') return new Response(SECURITY_TXT, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
-  if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://chat.flisk.si/</loc></url></urlset>', { headers: { 'content-type': 'application/xml', 'cache-control': 'public, max-age=86400' } });
+  if (request.method === 'GET' && path === '/sitemap.xml') return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://chat.flisk.si/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chat.flisk.si/"/><xhtml:link rel="alternate" hreflang="ja" href="https://chat.flisk.si/ja/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://chat.flisk.si/"/></url><url><loc>https://chat.flisk.si/ja/</loc><xhtml:link rel="alternate" hreflang="en" href="https://chat.flisk.si/"/><xhtml:link rel="alternate" hreflang="ja" href="https://chat.flisk.si/ja/"/><xhtml:link rel="alternate" hreflang="x-default" href="https://chat.flisk.si/"/></url></urlset>', { headers: { 'content-type': 'application/xml', 'cache-control': 'public, max-age=86400' } });
 
   // Is chat able to reach what it depends on? No sign-in, no secrets, only status codes.
   // Cached for 10 seconds per isolate (#165) so repeated checks make no extra outgoing requests.
@@ -553,7 +553,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const refund = async (force = false) => chosen.free && (force || !m.answered()) && refundQuota(env, 'chat', { anon, id: await who(login) });
     return { m, refund };
   };
-  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic' || path === '/embed' || path === '/settings' || path === '/reviews')) {
+  if (request.method === 'GET' && (path === '/' || path === '/ja' || path === '/next' || path === '/classic' || path === '/embed' || path === '/settings' || path === '/reviews')) {
     // The new Astryx page is the home page; the previous page stays at /classic.
     const isNext = path !== '/classic';  // /settings and /reviews are the chat with the settings dialog open over it (the page script opens it)
     // /embed is the chat as a window inside grow.flisk.si: same app, no side bar, no Earth, and only Grow may frame it.
@@ -574,7 +574,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const page = (opts) => {
       const inf = inferenceOrigin(env);
       const csp = withFrame(cspWithPod(pod, origin), inf);
-      if (isNext) return html(nextPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed }), 200, { 'content-security-policy': embed ? embedCsp(nextCsp(csp)) : nextCsp(csp) });
+      if (isNext) return html(nextPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed, lang: path === '/ja' ? 'ja' : 'en' }), 200, { 'content-security-policy': embed ? embedCsp(nextCsp(csp)) : nextCsp(csp) });
       let body = appPage({ ...opts, models, theme, here, pod, inf, names });
       if (geo === 'UA') body = body.replace('<head>', `<head><script>window.__GEO="UA"</script>`);
       return html(body, 200, { 'content-security-policy': csp });

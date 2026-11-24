@@ -551,7 +551,17 @@ export const KEYBOARD_FIT = "(function(){var v=window.visualViewport,r=document.
   "v.addEventListener('resize',fit);v.addEventListener('scroll',fit);fit()})();";
 
 // What search engines and link previews read about the home page. /classic and the new page at / both use it (#350).
-export const SEO_HEAD = `<meta name="robots" content="index,follow"><link rel="canonical" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${DESC}"><meta property="og:url" content="https://chat.flisk.si/"><meta property="og:type" content="website"><meta property="og:image" content="https://chat.flisk.si/og.png?v=1"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Flisk Chat: open a browser, type, it gets done"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Flisk Chat"><meta name="twitter:description" content="${DESC}"><meta name="twitter:image" content="https://chat.flisk.si/og.png?v=1"><meta name="description" content="${DESC}">`;
+const DESC_JA = 'Flisk Chat: ウェブサイト、アプリ、複数サービスのシステム、またはタスクを説明するだけ。本物のコンピューターで実行し、結果と公開リンクをお届けします。無料モデル、ログイン不要。';
+// The home page in English (at /) and in Japanese (at /ja/). Each carries the same hreflang set, and its own canonical link:
+// English stays the default (x-default), and nobody is redirected by language.
+export const seoHead = (lang = 'en') => {
+  const ja = lang === 'ja';
+  const url = ja ? 'https://chat.flisk.si/ja/' : 'https://chat.flisk.si/';
+  const desc = ja ? DESC_JA : DESC;
+  const alt = ja ? 'Flisk Chat: ブラウザーを開いて、入力するだけで完了' : 'Flisk Chat: open a browser, type, it gets done';
+  return `<meta name="robots" content="index,follow"><link rel="canonical" href="${url}"><link rel="alternate" hreflang="en" href="https://chat.flisk.si/"><link rel="alternate" hreflang="ja" href="https://chat.flisk.si/ja/"><link rel="alternate" hreflang="x-default" href="https://chat.flisk.si/"><meta property="og:title" content="Flisk Chat"><meta property="og:description" content="${desc}"><meta property="og:url" content="${url}"><meta property="og:type" content="website"><meta property="og:locale" content="${ja ? 'ja_JP' : 'en_US'}"><meta property="og:locale:alternate" content="${ja ? 'en_US' : 'ja_JP'}"><meta property="og:image" content="https://chat.flisk.si/og.png?v=1"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${alt}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Flisk Chat"><meta name="twitter:description" content="${desc}"><meta name="twitter:image" content="https://chat.flisk.si/og.png?v=1"><meta name="description" content="${desc}">`;
+};
+export const SEO_HEAD = seoHead('en');
 export const ICON_HEAD = `<link rel="icon" href="${FAVICON}"><link rel="apple-touch-icon" href="/apple-touch-icon.png">`;
 import { i18nScript } from './i18n.js';
 const I18N = i18nScript();

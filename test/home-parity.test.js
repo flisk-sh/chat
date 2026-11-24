@@ -193,3 +193,18 @@ test('the phone top bar keeps every button on screen at 320, 360 and 375 px (#35
   expect(qa).toContain('for (const width of [320, 360, 375])');
   expect(qa).toContain('top bar');
 });
+
+test('guest does not expose internal anon id in user footer or badge (#363)', () => {
+  // Evaluate the helper from source: importing App.jsx would load web/src/api.js with this file's globals and break other tests.
+  const src = app.match(/export const userLabel = (.*);/)[1];
+  const userLabel = new Function('return ' + src.replace('boot = BOOT', 'boot'))();
+  expect(userLabel({login: 'anon-c8a5d77f7bbb99e5', anon: true})).toBe('Guest');
+  expect(userLabel({login: '', anon: false})).toBe('Guest');
+  expect(userLabel({login: null, anon: false})).toBe('Guest');
+  expect(userLabel({login: 'octocat', anon: false})).toBe('@octocat');
+  expect(app).toContain('userLabel()');
+  expect(app).toContain('Sign in with GitHub');
+  expect(app).not.toMatch(/@' \+ BOOT\.login/);
+  expect(built).toContain('Sign in with GitHub');
+  expect(built).not.toMatch(/@['"]\s*\+\s*BOOT\.login/);
+});

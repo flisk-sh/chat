@@ -11,7 +11,7 @@ const TOKEN_FILE = 'src/page.js';
 // web/ is the Astryx front end (rounded by design); its built output is checked in as src/next-app.generated.js.
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'web']);
 // src/next-app.generated.js is the built Astryx bundle (Meta's design system, rounded by design); the rule still guards our own source.
-const SKIP_FILES = new Set(['assets/css/bootstrap.purged.min.css', 'src/next-app.generated.js']);
+const SKIP_FILES = new Set(['assets/css/bootstrap.purged.min.css', 'src/next-app.generated.js', 'src\\next-app.generated.js']);
 const SKIP_PREFIXES = ['assets/social/'];
 const EXTENSIONS = /\.(?:css|html|js|mjs)$/;
 
@@ -22,9 +22,10 @@ const RADIUS_DECL = /(?<![\w-])(border(?:-(?:top|bottom|start|end)-(?:left|right
 const RADIUS_TOKEN_DEF = /(?<![\w-])(--(?:bs-)?(?:[\w-]*-)?radius[\w-]*)\s*:\s*([^;}\n]+)/g;
 
 export function findRadiusProblems(source, file = '') {
+  const normFile = file.replace(/\\/g, '/');
   const problems = [];
   const lineOf = (index) => source.slice(0, index).split('\n').length;
-  if (file.startsWith('scripts/') || file.startsWith('test/')) return problems;
+  if (normFile.startsWith('scripts/') || normFile.startsWith('test/')) return problems;
   for (const match of source.matchAll(RADIUS_DECL)) {
     const value = match[2].trim();
     if (value.startsWith('${') || value === '') continue;
@@ -36,7 +37,7 @@ export function findRadiusProblems(source, file = '') {
   for (const match of source.matchAll(RADIUS_TOKEN_DEF)) {
     const [, name, raw] = match;
     const value = raw.trim();
-    if (file === TOKEN_FILE && (name === '--radius' || name.startsWith('--flisk-radius') || (name.startsWith('--bs-') && value === 'var(--radius)'))) continue;
+    if (normFile === TOKEN_FILE && (name === '--radius' || name.startsWith('--flisk-radius') || (name.startsWith('--bs-') && value === 'var(--radius)'))) continue;
     problems.push(`${file}:${lineOf(match.index)} ${name}: ${value} (only --radius in ${TOKEN_FILE} may set a radius)`);
   }
   return problems;
@@ -45,7 +46,7 @@ export function findRadiusProblems(source, file = '') {
 function* walk(root, dir = root) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
-    const rel = relative(root, path);
+    const rel = relative(root, path).replace(/\\/g, '/');
     if (statSync(path).isDirectory()) {
       if (!SKIP_DIRS.has(name)) yield* walk(root, path);
     } else if (EXTENSIONS.test(name) && !SKIP_FILES.has(rel) && !SKIP_PREFIXES.some((p) => rel.startsWith(p))) {
