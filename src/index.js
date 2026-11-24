@@ -598,34 +598,26 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
 
   // The inside of the settings dialog for this visitor. Anyone can open it: a guest sees the account and help sections, a signed-in
   // visitor also their AI for reviews. Only the AI's name and model come back, never its key.
-  if (request.method === 'GET' && path === '/settings/data') {
-
-    // What this visitor has used today, read only: the free tasks and voice chats (counted per login, or per network address for a guest)
+  // What this visitor has used today, read only: the free tasks and voice chats (counted per login, or per network address for a guest)
     // and the pictures (counted per login in D1). The same counters the gates use, so the numbers match what will be refused.
-    const usageToday = async () => {
+    const usageToday = async (named) => {
       const login = session?.login || 'anon-none';
       const id = await who(login);
       const [tasks, talk, pics] = await Promise.all([usageOf(env, 'chat', { anon: !named, id }), usageOf(env, 'talk', { anon: !named, id }), session ? photosUsed(env, session.login) : 0]);
       return [{ key: 'tasks', ...tasks }, { key: 'pictures', used: pics, limit: PHOTOS_PER_LOGIN }, { key: 'talk', ...talk }];
     };
+  if (request.method === 'GET' && path === '/settings/data') {
+
     const site = request.headers.get('sec-fetch-site');
     if (site && site !== 'same-origin') return json(403, { error: 'this only works from chat itself' });
     const named = session && !anon;
     return json(200, {
       login: named ? session.login : '', named: !!named, stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY,
       saved: named ? await loadSettings(env, session.login).catch(() => null) : null,
-      usage: await usageToday(), history: { pictures: session ? await photoHistory(env, session.login) : [] },
+      usage: await usageToday(!!named), history: { pictures: session ? await photoHistory(env, session.login) : [] },
     });
   }
   if (request.method === 'GET' && path === '/settings/panel') {
-    // What this visitor has used today, read only: the free tasks and voice chats (counted per login, or per network address for a guest)
-    // and the pictures (counted per login in D1). The same counters the gates use, so the numbers match what will be refused.
-    const usageToday = async () => {
-      const login = session?.login || 'anon-none';
-      const id = await who(login);
-      const [tasks, talk, pics] = await Promise.all([usageOf(env, 'chat', { anon: !named, id }), usageOf(env, 'talk', { anon: !named, id }), session ? photosUsed(env, session.login) : 0]);
-      return [{ key: 'tasks', ...tasks }, { key: 'pictures', used: pics, limit: PHOTOS_PER_LOGIN }, { key: 'talk', ...talk }];
-    };
     const site = request.headers.get('sec-fetch-site');
     if (site && site !== 'same-origin') return json(403, { error: 'this only works from chat itself' });
     const ok = url.searchParams.get('ok');
@@ -633,7 +625,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     return html(settingsPanelHtml({
       login: session?.login || '', anon: !named, stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY,
       saved: named ? await loadSettings(env, session.login).catch(() => null) : null,
-      usage: await usageToday(), history: { pictures: session ? await photoHistory(env, session.login) : [] },
+      usage: await usageToday(!!named), history: { pictures: session ? await photoHistory(env, session.login) : [] },
       section: url.searchParams.get('section') || '', lang: url.searchParams.get('lang') === 'uk' ? 'uk' : '',
       flash: ok === 'saved' || ok === 'deleted' ? ok : '',
     }));

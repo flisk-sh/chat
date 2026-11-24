@@ -170,7 +170,7 @@ export function SettingsDialog({open, onClose, section, onSection, scheme, setSc
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
-    fetch('/settings/data', {cache: 'no-store'}).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((d) => { setData(d); setFailed(false); }, () => setFailed(true));
+    fetch('/settings/data', {cache: 'no-store'}).then((r) => (r.ok ? r.json() : Promise.reject(new Error('settings ' + r.status)))).then((d) => { setData(d); setFailed(false); }, () => setFailed(true));
   }, []);
   useEffect(() => { if (open) load(); }, [open, load]);
   const cur = settingsSection(section);
