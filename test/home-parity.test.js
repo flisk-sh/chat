@@ -168,8 +168,8 @@ test('the phone top bar keeps every button on screen at 320, 360 and 375 px (#35
   const css = read('web/src/app.css');
   expect(css).toContain('@media (max-width:400px){.chat-head:has(.chat-head-end)');
   expect(app).toContain('const tiny = useNarrow(340);');
-  expect(app).toContain('{signIn && !tiny && <Button label="Sign in"');
-  expect(app).toContain("...(signIn && tiny ? [{label: 'Sign in with GitHub'");
+  expect(app).toContain('{signIn && !tiny && <Button label="Start free with GitHub"');
+  expect(app).toContain("...(signIn && tiny ? [{label: 'Start free with GitHub'");
   const qa = read('scripts/mobile-qa.mjs');
   expect(qa).toContain('for (const width of [320, 360, 375])');
   expect(qa).toContain('top bar');

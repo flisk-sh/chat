@@ -23,9 +23,14 @@ test('the signed-out home page has one primary button with the standard label, l
   expect(app).not.toContain('label="Sign in with GitHub" variant="primary"');
 });
 
-test('only the hero button carries the utm tag; the small Sign in links stay plain', () => {
+test('guests see the standard button in the header and in the daily-limit card, with the utm link', () => {
+  expect(app).toContain('<Button label="Start free with GitHub" size="sm" variant="primary" href={HERO_SIGNIN} />');
+  expect(app).toContain("onClick: () => { location.href = HERO_SIGNIN; }");
+  expect(app).not.toContain('<Button label="Sign in"');
+  // The limit card shows it to guests only, with the line under it.
+  expect(app).toMatch(/\(!BOOT\.login \|\| BOOT\.anon\) && <VStack gap=\{1\}><Button label="Start free with GitHub" variant="primary" size="sm" href=\{HERO_SIGNIN\} \/><Text type="supporting">No card\. Free to start\.<\/Text>/);
+  // Everything goes through the one constant, so the utm text exists once.
   expect(app.match(/utm_campaign=free-key/g)).toHaveLength(1);
-  expect(app).toContain('<Button label="Sign in" size="sm" variant="primary" href="/auth/start" />');
 });
 
 test('the hero first screen text is short and plain', () => {
