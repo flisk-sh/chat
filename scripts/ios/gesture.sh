@@ -15,7 +15,7 @@ case "${1:-}" in
   long-press) axe touch -x "$2" -y "$3" --down --up --delay 1 --udid "$UDID" ;;
   swipe) axe swipe --start-x "$2" --start-y "$3" --end-x "$4" --end-y "$5" --duration 0.5 --udid "$UDID" ;;
   scroll) size; x=$((W / 2))
-    if [ "${2:-down}" = down ]; then axe swipe --start-x $x --start-y $((H * 3 / 4)) --end-x $x --end-y $((H / 4)) --duration 0.5 --udid "$UDID"
+    if [[ "${2:-down}" = down ]]; then axe swipe --start-x $x --start-y $((H * 3 / 4)) --end-x $x --end-y $((H / 4)) --duration 0.5 --udid "$UDID"
     else axe swipe --start-x $x --start-y $((H / 4)) --end-x $x --end-y $((H * 3 / 4)) --duration 0.5 --udid "$UDID"; fi ;;
   back) size; axe gesture swipe-from-left-edge --screen-width "$W" --screen-height "$H" --udid "$UDID" ;;
   dismiss-sheet) size; axe swipe --start-x $((W / 2)) --start-y $((H / 6)) --end-x $((W / 2)) --end-y $((H * 5 / 6)) --duration 0.6 --udid "$UDID" ;;

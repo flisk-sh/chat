@@ -15,14 +15,14 @@ xcrun simctl install "$UDID" "$APP" || { echo "install failed"; exit 1; }
 # The bundle id inside the app wins: it often differs from the Android package
 # (a new Flutter app is com.example.myApp on iOS, com.example.my_app on Android)
 BID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" 2>/dev/null)
-if [ -n "$BID" ] && [ "$BID" != "$APP_ID" ]; then echo "Bundle id read from the app (differs from app_id)"; APP_ID=$BID; fi
+if [[ -n "$BID" ]] && [[ "$BID" != "$APP_ID" ]]; then echo "Bundle id read from the app (differs from app_id)"; APP_ID=$BID; fi
 export APP_ID
 xcrun simctl launch "$UDID" "$APP_ID"; sleep 8
 # First capture stores the screen width in points for gesture.sh
 python3 scripts/ios/screen.py "$RUNNER_TEMP/warmup" 00 >/dev/null 2>&1 || true
 # Optional screen recording, kept in results/ (encrypted like the rest)
 REC=""
-if [ "${RECORD_VIDEO:-false}" = true ]; then
+if [[ "${RECORD_VIDEO:-false}" = true ]]; then
   mkdir -p "results/$PERSONA/video"
   set -m   # own process group: a background job of a script would ignore the SIGINT that ends the file
   xcrun simctl io "$UDID" recordVideo --codec=h264 --force "results/$PERSONA/video/rec_01.mp4" > "$RUNNER_TEMP/rec.log" 2>&1 &
@@ -35,7 +35,7 @@ claude -p "Read $BRIEF and personas.json, then do the mission until the final re
   --allowedTools "Bash(bash scripts/ios/gesture.sh:*),Bash(python3 scripts/ios/screen.py:*),Bash(python3 scripts/ios/type.py:*),Bash(sleep:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*),Read,Write,Edit" \
   > results/agent-output.json 2> results/agent-errors.txt
 CODE=$?
-if [ -n "$REC" ]; then
+if [[ -n "$REC" ]]; then
   kill -INT "$REC" 2>/dev/null
   for _ in $(seq 1 30); do kill -0 "$REC" 2>/dev/null || break; sleep 1; done
   cat "$RUNNER_TEMP/rec.log"; ls -l "results/$PERSONA/video"

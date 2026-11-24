@@ -18,9 +18,9 @@ jobs:
   measure:
     permissions:
       contents: write
-    uses: flisk-sh/gel/.github/workflows/north-star.yml@6a25d9698e613ae0c6b101bf5d01c2bf03bda123 # main, north-star passes measure_secret (gel#69)
+    uses: flisk-sh/gel/.github/workflows/north-star.yml@15df52e9c5afa17814fdb336588e677f72feb40a # v1.17.0 (+next-cta)
     with:
-      gel_ref: 6a25d9698e613ae0c6b101bf5d01c2bf03bda123
+      gel_ref: 15df52e9c5afa17814fdb336588e677f72feb40a
       timeout: 10
     secrets:
       measure_secret: ${{ secrets.FLISK_ANALYTICS_KEY }}

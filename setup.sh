@@ -13,7 +13,7 @@ echo "Setting up agent testers for $REPO"
 
 KEYDIR="$HOME/.mobile-agent-testers"; mkdir -p "$KEYDIR"; chmod 700 "$KEYDIR"
 PRIV="$KEYDIR/${REPO//\//_}.pem"
-if [ ! -f "$PRIV" ]; then
+if [[ ! -f "$PRIV" ]]; then
   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out "$PRIV" 2>/dev/null
   chmod 600 "$PRIV"
   echo "Private key created: $PRIV (keep it safe, never commit it)"
@@ -31,7 +31,7 @@ if ! grep -qxE 'CLAUDE_CODE_OAUTH_TOKEN|ANTHROPIC_API_KEY' <<<"$SECRETS"; then
   echo "  1) a Claude Pro/Max subscription: run 'claude setup-token' in another terminal and paste the token"
   echo "  2) an Anthropic API key (pay per token)"
   read -rp "Choose 1 or 2: " CHOICE
-  NAME=$([ "$CHOICE" = 2 ] && echo ANTHROPIC_API_KEY || echo CLAUDE_CODE_OAUTH_TOKEN)
+  NAME=$([[ "$CHOICE" = 2 ]] && echo ANTHROPIC_API_KEY || echo CLAUDE_CODE_OAUTH_TOKEN)
   read -rsp "Paste it (hidden): " VALUE; echo
   printf '%s' "$VALUE" | gh secret set "$NAME"
   unset VALUE
