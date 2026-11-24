@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { answeredModel, handle, overDailyLimit, usedToday, publishSite, refundDailyLimit, resetHealthCache, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
+import { answeredModel, handle, overDailyLimit, usageOf, usedToday, publishSite, refundDailyLimit, resetHealthCache, MAX_SITE_BYTES, withStorageShim } from '../src/index.js';
 import { parseAction, runTask } from '../src/loop.js';
 import { SYSTEM } from '../src/prompt.js';
 import { modelLabel, resolveModel } from '../src/model.js';
@@ -181,6 +181,13 @@ describe('safety', () => {
     expect(await usedToday('octo', { cache, scope: 'chat-limit' })).toBe(3); // reading twice changes nothing
     expect(await usedToday('other', { cache, scope: 'chat-limit' })).toBe(0);
     expect(await usedToday('octo', { cache: null, scope: 'chat-limit' })).toBe(0);
+    // Production has no LIMIT_CACHE binding: the gate then uses the default cache, and so must the reader (it read 0 for a while).
+    const saved = globalThis.caches;
+    globalThis.caches = { default: cache };
+    try {
+      expect(await usedToday('octo', { scope: 'chat-limit' })).toBe(3);
+      expect((await usageOf({}, 'chat', { anon: false, id: 'octo' })).used).toBe(3);
+    } finally { globalThis.caches = saved; }
   });
 
   test('a task the free AI never answered gives its count back, and the count never goes below zero', async () => {

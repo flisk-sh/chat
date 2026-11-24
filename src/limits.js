@@ -64,7 +64,7 @@ export const overQuota = (env, kind, { anon, id }) => overDailyLimit(id, { cache
 export const refundQuota = (env, kind, { anon, id }) => refundDailyLimit(id, { cache: env.LIMIT_CACHE, scope: scopeOf(kind, anon) });
 
 // What a person has used today, read only (nothing is counted). Same keys as overDailyLimit, so the numbers match what the gate enforces.
-export async function usedToday(id, { cache, scope, now = Date.now() }) {
+export async function usedToday(id, { cache = globalThis.caches?.default, scope, now = Date.now() }) {
   if (!cache) return 0;
   try {
     const hit = await cache.match(`https://${scope}.invalid/${encodeURIComponent(id)}/${new Date(now).toISOString().slice(0, 10)}`);
