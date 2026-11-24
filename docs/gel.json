@@ -53,9 +53,16 @@
     "install-ignore-scripts": "adding --ignore-scripts to bun/npm installs in check.yml, deploy.yml and e2e-live.yml can break builds that rely on postinstall; needs a maintainer to test each one, tracked as follow-up",
     "workflow-checkout-safety": "deploy.yml checks out in a workflow_run workflow with a write token; this is a deploy-security change that needs a maintainer review, not a mechanical edit",
     "curl-https-only": "scripts/ios/run_agent.sh curl probes a local simulator endpoint; needs a maintainer to confirm it can be https-only",
-    "log-injection": "scripts/e2e-live.mjs logs error.message; the CR/LF strip needs a maintainer to confirm the log format the e2e dashboard parses"
+    "log-injection": "scripts/e2e-live.mjs logs error.message; the CR/LF strip needs a maintainer to confirm the log format the e2e dashboard parses",
+    "sonar_patterns": "setup.sh and src/page.js (a minified browser bundle, scored high risk by risk-history) are not edited without a test; their existing hits are frozen in the baseline and may only go down"
   },
   "ignore": [
     "src/next-app.generated.js"
-  ]
+  ],
+  "sonar_patterns": {
+    "baseline": {
+      "setup.sh": 2,
+      "src/page.js": 1
+    }
+  }
 }
