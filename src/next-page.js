@@ -4,7 +4,8 @@
 import { NEXT_CSS, NEXT_CSS_PATH, NEXT_FONTS, NEXT_JS, NEXT_JS_PATH } from './next-app.generated.js';
 import { EARTH_JS } from './earth.js';
 import { SETTINGS_CSS, SETTINGS_JS } from './settings-dialog.js';
-import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, SEO_HEAD, loginHook } from './page.js';
+import { jaScript } from './i18n-ja.js';
+import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, seoHead, loginHook } from './page.js';
 
 const LS = new RegExp('[\\u2028\\u2029]', 'g');
 const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
@@ -13,11 +14,11 @@ const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
 const BAR_CSS = '.vv-root{top:calc(var(--vv-top,0px) + var(--fbar,0px));height:calc(var(--vv-h,100dvh) - var(--fbar,0px))}';
 const BAR_JS = `(function(){var r=document.documentElement,h;function find(){return [].find.call(document.body.children,function(e){return /2147483000/.test(e.style.cssText)})}function set(){r.style.setProperty('--fbar',(h?h.offsetHeight:0)+'px')}function go(){h=find();if(!h)return setTimeout(go,100);set();if(window.ResizeObserver)new ResizeObserver(set).observe(h)}go()})();`;
 
-export function nextPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false } = {}) {
+export function nextPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false, lang = 'en' } = {}) {
   const boot = { embed, login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES };
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="${lang === 'ja' ? 'ja' : 'en'}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<title>Flisk Chat</title>${SEO_HEAD}
+<title>${lang === 'ja' ? 'Flisk Chat: 一言でウェブサイトとアプリを作る' : 'Flisk Chat'}</title>${seoHead(lang)}
 ${ICON_HEAD}
 <script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>
 ${embed ? '' : `<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>`}
@@ -25,7 +26,7 @@ ${embed ? '' : `<script src="https://flisk.si/assets/bar.js" data-product="Chat"
 <style>${embed ? '' : BAR_CSS + SETTINGS_CSS}</style></head><body>${embed ? '' : '<canvas id="earth" class="earthc" aria-hidden="true"></canvas>'}<div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>
 <script type="module" src="${NEXT_JS_PATH}"></script>
-${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>\n<script>${SETTINGS_JS}</script>`}</body></html>`;
+${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>\n<script>${SETTINGS_JS}</script>`}${lang === 'ja' ? `\n<script>${jaScript()}</script>` : ''}</body></html>`;
 }
 
 // The embedded chat can be framed by grow.flisk.si (and analytics, as everywhere); nothing else.
