@@ -56,5 +56,40 @@ export const CAPABILITIES = [
         "needsComputer": false
       }
     ]
+  },
+  {
+    "service": "studio",
+    "origin": "https://studio.flisk.si",
+    "auth": "none",
+    "capabilities": [
+      {
+        "id": "photo-editor",
+        "title": "Photo editor",
+        "does": "Removes the background of a photo, crops, rotates, adjusts light and colour, adds text and resizes it. The photo stays in the visitor's browser.",
+        "input": {},
+        "asks": [
+          "remove the background",
+          "cut out the subject",
+          "edit a photo",
+          "crop a photo",
+          "resize a photo"
+        ],
+        "link": "https://studio.flisk.si/#editor",
+        "needsComputer": false
+      },
+      {
+        "id": "pdf-tools",
+        "title": "PDF tools",
+        "does": "Merges PDFs, shrinks them and puts a watermark across every page. Files stay in the visitor's browser.",
+        "input": {},
+        "asks": [
+          "merge pdfs",
+          "make a pdf smaller",
+          "watermark a pdf"
+        ],
+        "link": "https://studio.flisk.si/#merge",
+        "needsComputer": false
+      }
+    ]
   }
 ];
