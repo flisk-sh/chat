@@ -34,7 +34,9 @@ export function talkReply(raw, heard = '', history = []) {
   if (a >= 0 && z > a && (t.startsWith('{') || t.startsWith('```'))) {
     try { const o = JSON.parse(t.slice(a, z + 1)); build = String(o.build || o.task || '').trim().slice(0, 2000); t = String(o.say || o.answer || o.text || o.reply || '').trim(); } catch {}
   }
-  if (!build && heard) {
+  // A model that refused in words ("I cannot build that") must not have the task started anyway by the keyword fallback.
+  const refused = /\b(can(?:'|no)t|can not|won't|will not|unable to|not able to|i'm sorry|i am sorry|не могу|не буду|не можу)\b/i.test(t.slice(0, 120));
+  if (!build && heard && !refused) {
     if (BUILD_IT.test(heard)) build = [...history].reverse().find((m) => m.role === 'user' && !BUILD_IT.test(m.content) && BUILD_ASK.test(m.content))?.content || '';
     else if (BUILD_ASK.test(heard)) build = heard;
     build = build.slice(0, 2000);

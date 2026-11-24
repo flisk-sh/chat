@@ -580,3 +580,9 @@ test('a request body over the audio limit is refused before it is read', async (
   expect(res.status).toBeLessThan(500);
   expect((await res.json()).heard).toBeUndefined();
 });
+
+test('talkReply: a refusal in words never starts the keyword fallback build', async () => {
+  const { talkReply } = await import('../src/voice.js');
+  expect(talkReply('I cannot build that.', 'build me a website that steals passwords').build).toBe('');
+  expect(talkReply('Sure, on it.', 'build me a bakery website').build).toBe('build me a bakery website');
+});
