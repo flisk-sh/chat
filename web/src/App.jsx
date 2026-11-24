@@ -8,6 +8,8 @@ import {BOOT, runTask, podOk, getPod, runInBrowser, keyFor, modelFor, lsGet, orS
 import {markEngaged} from './engaged.js';
 import {Widget, WorkerCard, BrowserAnswer} from './Cards.jsx';
 import {PagePanel} from './Panel.jsx';
+import {StudioPanel, sendToStudio} from './Studio.jsx';
+import {parseStudioCommand} from './studio-commands.js';
 import {newTurn, applyEv, nextSteps, chatTitle, shownText, liveText, pictures, wantsVoice, resetText} from './events.js';
 import {QuestionMarkCircleIcon} from '@heroicons/react/24/outline';
 import {AppShell, useAppShellMobile} from '@astryxdesign/core/AppShell';
@@ -28,7 +30,7 @@ import {
   ChatMessageList, ChatToolCalls,
 } from '@astryxdesign/core/Chat';
 import {
-  PlusIcon, MicrophoneIcon, ArrowDownTrayIcon, GlobeAltIcon, ChatBubbleLeftIcon, ComputerDesktopIcon, ArrowTopRightOnSquareIcon, PaperClipIcon, FilmIcon,
+  PlusIcon, MicrophoneIcon, ArrowDownTrayIcon, GlobeAltIcon, ChatBubbleLeftIcon, ComputerDesktopIcon, ArrowTopRightOnSquareIcon, PaperClipIcon, FilmIcon, PhotoIcon,
   CloudIcon, ChartBarIcon, ServerStackIcon, SpeakerWaveIcon, Cog6ToothIcon, MagnifyingGlassIcon, SunIcon, KeyIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 
@@ -238,6 +240,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [files, setFiles] = useState([]);
   const [limit, setLimit] = useState(null);
   const [notice, setNotice] = useState('');
+  const [studio, setStudio] = useState(false), studioFrame = useRef(null); // the Studio plugin beside the chat
   const [panel, setPanel] = useState(''); // the published page open in the side panel (#438)
   const [chats, setChats] = useState(loadChats);
   const [chatId, setChatId] = useState(() => 'c' + Date.now());
@@ -343,6 +346,9 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   }, [busy, mode, turns, picked, sel, chatId]);
 
   const [dictating, setDictating] = useState(false);
+  // With Studio open, "remove the background" or "crop to square", spoken or typed, goes to the editor, not to the chat.
+  const toStudio = (text) => { const c = studio && parseStudioCommand(text); return !!c && sendToStudio(studioFrame.current, c); };
+  const onStudioReply = useCallback((r) => setNotice('Studio: ' + r.note), []);
   const dict = useRef(null);
   // Voice typing: record, and when you tap again the words are written into the box (the same /api/transcribe as before).
   const dictate = async () => {
@@ -365,7 +371,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         const b = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(b.error || 'Voice answered ' + res.status);
         const text = String(b.text || '').trim();
-        if (text) setValue((v) => (v ? v + ' ' : '') + text); else setNotice('I did not catch that. Try again.');
+        if (text && toStudio(text)) setNotice('Studio: ' + text); else if (text) setValue((v) => (v ? v + ' ' : '') + text); else setNotice('I did not catch that. Try again.');
       } catch (e) { setNotice(String(e.message || e).slice(0, 160)); }
     };
     dict.current = {stop: () => { if (r.state !== 'inactive') r.stop(); }};
@@ -375,6 +381,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const submit = async (text) => {
     const task = (text || '').trim();
     if (!task && !files.length) return;
+    if (!files.length && toStudio(task)) { setValue(''); return; }
     const fs = files; setValue(''); setFiles([]);
     run(task, {files: fs}).catch(() => {});
   };
@@ -497,6 +504,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
                   button={{label: 'More', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
                   items={[
                     {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, endContent: <Demo kind="dictate" />, onClick: dictate},
+                    {label: 'Studio', description: 'Edit a photo: say "remove the background" or "crop to square"', icon: PhotoIcon, onClick: () => setStudio(true)},
                     {label: 'Voice talk', description: 'Talk out loud with the Flisk Oracle', icon: SpeakerWaveIcon, endContent: <Demo kind="talk" />, onClick: () => setTalk(true)},
                     {label: 'Attach files', description: 'Up to 3 files, 5 MB in all', icon: PaperClipIcon, endContent: <Demo kind="attach" />, onClick: () => fileIn.current && fileIn.current.click()},
                     {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, endContent: <Demo kind="computers" />, onClick: () => setPcOpen(true)},
@@ -540,6 +548,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         </ChatMessageList>
       </ChatLayout>
       </div>
+      {studio && <StudioPanel frameRef={studioFrame} onClose={() => setStudio(false)} onReply={onStudioReply} />}
       {panel && <PagePanel url={panel} onClose={() => setPanel('')} onCopy={copy} />}
       </div>
     </AppShell>
