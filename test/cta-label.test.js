@@ -13,10 +13,10 @@ const app = readFileSync(new URL('../web/src/App.jsx', import.meta.url), 'utf8')
 
 test('the signed-out home page has one primary button with the standard label, line and utm tag', () => {
   const home = homePage();
-  expect(home).toContain(`<a class="btn go" href="/auth/start?${UTM.replaceAll('&', '&amp;')}">${LABEL}</a>`);
+  expect(home).toContain(`<a class="btn go next-cta" data-next-cta href="/auth/start?${UTM.replaceAll('&', '&amp;')}">${LABEL}</a>`);
   expect(home).toContain(LINE);
   expect(home).not.toContain('>Sign in with GitHub<');
-  expect(app).toContain(`label="${LABEL}" variant="primary" href={HERO_SIGNIN}`);
+  expect(app).toContain(`label="${LABEL}" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN}`);
   expect(app).toContain(`const HERO_SIGNIN = '/auth/start?${UTM}'`);
   expect(app).toContain(LINE);
   expect(app).not.toContain('Sign in with GitHub to start');

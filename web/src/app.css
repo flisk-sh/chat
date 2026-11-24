@@ -223,3 +223,10 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 /* On touch screens + and send are 44px tall: the text cell stretches to that row, so the text centres on them (it sat 6px low). */
 .one-row > div > div:nth-child(2){align-self:stretch}
 .one-row > div > div:nth-child(2) > .astryx-chat-composer-input{flex:1 1 auto}
+
+/* next-cta (GEL guard): the one thing a visitor most likely does next gets a spinning rainbow border.
+   The fill is the button's own fill, so only the 2px ring shows the gradient. The stops are the only raw colours. */
+@property --next-cta-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+.next-cta{border:2px solid transparent;background:linear-gradient(var(--_button-fill),var(--_button-fill)) padding-box,conic-gradient(from var(--next-cta-angle),#ef4444,#f59e0b,#eab308,#22c55e,#3b82f6,#8b5cf6,#ef4444) border-box;animation:next-cta-spin 3s linear infinite}
+@keyframes next-cta-spin{to{--next-cta-angle:360deg}}
+@media (prefers-reduced-motion:reduce){.next-cta{animation:none}}

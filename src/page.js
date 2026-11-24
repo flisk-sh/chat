@@ -140,6 +140,12 @@ a{color:var(--green)}button{font:inherit;color:inherit}
 .byor{display:block;width:100%;margin:0 0 10px;padding:10px 14px;border:1px solid var(--ink);border-radius:var(--radius);background:var(--ink);color:var(--bg);font-weight:600;font-size:14px;cursor:pointer}.byor:hover{background:var(--green-d);border-color:var(--green-d)}.byorsep{margin:0 0 10px}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--radius);padding:7px 14px;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--ink)}.btn.go{background:var(--green);border-color:var(--green);color:var(--flisk-on-accent,#fff)}.btn.go:hover{background:var(--green-d)}
+/* next-cta (GEL guard): the most likely next action gets a spinning rainbow border; the fill stays the button green. */
+@property --next-cta-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+.btn.go.next-cta{border:2px solid transparent;padding:6px 13px;background:linear-gradient(var(--green),var(--green)) padding-box,conic-gradient(from var(--next-cta-angle),#ef4444,#f59e0b,#eab308,#22c55e,#3b82f6,#8b5cf6,#ef4444) border-box;animation:next-cta-spin 3s linear infinite}
+.btn.go.next-cta:hover{background:linear-gradient(var(--green-d),var(--green-d)) padding-box,conic-gradient(from var(--next-cta-angle),#ef4444,#f59e0b,#eab308,#22c55e,#3b82f6,#8b5cf6,#ef4444) border-box}
+@keyframes next-cta-spin{to{--next-cta-angle:360deg}}
+@media (prefers-reduced-motion:reduce){.btn.go.next-cta{animation:none}}
 .btn[disabled]{opacity:.55;cursor:wait}
 .err{color:var(--red);background:#FEF3F2;border:1px solid #FECDCA;border-radius:var(--radius);padding:10px 14px;white-space:pre-wrap;font-size:14px}
 .note{font-size:13px;color:var(--dim);margin:6px 0 0}
@@ -540,7 +546,7 @@ const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:
 export const homePage = () =>
   shell(
     'Flisk Chat',
-    `<main id="main" class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website or app. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk plans it, runs it on a real computer, and gives you the result and a live link.</p><a class="btn go" href="/auth/start?utm_source=chat&amp;utm_medium=cta&amp;utm_campaign=free-key">Start free with GitHub</a><p class="nocard" style="color:var(--dim);font-size:13px;margin:8px 0 0">No card. Free to start.</p></main>`,
+    `<main id="main" class="col" style="padding-top:14vh;overflow:auto;flex:1;min-height:0;width:100%">${LOGO}<h1 style="font:600 36px/1.15 var(--sans);letter-spacing:-.025em;margin:28px 0 10px">Ask for a website or app. It gets a computer.</h1><p style="color:var(--dim);max-width:56ch">Type what you want. Flisk plans it, runs it on a real computer, and gives you the result and a live link.</p><a class="btn go next-cta" data-next-cta href="/auth/start?utm_source=chat&amp;utm_medium=cta&amp;utm_campaign=free-key">Start free with GitHub</a><p class="nocard" style="color:var(--dim);font-size:13px;margin:8px 0 0">No card. Free to start.</p></main>`,
   );
 
 export const messagePage = (title, text) =>

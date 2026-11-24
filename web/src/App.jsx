@@ -489,7 +489,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
                 <Heading level={1} className="greet">{!BOOT.login ? 'Make real websites and apps from a sentence' : guestHome ? 'Describe a website or app. Get a live link.' : 'What shall we make today?'}</Heading>
                 <Markdown density="compact">{BOOT.login ? (guestHome ? 'Free, no sign-up. Pick an example or type your own.' : 'Ask a question, or describe a website or app.') : 'Flisk Chat makes them on a computer that is yours. You can look around first.'}</Markdown>
               </VStack></ChatMessageBubble>
-              {!BOOT.login && <ChatMessageBubble variant="ghost"><VStack gap={1}><Button label="Start free with GitHub" variant="primary" href={HERO_SIGNIN} /><Text type="supporting">No card. Free to start.</Text></VStack></ChatMessageBubble>}
+              {!BOOT.login && <ChatMessageBubble variant="ghost"><VStack gap={1}><Button label="Start free with GitHub" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN} /><Text type="supporting">No card. Free to start.</Text></VStack></ChatMessageBubble>}
               <ChatMessageBubble variant="ghost"><HStack className="chips" gap={2} wrap="wrap">
                 {starters.map((c) => <Tip key={c.label || c.id} title={c.label} brand="flisk" text={'Tap to try: ' + (c.prompt || c.label)} more="Flisk does the work and shows you the result in this chat."><Button label={c.label} variant="secondary" size="sm" onClick={() => setValue(c.prompt || c.label)} /></Tip>)}
               </HStack></ChatMessageBubble>
