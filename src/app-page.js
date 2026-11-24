@@ -33,7 +33,9 @@ ${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>`}${lang
 export const embedCsp = (csp) => csp.replace(/frame-ancestors [^;]*/, 'frame-ancestors https://grow.flisk.si https://analytics.flisk.si');
 
 // The app's own files (JS, CSS, fonts) come from this origin, so the page policy allows 'self' for them.
-export const appCsp = (csp) => csp.replace('script-src ', "script-src 'self' ").replace('style-src ', "style-src 'self' ").replace('font-src ', "font-src 'self' ");
+// The new app also frames studio.flisk.si: the Studio plugin (photo editor) runs there and chat sends it commands with postMessage. /classic does not.
+export const STUDIO_ORIGIN = 'https://studio.flisk.si';
+export const appCsp = (csp) => csp.replace('script-src ', "script-src 'self' ").replace('style-src ', "style-src 'self' ").replace('font-src ', "font-src 'self' ").replace("frame-src 'self'", `frame-src 'self' ${STUDIO_ORIGIN}`);
 
 // /_app/<name>.<hash>.<ext>: the app's files, kept by browsers for a year because the name changes with the content (#351).
 // A page from the version before a deploy can still ask for an old name for a moment; it gets today's file, not kept.

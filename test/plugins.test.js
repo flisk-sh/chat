@@ -25,3 +25,17 @@ describe('plugin catalog', () => {
       expect(list.find((p) => p.id === 'studio.' + id).status).toBe('ready');
   });
 });
+
+describe('plugin picker', () => {
+  test('the + menu opens the plugin picker, which reads the catalog', async () => {
+    const app = await Bun.file(new URL('../web/src/App.jsx', import.meta.url)).text();
+    expect(app).toContain("label: 'Plugins'");
+    expect(app).toContain('<PluginsDialog');
+    const dlg = await Bun.file(new URL('../web/src/Plugins.jsx', import.meta.url)).text();
+    expect(dlg).toContain('plugins/catalog.json');
+  });
+  test('the menu text names the real counts', async () => {
+    const app = await Bun.file(new URL('../web/src/App.jsx', import.meta.url)).text();
+    expect(app).toContain(`${list.length} plugins, ${list.filter((p) => p.status === 'ready').length} ready`);
+  });
+});
