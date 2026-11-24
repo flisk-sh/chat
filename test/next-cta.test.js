@@ -10,7 +10,8 @@ const css = readFileSync(new URL('../web/src/app.css', import.meta.url), 'utf8')
 
 test('the classic landing marks exactly one element, the first button after the h1', () => {
   const home = homePage();
-  const body = home.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, '');
+  // The page's markup is the <main> element; the scripts and styles sit outside it.
+  const body = home.slice(home.indexOf('<main'), home.indexOf('</main>'));
   const marked = [...body.matchAll(/<[a-z][^>]*>/gi)].filter((m) => /\sdata-next-cta(?=[\s=>/])/.test(m[0]));
   expect(marked).toHaveLength(1);
   expect(marked[0][0]).toMatch(/class="[^"]*\bnext-cta\b/);
