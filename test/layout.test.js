@@ -3,6 +3,14 @@ import { appPage } from '../src/page.js';
 
 const page = appPage({ login: 'ann', connected: [] });
 
+test('the task box takes the cursor on load before history renders, and only retries when nothing else has focus', () => {
+  const focusAt = page.indexOf("if(matchMedia('(pointer:fine)').matches){box.focus();");
+  const histAt = page.indexOf('\ndrawHist();\n');
+  expect(focusAt).toBeGreaterThan(-1);
+  expect(histAt).toBeGreaterThan(focusAt);
+  expect(page).toContain('if(document.activeElement===document.body)box.focus();');
+});
+
 test('the model picker and the + menu are placed inside the window when they open', () => {
   expect(page).toContain('const placeFloat=(el,anchor)=>');
   // clamps to the flisk bar and to any clipping parent, so neither menu is cut off

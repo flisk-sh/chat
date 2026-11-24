@@ -1573,7 +1573,7 @@ form.onsubmit=(e)=>{e.preventDefault();stopTalk();if(voiceOn)unlockAudio();const
   if(!cur.free&&!byoKey.value.trim()){openPop();pick(cur);byStat.textContent='Paste your '+cur.providerName+' API key first, then press Run again.';byoKey.focus();return;}
   lastSend=Date.now();box.value='';fit();if(treeAnswer){treeAnswer(task);return;}dropLimit();userMsg(task);
   if(!byVoice&&!attached.length&&!history.length&&BUILD.test(task)&&!ASK.test(task)){ask6(task);return;}history.push({role:'user',content:task});saveChat();run(task);};
-try{if(matchMedia('(pointer:fine)').matches){box.focus();requestAnimationFrame(()=>{if(document.activeElement!==box&&!document.querySelector('dialog[open],.pop:not([hidden])'))box.focus();});}}catch(e){}
+try{if(matchMedia('(pointer:fine)').matches){box.focus();requestAnimationFrame(()=>{if(document.activeElement===document.body)box.focus();});}}catch(e){}
 drawHist();
 if(window.__SIGNED__){try{const t=sessionStorage.getItem('chat_pending');if(t){sessionStorage.removeItem('chat_pending');try{const pf=JSON.parse(sessionStorage.getItem('chat_pending_files')||'[]');if(Array.isArray(pf))attached=pf.slice(0,3);}catch(e){}sessionStorage.removeItem('chat_pending_files');userMsg(t);history.push({role:'user',content:t});run(t);}}catch(e){}}
 `;
