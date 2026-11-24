@@ -190,13 +190,18 @@ describe('drawing the photo', () => {
     expect(env.DB.rows.get(`${day}|*`)).toBe(1);
   });
 
-  test('over the cap per login, or for everybody, there is no photo', async () => {
-    const env = { DB: fakeDb(), AI: ai('B'.repeat(4000)) };
+  test('over the cap per login, or for everybody, FLUX is skipped and only free Pollinations can answer', async () => {
+    const env = { DB: fakeDb(), AI: { run: async () => { throw new Error('FLUX must not run over the cap'); } } };
     const day = new Date().toISOString().slice(0, 10);
+    const down = async () => new Response('down', { status: 502 });
     env.DB.rows.set(`${day}|ana`, PHOTOS_PER_LOGIN);
-    expect(await sitePhoto(env, 'ana', 'bread')).toBe('');
+    expect(await sitePhoto(env, 'ana', 'bread', { fetchImpl: down })).toBe('');
     env.DB.rows.set(`${day}|*`, PHOTOS_PER_DAY);
-    expect(await sitePhoto(env, 'bo', 'bread')).toBe('');
+    expect(await sitePhoto(env, 'bo', 'bread', { fetchImpl: down })).toBe('');
+    // Over the cap, Pollinations still draws: the cap protects FLUX neurons, which Pollinations does not use.
+    const jpeg = new Uint8Array(5000).fill(7);
+    const ok = async () => new Response(jpeg, { headers: { 'content-type': 'image/jpeg' } });
+    expect(await sitePhoto(env, 'ana', 'a cat', { fetchImpl: ok })).toBe(`data:image/jpeg;base64,${Buffer.from(jpeg).toString('base64')}`);
   });
 
   test('a failed, slow or empty model gives no photo instead of an error', async () => {

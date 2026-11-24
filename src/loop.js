@@ -516,12 +516,20 @@ export async function runTask({ grade = null, stream = false, decision = null, c
   const drawImage = async (spec) => {
     emit({ type: 'image_start', prompt: spec.prompt });
     let pic = await Promise.resolve(photo(spec.prompt)).catch(() => '');
+    let busy = false;
     if (!pic) {
-      const r = await Promise.race([model([{ role: 'system', content: SVG_ASK }, { role: 'user', content: spec.prompt.replace(/,\s*(a photorealistic photo.*|high detail)$/i, '') }]), new Promise((_, no) => setTimeout(() => no(new Error('svg took too long')), 60_000))]).catch((e) => { console.warn('svg picture failed:', String(e?.message || e).slice(0, 200)); return null; });
-      const svg = cleanSvg(r?.text);
-      if (svg) pic = svgDataUrl(svg);
+      // The chat model writes the picture as SVG. A busy free model is short-lived, so it is asked again after the same waits as the main loop.
+      for (let attempt = 0; !pic && attempt <= BUSY_WAITS.length; attempt++) {
+        const r = await Promise.race([model([{ role: 'system', content: SVG_ASK }, { role: 'user', content: spec.prompt.replace(/,\s*(a photorealistic photo.*|high detail)$/i, '') }]), new Promise((_, no) => setTimeout(() => no(new Error('svg took too long')), 60_000))]).catch((e) => { console.warn('svg picture failed:', String(e?.message || e).slice(0, 200)); return null; });
+        const svg = cleanSvg(r?.text);
+        if (svg) { pic = svgDataUrl(svg); break; }
+        busy = r?.kind === 'busy';
+        if (!busy || attempt === BUSY_WAITS.length) break;
+        emit({ type: 'reroute', text: `Every free model is busy, trying again in ${Math.round(BUSY_WAITS[attempt] / 1000)} s` });
+        await wait(BUSY_WAITS[attempt]);
+      }
     }
-    if (!pic) return { error: 'the picture could not be drawn right now: the daily picture limit is used up or the drawing model is busy. Try again later' };
+    if (!pic) return { error: busy ? 'every free model is busy right now, so the picture could not be drawn. Try again in a minute' : 'the picture could not be drawn right now. Try again in a minute' };
     const saved = saveImage ? await Promise.resolve(saveImage(pic, spec.prompt)).catch((e) => ({ error: String(e?.message || e) })) : { url: pic };
     if (saved?.error || !saved?.url) return { error: saved?.error || 'the picture could not be saved' };
     links.push(saved.url);

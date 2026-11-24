@@ -41,13 +41,14 @@ export async function pollinationsPhoto(prompt, { fetchImpl = fetch, ms = PHOTO_
 
 // A data: URL of the photo, or '' when there is none.
 export async function sitePhoto(env, login, prompt, { ms = PHOTO_MS, fetchImpl = fetch } = {}) {
-  if (!prompt || !env.DB) return '';
+  if (!prompt) return '';
+  // The daily cap protects the account's FLUX neurons only. Pollinations costs none, so a spent cap (or no table yet)
+  // skips FLUX but still tries Pollinations: a picture must not end on "limit used up" while a free source works.
+  let slot = false;
   try {
-    if (!(await takePhotoSlot(env, login))) return '';
-  } catch {
-    return '';
-  }
-  const flux = env.AI ? await fluxPhoto(env, prompt, ms) : '';
+    slot = !!env.DB && (await takePhotoSlot(env, login));
+  } catch { /* no slot: no FLUX */ }
+  const flux = slot && env.AI ? await fluxPhoto(env, prompt, ms) : '';
   return flux || (env.NO_POLLINATIONS === '1' ? '' : pollinationsPhoto(prompt, { fetchImpl, ms }));
 }
 

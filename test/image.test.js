@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { appPage } from '../src/page.js';
-import { asksImage, cleanSvg, inlineLocal, parseAction, runTask } from '../src/loop.js';
+import { asksImage, BUSY_WAITS, cleanSvg, inlineLocal, parseAction, runTask } from '../src/loop.js';
 import { SYSTEM } from '../src/prompt.js';
 import { imageIntent } from '../src/model.js';
 import { handle, saveImage } from '../src/index.js';
@@ -52,6 +52,24 @@ describe('a picture the user asks for is drawn and shown in the chat, like ChatG
     await runTask({ task: 'put a cat photo into my notes file', model, computer });
     expect(ran).toBe(0);
     expect(JSON.stringify(msgs[1])).toContain('Refused: do not fetch pictures from an image website');
+  });
+
+  test('no photo and a busy chat model: the SVG fallback waits and asks again, then draws', async () => {
+    const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"><rect width="800" height="800" fill="#eee"/><circle cx="400" cy="400" r="200" fill="#fa0"/><circle cx="330" cy="350" r="30"/><circle cx="470" cy="350" r="30"/><path d="M340 480 Q400 540 460 480" stroke="#000" fill="none"/>${'<!-- pad -->'.repeat(30)}</svg>`;
+    let calls = 0;
+    const waits = [];
+    const model = async () => (++calls < 3 ? { error: 'The free AI is busy right now.', kind: 'busy' } : { text: SVG });
+    const r = await runTask({ task: 'draw a cat', model, computer: noComputer, photo: async () => '', wait: async (ms) => { waits.push(ms); } });
+    expect(calls).toBe(3);
+    expect(waits).toEqual(BUSY_WAITS);
+    expect(r.answer).toContain('![');
+  });
+
+  test('still busy after every wait: the sentence says the free models are busy, not that a limit is used up', async () => {
+    const model = async () => ({ error: 'The free AI is busy right now.', kind: 'busy' });
+    const r = await runTask({ task: 'draw a cat', model, computer: noComputer, photo: async () => '', wait: async () => {} });
+    expect(r.answer).toMatch(/^Sorry, every free model is busy/);
+    expect(r.answer).not.toMatch(/limit/);
   });
 
   test('no picture (daily limit, busy model): a calm sentence, never a page or a computer', async () => {
