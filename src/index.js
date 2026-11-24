@@ -18,7 +18,7 @@ import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { runOverSocket } from './browserpod.js';
-import { sitePhoto } from './photo.js';
+import { PHOTOS_PER_LOGIN, photosUsed, sitePhoto } from './photo.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { sentenceSplitter, splitReply } from './talk-stream.js';
@@ -30,7 +30,7 @@ import { withSecurityHeaders } from './security-headers.js';
 import { asksBuild, spokenReply, talkMessages, talkReply, transcribe } from './voice.js';
 export * from './voice.js';
 import { runEvents, sendTrace } from './trace.js';
-import { answeredModel, freeModelOpts, limitOf, overDailyLimit, overQuota, refundQuota, taskLimitBody } from './limits.js';
+import { usageOf, answeredModel, freeModelOpts, limitOf, overDailyLimit, overQuota, refundQuota, taskLimitBody } from './limits.js';
 export * from './limits.js';
 
 // RFC 9116 contact for security researchers, published at /.well-known/security.txt.
@@ -593,6 +593,14 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   // The inside of the settings dialog for this visitor. Anyone can open it: a guest sees the account and help sections, a signed-in
   // visitor also their AI for reviews. Only the AI's name and model come back, never its key.
   if (request.method === 'GET' && path === '/settings/panel') {
+    // What this visitor has used today, read only: the free tasks and voice chats (counted per login, or per network address for a guest)
+    // and the pictures (counted per login in D1). The same counters the gates use, so the numbers match what will be refused.
+    const usageToday = async () => {
+      const login = session?.login || 'anon-none';
+      const id = await who(login);
+      const [tasks, talk, pics] = await Promise.all([usageOf(env, 'chat', { anon: !named, id }), usageOf(env, 'talk', { anon: !named, id }), session ? photosUsed(env, session.login) : 0]);
+      return [{ key: 'tasks', ...tasks }, { key: 'pictures', used: pics, limit: PHOTOS_PER_LOGIN }, { key: 'talk', ...talk }];
+    };
     const site = request.headers.get('sec-fetch-site');
     if (site && site !== 'same-origin') return json(403, { error: 'this only works from chat itself' });
     const ok = url.searchParams.get('ok');
@@ -600,6 +608,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     return html(settingsPanelHtml({
       login: session?.login || '', anon: !named, stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY,
       saved: named ? await loadSettings(env, session.login).catch(() => null) : null,
+      usage: await usageToday(),
       section: url.searchParams.get('section') || '', lang: url.searchParams.get('lang') === 'uk' ? 'uk' : '',
       flash: ok === 'saved' || ok === 'deleted' ? ok : '',
     }));

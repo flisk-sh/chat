@@ -22,15 +22,15 @@ const signedIn = async (e, login = 'odykyi') => (await makeSession(e, login)).sp
 const panel = (over = {}) => settingsPanelHtml({ login: 'ann', saved: null, stored: true, limit: 5, ...over });
 
 describe('the panel', () => {
-  test('four sections, each a tab with its own panel, and only the account one open at first', () => {
+  test('five sections, each a tab with its own panel, and only the account one open at first', () => {
     const h = panel();
-    expect(SETTINGS_SECTIONS).toEqual(['account', 'ai', 'github', 'computers']);
+    expect(SETTINGS_SECTIONS).toEqual(['account', 'usage', 'ai', 'github', 'computers']);
     for (const id of SETTINGS_SECTIONS) {
       expect(h).toContain(`role="tab" class="sd-tab" id="sd-t-${id}" aria-controls="sd-p-${id}"`);
       expect(h).toContain(`id="sd-p-${id}" aria-labelledby="sd-t-${id}"`);
     }
     expect(h).toContain('id="sd-t-account" aria-controls="sd-p-account" aria-selected="true" tabindex="0"');
-    expect(h.match(/role="tabpanel"[^>]*hidden/g)).toHaveLength(3);
+    expect(h.match(/role="tabpanel"[^>]*hidden/g)).toHaveLength(4);
     expect(h).toContain('role="tablist" aria-orientation="vertical"');
     expect(h).toContain('type="search" class="sd-q" placeholder="Search settings"');
   });
@@ -176,7 +176,7 @@ describe('the browser script', () => {
     expect(SRC).toContain('a[href="/reviews"],a[href="/settings"]');
     expect(SRC).toContain('[data-open-settings]');
     expect(SRC).toContain('e.metaKey || e.ctrlKey');
-    expect(SRC).toContain('(github|ai|account|computers)');
+    expect(SRC).toContain('(github|ai|account|usage|computers)');
   });
   test('it posts with fetch, same origin, asking for JSON, and never keeps the key', () => {
     expect(SRC).toContain("credentials: 'same-origin'");
@@ -186,5 +186,28 @@ describe('the browser script', () => {
   });
   test('on phones the dialog fills the screen', () => {
     expect(SETTINGS_CSS).toMatch(/@media \(max-width:760px\)\{[\s\S]*\.sd-box\{width:100%;height:100%/);
+  });
+});
+
+describe('usage today', () => {
+  const usage = [{ key: 'tasks', used: 4, limit: 10 }, { key: 'pictures', used: 6, limit: 6 }, { key: 'talk', used: 0, limit: 30 }];
+  test('the Usage section shows what is left of each free allowance', () => {
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage, section: 'usage' });
+    expect(SETTINGS_SECTIONS).toContain('usage');
+    expect(html).toContain('<b>6</b> <span>left of 10</span>');
+    expect(html).toContain('<b>0</b> <span>left of 6</span>'); // pictures used up
+    expect(html).toContain('<b>30</b> <span>left of 30</span>');
+    expect(html).toContain('data-sd-model');
+    expect(html).toContain('Sign in with GitHub'); // a guest is told how to get more
+    expect(settingsPanelHtml({ login: 'ann', anon: false, usage, section: 'usage' })).not.toContain('More free tasks');
+    expect(settingsPanelHtml({ login: 'anon-1', anon: true, usage: [], section: 'usage' })).toContain('Usage is not available right now.');
+  });
+  test('GET /settings/panel hands a guest their real counts, from the counters the gates use', async () => {
+    const store = new Map();
+    const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+    const env = { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+    const res = await handle(new Request('https://chat.test/settings/panel?section=usage', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('left of 10'); // no session yet: the guest share, nothing used
   });
 });

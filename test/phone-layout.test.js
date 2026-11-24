@@ -144,7 +144,7 @@ test('on a phone the chat header is one row: Sign in stays in sight (in the more
   expect(phone).toContain('label="Start free with GitHub"');
   expect(phone).toContain('<MoreMenu');
   expect(phone).toContain('presentation="adaptive"');
-  for (const item of ["'Leave explain mode' : 'Explain'", "'Look: '", "'AI model and keys'"]) expect(phone).toContain(item);
+  for (const item of ["'Leave explain mode' : 'Explain'", "'Look: '", "'Settings and usage'"]) expect(phone).toContain(item);
   expect(css).toContain('.chat-head:has(.chat-head-end){flex-wrap:nowrap!important');
   expect(css).toContain('@media (max-width:400px){.chat-head:has(.chat-head-end)');
 });

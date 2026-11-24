@@ -8,7 +8,7 @@ import { UK } from './i18n.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-export const SETTINGS_SECTIONS = ['account', 'ai', 'github', 'computers'];
+export const SETTINGS_SECTIONS = ['account', 'usage', 'ai', 'github', 'computers'];
 export const COMPUTERS_URL = 'https://fleet.flisk.si/console?section=providers';
 const COMMANDS = [
   ['@flisk-chat review', 'Reads the changes and posts a review. Takes about 20 seconds.'],
@@ -18,11 +18,12 @@ const COMMANDS = [
 // What the search box looks in, besides the section's name.
 const WORDS = {
   account: 'account sign in sign out log out github login profile',
+  usage: 'usage left today limit free tasks pictures photos voice talk quota daily reset',
   ai: 'ai model api key provider openrouter claude anthropic openai reviews save delete',
   github: 'github reviews pull request install app commands comment copy repo',
   computers: 'computers fleet providers connect sandbox machine',
 };
-const NAMES = { account: 'Account', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
+const NAMES = { account: 'Account', usage: 'Usage today', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
 
 // Ukrainian lives in i18n.js (the page script reads it too); here the server uses it for ?lang=uk.
 const tr = (lang) => (s) => (lang === 'uk' ? UK[s] || s : s);
@@ -33,7 +34,7 @@ const row = (label, hint, control, forId = '') =>
 const group = (title, body) => `<div class="sd-group"${title ? ` role="group" aria-label="${esc(title)}"` : ''}>${title ? `<h4>${esc(title)}</h4>` : ''}${body}</div>`;
 
 // The inside of the dialog for one visitor. `saved` is the AI they stored (never its key), `form` what they typed after a refused save.
-export function settingsPanel({ login = '', anon = false, saved = null, stored = false, limit = 5, section = '', flash = '', error = '', form = {}, lang = '', keyPages, appUrl, themeNote = '' } = {}) {
+export function settingsPanel({ login = '', anon = false, saved = null, stored = false, limit = 5, section = '', flash = '', error = '', form = {}, lang = '', keyPages, appUrl, themeNote = '', usage = [] } = {}) {
   const t = tr(lang);
   const named = !!login && !anon && !/^anon-/i.test(String(login));
   const cur = SETTINGS_SECTIONS.includes(section) ? section : 'account';
@@ -68,7 +69,21 @@ ${row(t('API key'), t('The key is encrypted before it is stored and never shown 
 
   const computers = group('', row(t('Your computers'), t('Connect the computers and cloud accounts where chat runs your tasks. This opens in Fleet, in a new tab.'), `<a class="sd-btn go" href="${COMPUTERS_URL}" target="_blank" rel="noopener">${t('Open Computers')}</a>`));
 
-  const bodies = { account, ai: aiBody, github, computers };
+  // What is left of today's free allowance. The numbers come from the same counters the gates use; the counters are not exact across data
+  // centres, so "about" is honest. Everything resets at midnight UTC.
+  const USAGE_NAMES = { tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.'] };
+  const meter = (u) => {
+    const left = Math.max(0, u.limit - u.used);
+    const [name, hint] = USAGE_NAMES[u.key] || [u.key, ''];
+    const pct = u.limit ? Math.min(100, Math.round((u.used / u.limit) * 100)) : 0;
+    return row(t(name), t(hint), `<div class="sd-use"><b>${left}</b> <span>${t('left of')} ${u.limit}</span><div class="sd-bar" role="img" aria-label="${esc(`${u.used} / ${u.limit}`)}"><i style="width:${pct}%"></i></div></div>`);
+  };
+  const usagePane = group('', (usage.length ? usage.map(meter).join('') : `<p class="sd-hint">${t('Usage is not available right now.')}</p>`)) +
+    `<p class="sd-hint">${t('Counts reset every day at midnight UTC.')} ${named ? '' : t('Signing in with GitHub gives more free tasks, and keeps your chats.')}</p>` +
+    (named ? '' : group('', row(t('More free tasks'), t('No card. Keeps your chats too.'), '<a class="sd-btn go" href="/auth/start">' + t('Sign in with GitHub') + '</a>'))) +
+    group('', row(t('AI model and keys'), t('Flisk Wolf is free, or add your own key.'), `<button type="button" class="sd-btn" data-sd-model>${t('Choose the AI')}</button>`));
+
+  const bodies = { account, usage: usagePane, ai: aiBody, github, computers };
   const msg = error ? `<p class="sd-flash sd-bad" role="alert">${esc(t('Not saved: {why}').replace('{why}', error))}</p>` : flash === 'saved' ? `<p class="sd-flash" role="status">${t('Saved. Your next review uses this AI.')}</p>` : flash === 'deleted' ? `<p class="sd-flash" role="status">${t('Deleted. Reviews use the free Flisk Wolf model again.')}</p>` : '';
   const tabs = SETTINGS_SECTIONS.map((id) => `<button type="button" role="tab" class="sd-tab" id="sd-t-${id}" aria-controls="sd-p-${id}" aria-selected="${id === cur}" tabindex="${id === cur ? 0 : -1}" data-sec="${id}" data-kw="${esc((NAMES[id] + ' ' + t(NAMES[id]) + ' ' + WORDS[id]).toLowerCase())}">${t(NAMES[id])}</button>`).join('');
   const panes = SETTINGS_SECTIONS.map((id) => `<section role="tabpanel" class="sd-pane" id="sd-p-${id}" aria-labelledby="sd-t-${id}" tabindex="0"${id === cur ? '' : ' hidden'}><h3>${t(NAMES[id])}</h3>${id === cur || (error && id === 'ai') ? msg : ''}<div class="sd-err" role="alert" hidden></div>${bodies[id]}</section>`).join('');
@@ -105,6 +120,7 @@ export const SETTINGS_CSS = `
 .sd-in{width:100%;padding:8px 10px;border:1px solid var(--sd-line2);border-radius:var(--radius);background:var(--sd-field);color:var(--sd-ink);font:inherit;font-size:16px}
 .sd-keylinks{margin:0;font-size:13px;text-align:right}.sd-keylink{color:var(--sd-ink)}
 .sd-cur{color:var(--sd-ink)}
+.sd-use{display:grid;gap:6px;justify-items:end;min-width:0;width:100%}.sd-use b{font-size:20px;font-weight:600}.sd-use span{color:var(--sd-dim);font-size:13px}.sd-bar{width:100%;height:6px;border-radius:var(--radius);background:var(--sd-line)}.sd-bar i{display:block;height:100%;border-radius:inherit;background:var(--sd-accent)}
 .sd-actions{display:flex;justify-content:flex-end;padding:12px 0 14px;border-top:1px solid var(--sd-line)}
 .sd-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--sd-line2);background:var(--sd-bg);color:var(--sd-ink);border-radius:var(--radius);padding:7px 14px;font:inherit;text-decoration:none;cursor:pointer;min-height:36px}.sd-btn:hover{border-color:var(--sd-ink)}.sd-btn.go{background:var(--sd-accent);border-color:var(--sd-accent);color:var(--sd-on)}.sd-btn[disabled]{opacity:.6;cursor:default}
 .sd-cmds{list-style:none;margin:8px 0 14px;padding:0;display:grid;gap:8px}.sd-cmd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;border:1px solid var(--sd-line);border-radius:var(--radius);padding:10px 12px;background:var(--sd-field)}.sd-cmd code{font:600 13px var(--mono,ui-monospace,Menlo,monospace);overflow-wrap:anywhere}.sd-cmd span{grid-column:1/-1;color:var(--sd-dim);font-size:13px}
@@ -238,9 +254,10 @@ function settingsClient() {
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { back(w.copied); }).catch(function () { back(w.copyfail); });
   };
   var onClick = function (e) {
-    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],.sd-tab') : null;
+    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],[data-sd-model],.sd-tab') : null;
     if (!el) return;
     if (el.hasAttribute('data-sd-close')) close();
+    else if (el.hasAttribute('data-sd-model')) { close(); window.dispatchEvent(new CustomEvent('flisk:model')); }
     else if (el.hasAttribute('data-sd-copy')) copy(el);
     else select(el.dataset.sec);
   };
@@ -257,7 +274,7 @@ function settingsClient() {
         done(); err.textContent = (w.whyfmt || '{why}').replace('{why}', res[1].error || w.neterr); err.hidden = false;
       }).catch(function () { done(); err.textContent = w.neterr; err.hidden = false; });
   };
-  var fromLink = function (a) { var m = /#(github|ai|account|computers)$/.exec(a.getAttribute('href') || ''); return m ? m[1] : (a.getAttribute('data-open-settings') || ''); };
+  var fromLink = function (a) { var m = /#(github|ai|account|usage|computers)$/.exec(a.getAttribute('href') || ''); return m ? m[1] : (a.getAttribute('data-open-settings') || ''); };
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest(OPEN) : null;
     if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (a.target && a.target !== '_self')) return;
@@ -265,7 +282,7 @@ function settingsClient() {
   }, true);
   var auto = function () {
     if (!/^\/(settings|reviews)$/.test(location.pathname)) return;
-    var q = new URLSearchParams(location.search).get('ok'), h = /^#(github|ai|account|computers)$/.exec(location.hash);
+    var q = new URLSearchParams(location.search).get('ok'), h = /^#(github|ai|account|usage|computers)$/.exec(location.hash);
     open(h ? h[1] : q ? 'ai' : '', null, /^(saved|deleted)$/.test(q || '') ? q : '');
   };
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root && !root.hidden) { e.preventDefault(); close(); } });

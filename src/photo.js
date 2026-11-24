@@ -8,6 +8,14 @@ export const PHOTOS_PER_LOGIN = 6; // a day
 export const PHOTOS_PER_DAY = 40; // a day, for everybody: 40 x 55 = 2,200 neurons, so the text model keeps its share of the 10,000
 const PHOTO_MS = 25_000;
 
+// Pictures this login has drawn today, read only; the cap is PHOTOS_PER_LOGIN. 0 when the table cannot be read.
+export async function photosUsed(env, login, day = new Date().toISOString().slice(0, 10)) {
+  try {
+    const row = await env.DB.prepare('SELECT n FROM site_photos WHERE day = ? AND login = ?').bind(day, login).first();
+    return Math.max(0, Number(row?.n) || 0);
+  } catch { return 0; }
+}
+
 // Counts one photo for the login and for everybody today; false when either count is already at its cap.
 export async function takePhotoSlot(env, login, day = new Date().toISOString().slice(0, 10)) {
   const rows = await env.DB.prepare('SELECT login, n FROM site_photos WHERE day = ? AND login IN (?, ?)').bind(day, login, '*').all();
