@@ -171,7 +171,7 @@ function useNarrow(px) {
   return on;
 }
 
-function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
+function HeaderEnd({explain, onExplain, scheme, onLook, onSettings}) {
   const {isMobile} = useAppShellMobile();
   const guest = BOOT.login && BOOT.anon;
   const signIn = !BOOT.login || BOOT.anon;
@@ -187,7 +187,7 @@ function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
           ...(signIn && tiny ? [{label: 'Start free with GitHub', description: 'No card. Keep your chats and get more free tasks', icon: KeyIcon, onClick: () => { location.href = HERO_SIGNIN; }}] : []),
           {label: explain ? 'Leave explain mode' : 'Explain', description: 'Tap anything to read what it does, without running it', icon: QuestionMarkCircleIcon, onClick: onExplain},
           {label: 'Look: ' + (LOOKS[scheme] || scheme), description: 'Tap to switch to ' + LOOKS[nextLook(scheme)], icon: SunIcon, onClick: onLook},
-          {label: 'AI model and keys', description: 'Flisk Wolf is free, or add your own key', icon: Cog6ToothIcon, onClick: onModel},
+          {label: 'Settings and usage', description: 'Free tasks left today, your account, the AI model and keys', icon: Cog6ToothIcon, onClick: onSettings},
         ]} />
       </HStack>
     );
@@ -198,7 +198,7 @@ function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
       {BOOT.anon && <Tip text="No card. Sign in with GitHub to keep your chats and get more free tasks."><Button label="Start free with GitHub" size="sm" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN} /></Tip>}
       <Tip passThrough text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={onExplain} /></Tip>
       <Tip title="Look of the page" text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={onLook} /></Tip>
-      <Tip title="AI model and keys" scene="model" text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onModel} /></Tip>
+      <Tip title="Settings and usage" scene="model" text="See how many free tasks you have left today, and choose the AI or add your own keys."><Button label="Settings and usage" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onSettings} /></Tip>
     </HStack>
   );
 }
@@ -226,6 +226,8 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     return () => document.removeEventListener('pointerdown', first);
   }, []);
   const [mdlOpen, setMdlOpen] = useState(false);
+  // The settings dialog (outside React) asks for the AI picker with this event.
+  useEffect(() => { const open = () => setMdlOpen(true); window.addEventListener('flisk:model', open); return () => window.removeEventListener('flisk:model', open); }, []);
   const [pcOpen, setPcOpen] = useState(false);
   const [explain, setExplain] = useState(false);
   const [caption, setCaption] = useState('');
@@ -473,7 +475,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       topNav={BOOT.embed ? undefined : 
       <HStack gap={2} align="center" justify="space-between" wrap="wrap" className="chat-head" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
         <HStack gap={1} align="center"><MobileNavToggle /></HStack>
-        <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onModel={() => setMdlOpen(true)} />
+        <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onSettings={() => (window.__openSettings ? window.__openSettings('usage') : setMdlOpen(true))} />
       </HStack>
       }
       sideNav={BOOT.embed ? undefined : side}>

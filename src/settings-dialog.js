@@ -8,7 +8,7 @@ import { UK } from './i18n.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-export const SETTINGS_SECTIONS = ['account', 'ai', 'github', 'computers'];
+export const SETTINGS_SECTIONS = ['account', 'usage', 'ai', 'github', 'computers'];
 export const COMPUTERS_URL = 'https://fleet.flisk.si/console?section=providers';
 const COMMANDS = [
   ['@flisk-chat review', 'Reads the changes and posts a review. Takes about 20 seconds.'],
@@ -18,11 +18,22 @@ const COMMANDS = [
 // What the search box looks in, besides the section's name.
 const WORDS = {
   account: 'account sign in sign out log out github login profile',
+  usage: 'usage left today limit free tasks pictures photos voice talk quota daily reset',
   ai: 'ai model api key provider openrouter claude anthropic openai reviews save delete',
   github: 'github reviews pull request install app commands comment copy repo',
   computers: 'computers fleet providers connect sandbox machine',
 };
-const NAMES = { account: 'Account', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
+// Left list, grouped like the Astryx settings-dialog template: a small heading, then the sections with an icon each.
+const GROUPS = [['Account', ['account', 'usage']], ['Chat', ['ai', 'github', 'computers']]];
+const ICONS = {
+  account: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  usage: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  ai: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  github: '<path d="M9 19c-4 1.5-4-2-6-2m12 4v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>',
+  computers: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+};
+const icon = (id) => `<svg class="sd-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[id] || ''}</svg>`;
+const NAMES = { account: 'Account', usage: 'Usage today', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
 
 // Ukrainian lives in i18n.js (the page script reads it too); here the server uses it for ?lang=uk.
 const tr = (lang) => (s) => (lang === 'uk' ? UK[s] || s : s);
@@ -33,7 +44,7 @@ const row = (label, hint, control, forId = '') =>
 const group = (title, body) => `<div class="sd-group"${title ? ` role="group" aria-label="${esc(title)}"` : ''}>${title ? `<h4>${esc(title)}</h4>` : ''}${body}</div>`;
 
 // The inside of the dialog for one visitor. `saved` is the AI they stored (never its key), `form` what they typed after a refused save.
-export function settingsPanel({ login = '', anon = false, saved = null, stored = false, limit = 5, section = '', flash = '', error = '', form = {}, lang = '', keyPages, appUrl, themeNote = '' } = {}) {
+export function settingsPanel({ login = '', anon = false, saved = null, stored = false, limit = 5, section = '', flash = '', error = '', form = {}, lang = '', keyPages, appUrl, themeNote = '', usage = [], history = {} } = {}) {
   const t = tr(lang);
   const named = !!login && !anon && !/^anon-/i.test(String(login));
   const cur = SETTINGS_SECTIONS.includes(section) ? section : 'account';
@@ -68,9 +79,39 @@ ${row(t('API key'), t('The key is encrypted before it is stored and never shown 
 
   const computers = group('', row(t('Your computers'), t('Connect the computers and cloud accounts where chat runs your tasks. This opens in Fleet, in a new tab.'), `<a class="sd-btn go" href="${COMPUTERS_URL}" target="_blank" rel="noopener">${t('Open Computers')}</a>`));
 
-  const bodies = { account, ai: aiBody, github, computers };
+  // What is left of today's free allowance. The numbers come from the same counters the gates use; the counters are not exact across data
+  // centres, so "about" is honest. Everything resets at midnight UTC.
+  const USAGE_NAMES = { tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.'] };
+  // A ring: the share of today's allowance used. Green while there is room, red when it is used up.
+  const ring = (u) => {
+    const frac = u.limit ? Math.min(1, u.used / u.limit) : 0, C = 2 * Math.PI * 26;
+    return `<svg class="sd-ring" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="${esc(`${u.used} / ${u.limit}`)}"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--sd-line)" stroke-width="7"/>${frac > 0 ? `<circle cx="32" cy="32" r="26" fill="none" stroke="${frac >= 1 ? 'var(--sd-red)' : 'var(--sd-accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C * frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 32 32)"/>` : ''}</svg>`;
+  };
+  const tile = (u) => {
+    const left = Math.max(0, u.limit - u.used), name = (USAGE_NAMES[u.key] || [u.key])[0];
+    return `<div class="sd-tile"><div><p class="sd-tl">${t(name)}</p><p class="sd-tv"><b>${left}</b> <span>${t('left of')} ${u.limit}</span></p><p class="sd-ts">${u.used} ${t('used today')}</p></div>${ring(u)}</div>`;
+  };
+  // Bars of the last days, with the daily limit as a dashed line (the pictures: the one allowance chat keeps a history for).
+  const bars = (pts, limit) => {
+    if (!pts.length) return '';
+    const W = 560, H = 190, L = 30, B = 24, T = 14, top = Math.max(limit, ...pts.map((p) => p.n), 1), slot = (W - L - 8) / pts.length, y = (v) => T + (H - T - B) * (1 - v / top);
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const grid = [0, Math.ceil(top / 2), top].map((v) => `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--sd-line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+    const cols = pts.map((p, i) => { const x = L + i * slot + slot * 0.2, w = slot * 0.6, last = i === pts.length - 1; return `<rect x="${x.toFixed(1)}" y="${y(p.n).toFixed(1)}" width="${w.toFixed(1)}" height="${(H - B - y(p.n)).toFixed(1)}" rx="3" fill="${last ? 'var(--sd-accent)' : 'var(--sd-line2)'}"/><text x="${(x + w / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${DAYS[new Date(`${p.day}T00:00:00Z`).getUTCDay()]}</text>`; }).join('');
+    const cap = `<line x1="${L}" x2="${W}" y1="${y(limit)}" y2="${y(limit)}" stroke="var(--sd-red)" stroke-dasharray="5 4"/><text class="sd-capl" x="${W}" y="${y(limit) - 5}" text-anchor="end">${t('Limit')} ${limit}</text>`;
+    return `<svg class="sd-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(pts.map((p) => `${p.day}: ${p.n}`).join(', '))}">${grid}${cols}${cap}</svg>`;
+  };
+  const pic = usage.find((u) => u.key === 'pictures');
+  const chart = pic && history.pictures?.length ? `<div class="sd-card"><p class="sd-tl">${t('Pictures, last 7 days')}</p>${bars(history.pictures, pic.limit)}</div>` : '';
+  const usagePane = (usage.length ? `<div class="sd-tiles">${usage.map(tile).join('')}</div>${chart}` : group('', `<p class="sd-hint">${t('Usage is not available right now.')}</p>`)) +
+    `<p class="sd-hint sd-note">${t('Counts reset every day at midnight UTC.')} ${named ? '' : t('Signing in with GitHub gives more free tasks, and keeps your chats.')}</p>` +
+    (named ? '' : group('', row(t('More free tasks'), t('No card. Keeps your chats too.'), '<a class="sd-btn go" href="/auth/start">' + t('Sign in with GitHub') + '</a>'))) +
+    group('', row(t('AI model and keys'), t('Flisk Wolf is free, or add your own key.'), `<button type="button" class="sd-btn" data-sd-model>${t('Choose the AI')}</button>`));
+
+  const bodies = { account, usage: usagePane, ai: aiBody, github, computers };
   const msg = error ? `<p class="sd-flash sd-bad" role="alert">${esc(t('Not saved: {why}').replace('{why}', error))}</p>` : flash === 'saved' ? `<p class="sd-flash" role="status">${t('Saved. Your next review uses this AI.')}</p>` : flash === 'deleted' ? `<p class="sd-flash" role="status">${t('Deleted. Reviews use the free Flisk Wolf model again.')}</p>` : '';
-  const tabs = SETTINGS_SECTIONS.map((id) => `<button type="button" role="tab" class="sd-tab" id="sd-t-${id}" aria-controls="sd-p-${id}" aria-selected="${id === cur}" tabindex="${id === cur ? 0 : -1}" data-sec="${id}" data-kw="${esc((NAMES[id] + ' ' + t(NAMES[id]) + ' ' + WORDS[id]).toLowerCase())}">${t(NAMES[id])}</button>`).join('');
+  const tab = (id) => `<button type="button" role="tab" class="sd-tab" id="sd-t-${id}" aria-controls="sd-p-${id}" aria-selected="${id === cur}" tabindex="${id === cur ? 0 : -1}" data-sec="${id}" data-kw="${esc((NAMES[id] + ' ' + t(NAMES[id]) + ' ' + WORDS[id]).toLowerCase())}">${icon(id)}<span>${t(NAMES[id])}</span></button>`;
+  const tabs = GROUPS.map(([g, ids]) => `<div class="sd-g"><p class="sd-gl">${t(g)}</p>${ids.map(tab).join('')}</div>`).join('');
   const panes = SETTINGS_SECTIONS.map((id) => `<section role="tabpanel" class="sd-pane" id="sd-p-${id}" aria-labelledby="sd-t-${id}" tabindex="0"${id === cur ? '' : ' hidden'}><h3>${t(NAMES[id])}</h3>${id === cur || (error && id === 'ai') ? msg : ''}<div class="sd-err" role="alert" hidden></div>${bodies[id]}</section>`).join('');
   return `<div class="sd-wrap" data-copied="${esc(t('Copied'))}" data-copy="${esc(t('Copy'))}" data-copyfail="${esc(t('Select and copy'))}" data-saving="${esc(t('Saving…'))}" data-neterr="${esc(t('Could not reach the server. Try again.'))}" data-whyfmt="${esc(t('Not saved: {why}'))}">
 <aside class="sd-side"><div class="sd-top"><h2 id="sd-title">${t('Settings')}</h2><button type="button" class="sd-x" data-sd-close aria-label="${esc(t('Close settings'))}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -92,7 +133,7 @@ export const SETTINGS_CSS = `
 .sd-x{display:inline-grid;place-items:center;width:32px;height:32px;border:0;border-radius:var(--radius);background:none;color:var(--sd-dim);cursor:pointer}.sd-x:hover{background:var(--sd-line);color:var(--sd-ink)}
 .sd-find{position:relative;display:flex;align-items:center}.sd-find svg{position:absolute;left:10px;color:var(--sd-dim);pointer-events:none}
 .sd-q{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--sd-line2);border-radius:var(--radius);background:var(--sd-field);color:var(--sd-ink);font:inherit;font-size:16px}
-.sd-tabs{display:flex;flex-direction:column;gap:2px}
+.sd-tabs{display:flex;flex-direction:column;gap:12px}.sd-g{display:flex;flex-direction:column;gap:2px}.sd-g[hidden]{display:none}.sd-gl{margin:0 10px 4px;font-size:12px;font-weight:600;color:var(--sd-dim)}.sd-tab{display:flex;align-items:center;gap:10px}
 .sd-tab{text-align:left;border:0;border-radius:var(--radius);background:none;color:var(--sd-dim);padding:8px 10px;font:inherit;cursor:pointer}.sd-tab:hover{background:var(--sd-line);color:var(--sd-ink)}.sd-tab[aria-selected=true]{background:var(--sd-bg);color:var(--sd-ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--sd-line2)}.sd-tab[hidden]{display:none}
 .sd-none{margin:4px 10px;color:var(--sd-dim);font-size:13px}
 .sd-main{overflow:auto;padding:22px 28px 28px;min-width:0;min-height:0}
@@ -105,6 +146,9 @@ export const SETTINGS_CSS = `
 .sd-in{width:100%;padding:8px 10px;border:1px solid var(--sd-line2);border-radius:var(--radius);background:var(--sd-field);color:var(--sd-ink);font:inherit;font-size:16px}
 .sd-keylinks{margin:0;font-size:13px;text-align:right}.sd-keylink{color:var(--sd-ink)}
 .sd-cur{color:var(--sd-ink)}
+.sd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:0 0 16px}.sd-tile{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--sd-line);border-radius:var(--radius);padding:14px 16px}
+.sd-tl,.sd-ts{margin:0}.sd-tl{font-weight:600}.sd-tv{margin:6px 0 2px;white-space:nowrap}.sd-tv b{font-size:26px;font-weight:600}.sd-tv span,.sd-ts{color:var(--sd-dim);font-size:13px}
+.sd-card{border:1px solid var(--sd-line);border-radius:var(--radius);padding:14px 16px 8px;margin:0 0 16px}.sd-chart{width:100%;height:auto;display:block;margin-top:8px}.sd-chart text{fill:var(--sd-dim);font-size:11px}.sd-chart .sd-capl{fill:var(--sd-red)}.sd-note{margin:0 0 16px}
 .sd-actions{display:flex;justify-content:flex-end;padding:12px 0 14px;border-top:1px solid var(--sd-line)}
 .sd-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--sd-line2);background:var(--sd-bg);color:var(--sd-ink);border-radius:var(--radius);padding:7px 14px;font:inherit;text-decoration:none;cursor:pointer;min-height:36px}.sd-btn:hover{border-color:var(--sd-ink)}.sd-btn.go{background:var(--sd-accent);border-color:var(--sd-accent);color:var(--sd-on)}.sd-btn[disabled]{opacity:.6;cursor:default}
 .sd-cmds{list-style:none;margin:8px 0 14px;padding:0;display:grid;gap:8px}.sd-cmd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;border:1px solid var(--sd-line);border-radius:var(--radius);padding:10px 12px;background:var(--sd-field)}.sd-cmd code{font:600 13px var(--mono,ui-monospace,Menlo,monospace);overflow-wrap:anywhere}.sd-cmd span{grid-column:1/-1;color:var(--sd-dim);font-size:13px}
@@ -209,6 +253,7 @@ function settingsClient() {
       var hit = !q || t.dataset.kw.indexOf(q) >= 0; t.hidden = !hit;
       if (hit) { n++; if (!first) first = t; if (t.getAttribute('aria-selected') === 'true') cur = t; }
     });
+    Array.prototype.forEach.call(box.querySelectorAll('.sd-g'), function (g) { g.hidden = !g.querySelector('.sd-tab:not([hidden])'); });
     box.querySelector('.sd-none').hidden = n > 0;
     if (!cur && first) select(first.dataset.sec);
   };
@@ -238,9 +283,10 @@ function settingsClient() {
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { back(w.copied); }).catch(function () { back(w.copyfail); });
   };
   var onClick = function (e) {
-    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],.sd-tab') : null;
+    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],[data-sd-model],.sd-tab') : null;
     if (!el) return;
     if (el.hasAttribute('data-sd-close')) close();
+    else if (el.hasAttribute('data-sd-model')) { close(); window.dispatchEvent(new CustomEvent('flisk:model')); }
     else if (el.hasAttribute('data-sd-copy')) copy(el);
     else select(el.dataset.sec);
   };
@@ -257,7 +303,7 @@ function settingsClient() {
         done(); err.textContent = (w.whyfmt || '{why}').replace('{why}', res[1].error || w.neterr); err.hidden = false;
       }).catch(function () { done(); err.textContent = w.neterr; err.hidden = false; });
   };
-  var fromLink = function (a) { var m = /#(github|ai|account|computers)$/.exec(a.getAttribute('href') || ''); return m ? m[1] : (a.getAttribute('data-open-settings') || ''); };
+  var fromLink = function (a) { var m = /#(github|ai|account|usage|computers)$/.exec(a.getAttribute('href') || ''); return m ? m[1] : (a.getAttribute('data-open-settings') || ''); };
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest(OPEN) : null;
     if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (a.target && a.target !== '_self')) return;
@@ -265,7 +311,7 @@ function settingsClient() {
   }, true);
   var auto = function () {
     if (!/^\/(settings|reviews)$/.test(location.pathname)) return;
-    var q = new URLSearchParams(location.search).get('ok'), h = /^#(github|ai|account|computers)$/.exec(location.hash);
+    var q = new URLSearchParams(location.search).get('ok'), h = /^#(github|ai|account|usage|computers)$/.exec(location.hash);
     open(h ? h[1] : q ? 'ai' : '', null, /^(saved|deleted)$/.test(q || '') ? q : '');
   };
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root && !root.hidden) { e.preventDefault(); close(); } });
@@ -273,4 +319,6 @@ function settingsClient() {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto); else auto();
 }
 
-export const SETTINGS_JS = `(${settingsClient.toString()})();`;
+// Wrangler bundles with keepNames, which puts __name(fn, 'x') calls inside settingsClient's text; the page has no __name, so the
+// gear threw "__name is not defined" and opened nothing. Give the snippet a do-nothing one in its own scope (as earth.js does).
+export const SETTINGS_JS = `;(function(){var __name=function(f){return f};(${settingsClient.toString()})();})();`;

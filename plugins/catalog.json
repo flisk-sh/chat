@@ -1,0 +1,509 @@
+{
+  "plugins": [
+    {
+      "id": "studio.remove-background",
+      "title": "Remove background",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "remove the background",
+        "cut out the subject"
+      ]
+    },
+    {
+      "id": "studio.crop",
+      "title": "Crop",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "crop to square",
+        "crop this"
+      ]
+    },
+    {
+      "id": "studio.rotate-flip",
+      "title": "Rotate and flip",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "rotate right",
+        "flip it"
+      ]
+    },
+    {
+      "id": "studio.adjust",
+      "title": "Adjust light and colour",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "make it warmer",
+        "more contrast"
+      ]
+    },
+    {
+      "id": "studio.resize",
+      "title": "Resize",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "make it 1080 wide"
+      ]
+    },
+    {
+      "id": "studio.text",
+      "title": "Add text to a photo",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "write hello at the bottom"
+      ]
+    },
+    {
+      "id": "studio.photo-batch",
+      "title": "Batch photos: resize, compress, ZIP",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "shrink these photos"
+      ]
+    },
+    {
+      "id": "studio.merge-pdf",
+      "title": "Merge PDFs",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "merge these pdfs"
+      ]
+    },
+    {
+      "id": "studio.shrink-pdf",
+      "title": "Shrink PDFs",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "make this pdf smaller"
+      ]
+    },
+    {
+      "id": "studio.watermark-pdf",
+      "title": "Watermark PDFs",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "watermark this pdf"
+      ]
+    },
+    {
+      "id": "studio.undo-redo",
+      "title": "Undo and redo",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "undo",
+        "redo"
+      ]
+    },
+    {
+      "id": "studio.export",
+      "title": "Download the result",
+      "group": "Studio",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "download it"
+      ]
+    },
+    {
+      "id": "flisk.cli",
+      "title": "Flisk CLI: status, up, down, logs, doctor",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "what is running"
+      ]
+    },
+    {
+      "id": "flisk.build",
+      "title": "Flisk build: a small app from a plain request",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "build me a small shop"
+      ]
+    },
+    {
+      "id": "flisk.pages",
+      "title": "Pages: publish a page to pages.flisk.si",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "publish this page"
+      ]
+    },
+    {
+      "id": "flisk.analytics",
+      "title": "Analytics: add a site, read stats",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "how many visitors today"
+      ]
+    },
+    {
+      "id": "toolradar.search",
+      "title": "Toolradar: find, compare and price tools",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "compare these tools"
+      ]
+    },
+    {
+      "id": "toolradar.listing",
+      "title": "Toolradar listing: update it, post an update",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "post an update"
+      ]
+    },
+    {
+      "id": "flisk.citable",
+      "title": "Citable: can AI search cite my site",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "can AI find my site"
+      ]
+    },
+    {
+      "id": "flisk.grow",
+      "title": "Grow it: find the first customers",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "find customers"
+      ]
+    },
+    {
+      "id": "flisk.agents",
+      "title": "Flisk agents: list and sessions",
+      "group": "Flisk",
+      "status": "ready",
+      "owner": "flisk",
+      "voice": [
+        "list my agents"
+      ]
+    },
+    {
+      "id": "flisk.readme-score",
+      "title": "README score",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "score my readme"
+      ]
+    },
+    {
+      "id": "flisk.demos",
+      "title": "Demos",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "show me a demo"
+      ]
+    },
+    {
+      "id": "flisk.seo-check",
+      "title": "SEO site check",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "check my seo"
+      ]
+    },
+    {
+      "id": "flisk.emoji-ranker",
+      "title": "Emoji ranker",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "rank these emoji"
+      ]
+    },
+    {
+      "id": "flisk.helpdock",
+      "title": "Helpdock",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "open helpdock"
+      ]
+    },
+    {
+      "id": "flisk.labs",
+      "title": "Labs",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "open labs"
+      ]
+    },
+    {
+      "id": "flisk.bar",
+      "title": "Flisk bar and account",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "open my account"
+      ]
+    },
+    {
+      "id": "fleet.pods",
+      "title": "Fleet: pods, provider keys, run a command",
+      "group": "Flisk",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "run this on my pod"
+      ]
+    },
+    {
+      "id": "studio.upscale",
+      "title": "Upscale a photo",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "make it sharper"
+      ]
+    },
+    {
+      "id": "studio.erase-object",
+      "title": "Blur or erase an object",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "erase that"
+      ]
+    },
+    {
+      "id": "studio.photo-to-pdf",
+      "title": "Photo to PDF",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "make this a pdf"
+      ]
+    },
+    {
+      "id": "studio.split-pdf",
+      "title": "Split or extract PDF pages",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "take pages 2 to 4"
+      ]
+    },
+    {
+      "id": "studio.reorder-pdf",
+      "title": "Reorder or delete PDF pages",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "delete page 3"
+      ]
+    },
+    {
+      "id": "studio.sign-pdf",
+      "title": "Sign a PDF",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "sign this"
+      ]
+    },
+    {
+      "id": "studio.ocr",
+      "title": "OCR: text from a photo or PDF",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "read the text"
+      ]
+    },
+    {
+      "id": "studio.heic",
+      "title": "Convert HEIC to JPEG",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "convert to jpeg"
+      ]
+    },
+    {
+      "id": "studio.icons",
+      "title": "Favicon and app icon set",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "make icons from this"
+      ]
+    },
+    {
+      "id": "studio.social-sizes",
+      "title": "Social image sizes",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "make it an instagram story"
+      ]
+    },
+    {
+      "id": "studio.meme",
+      "title": "Meme and caption maker",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "make a meme"
+      ]
+    },
+    {
+      "id": "studio.video-trim",
+      "title": "GIF or video trim",
+      "group": "Studio next",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "trim the first five seconds"
+      ]
+    },
+    {
+      "id": "voice.commands",
+      "title": "Voice commands",
+      "group": "Voice and chat",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "hey flisk"
+      ]
+    },
+    {
+      "id": "voice.read-aloud",
+      "title": "Read the result aloud",
+      "group": "Voice and chat",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "read it to me"
+      ]
+    },
+    {
+      "id": "chat.alt-text",
+      "title": "Describe a photo for alt text",
+      "group": "Voice and chat",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "describe this photo"
+      ]
+    },
+    {
+      "id": "chat.history-search",
+      "title": "Chat history search",
+      "group": "Voice and chat",
+      "status": "soon",
+      "owner": "flisk",
+      "voice": [
+        "find what I asked about pdfs"
+      ]
+    },
+    {
+      "id": "linear",
+      "title": "Linear",
+      "group": "Connectors",
+      "status": "ready",
+      "owner": "third-party",
+      "voice": [
+        "my issues"
+      ]
+    },
+    {
+      "id": "google-drive",
+      "title": "Google Drive",
+      "group": "Connectors",
+      "status": "soon",
+      "owner": "third-party",
+      "voice": [
+        "open my drive"
+      ]
+    },
+    {
+      "id": "github",
+      "title": "GitHub",
+      "group": "Connectors",
+      "status": "soon",
+      "owner": "third-party",
+      "voice": [
+        "open my pull requests"
+      ]
+    },
+    {
+      "id": "slack",
+      "title": "Slack",
+      "group": "Connectors",
+      "status": "soon",
+      "owner": "third-party",
+      "voice": [
+        "post to slack"
+      ]
+    },
+    {
+      "id": "notion",
+      "title": "Notion",
+      "group": "Connectors",
+      "status": "soon",
+      "owner": "third-party",
+      "voice": [
+        "save to notion"
+      ]
+    }
+  ]
+}

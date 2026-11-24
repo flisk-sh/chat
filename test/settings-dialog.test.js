@@ -22,15 +22,15 @@ const signedIn = async (e, login = 'odykyi') => (await makeSession(e, login)).sp
 const panel = (over = {}) => settingsPanelHtml({ login: 'ann', saved: null, stored: true, limit: 5, ...over });
 
 describe('the panel', () => {
-  test('four sections, each a tab with its own panel, and only the account one open at first', () => {
+  test('five sections, each a tab with its own panel, and only the account one open at first', () => {
     const h = panel();
-    expect(SETTINGS_SECTIONS).toEqual(['account', 'ai', 'github', 'computers']);
+    expect(SETTINGS_SECTIONS).toEqual(['account', 'usage', 'ai', 'github', 'computers']);
     for (const id of SETTINGS_SECTIONS) {
       expect(h).toContain(`role="tab" class="sd-tab" id="sd-t-${id}" aria-controls="sd-p-${id}"`);
       expect(h).toContain(`id="sd-p-${id}" aria-labelledby="sd-t-${id}"`);
     }
     expect(h).toContain('id="sd-t-account" aria-controls="sd-p-account" aria-selected="true" tabindex="0"');
-    expect(h.match(/role="tabpanel"[^>]*hidden/g)).toHaveLength(3);
+    expect(h.match(/role="tabpanel"[^>]*hidden/g)).toHaveLength(4);
     expect(h).toContain('role="tablist" aria-orientation="vertical"');
     expect(h).toContain('type="search" class="sd-q" placeholder="Search settings"');
   });
@@ -159,6 +159,14 @@ describe('the pages', () => {
 describe('the browser script', () => {
   test('it is valid JavaScript and the styles close their braces', () => {
     expect(() => new Function(SETTINGS_JS)).not.toThrow();
+    // Wrangler's keepNames writes __name(fn, "x") into the function text; the page has no __name (the gear opened nothing, Nov 24).
+    const named = SETTINGS_JS.replace(/function settingsClient\(([^)]*)\)\s*\{/, (m) => `${m}__name(function(){}, "x");`);
+    expect(named).not.toBe(SETTINGS_JS);
+    const deep = () => new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => '' : deep()), apply: () => deep(), set: () => true });
+    let ran = 0;
+    expect(() => new Function('document', 'window', 'location', 'localStorage', named)(deep(), deep(), deep(), deep())).not.toThrow(ReferenceError);
+    ran++;
+    expect(ran).toBe(1);
     expect(SETTINGS_CSS.split('{').length).toBe(SETTINGS_CSS.split('}').length);
   });
   test('it is a modal dialog: role, aria-modal, labelled, Esc closes, Tab stays inside, the page behind is inert, focus comes back', () => {
@@ -168,7 +176,7 @@ describe('the browser script', () => {
     expect(SRC).toContain('a[href="/reviews"],a[href="/settings"]');
     expect(SRC).toContain('[data-open-settings]');
     expect(SRC).toContain('e.metaKey || e.ctrlKey');
-    expect(SRC).toContain('(github|ai|account|computers)');
+    expect(SRC).toContain('(github|ai|account|usage|computers)');
   });
   test('it posts with fetch, same origin, asking for JSON, and never keeps the key', () => {
     expect(SRC).toContain("credentials: 'same-origin'");
@@ -178,5 +186,48 @@ describe('the browser script', () => {
   });
   test('on phones the dialog fills the screen', () => {
     expect(SETTINGS_CSS).toMatch(/@media \(max-width:760px\)\{[\s\S]*\.sd-box\{width:100%;height:100%/);
+  });
+});
+
+describe('usage today', () => {
+  const usage = [{ key: 'tasks', used: 4, limit: 10 }, { key: 'pictures', used: 6, limit: 6 }, { key: 'talk', used: 0, limit: 30 }];
+  test('the Usage section shows what is left of each free allowance', () => {
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage, section: 'usage' });
+    expect(SETTINGS_SECTIONS).toContain('usage');
+    expect(html).toContain('<b>6</b> <span>left of 10</span>');
+    expect(html).toContain('<b>0</b> <span>left of 6</span>'); // pictures used up
+    expect(html).toContain('<b>30</b> <span>left of 30</span>');
+    expect(html).toContain('data-sd-model');
+    expect(html).toContain('Sign in with GitHub'); // a guest is told how to get more
+    expect(settingsPanelHtml({ login: 'ann', anon: false, usage, section: 'usage' })).not.toContain('More free tasks');
+    expect(settingsPanelHtml({ login: 'anon-1', anon: true, usage: [], section: 'usage' })).toContain('Usage is not available right now.');
+  });
+  test('the usage tab draws a ring per allowance and a 7-day pictures chart with the limit line', () => {
+    const history = { pictures: ['2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23', '2026-11-24'].map((day, i) => ({ day, n: i === 6 ? 6 : i })) };
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage, history, section: 'usage' });
+    expect(html.match(/class="sd-ring"/g)).toHaveLength(3);
+    expect(html.match(/stroke-dasharray="[\d.]+ [\d.]+" transform/g)).toHaveLength(2); // the unused ring draws no arc, so no stray dot
+    expect(html).toContain('stroke="var(--sd-red)" stroke-width="7"'); // pictures used up: the ring turns red
+    expect(html).toContain('class="sd-chart"');
+    expect(html.match(/rx="3" fill="var\(--sd-/g)).toHaveLength(7); // one bar per day
+    expect(html).toContain('Limit 6');
+    expect(html).toContain('Tue'); // 2026-11-24 is a Tuesday
+    expect(settingsPanelHtml({ login: 'anon-1', anon: true, usage, history: {}, section: 'usage' })).not.toContain('class="sd-chart"');
+    const uk = settingsPanelHtml({ login: 'anon-1', anon: true, usage, history, section: 'usage', lang: 'uk' });
+    expect(uk).toContain('Ліміт 6');
+    expect(uk).toContain('використано сьогодні');
+  });
+  test('the left list is grouped, with an icon per section', () => {
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage });
+    expect(html.match(/class="sd-gl"/g)).toHaveLength(2);
+    expect(html.match(/class="sd-ic"/g)).toHaveLength(SETTINGS_SECTIONS.length);
+  });
+  test('GET /settings/panel hands a guest their real counts, from the counters the gates use', async () => {
+    const store = new Map();
+    const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+    const env = { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+    const res = await handle(new Request('https://chat.test/settings/panel?section=usage', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('left of 10'); // no session yet: the guest share, nothing used
   });
 });

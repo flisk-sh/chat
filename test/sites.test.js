@@ -3,7 +3,7 @@ import { MAX_LAYOUT_BYTES, parseAction, runTask } from '../src/loop.js';
 import { SYSTEM } from '../src/prompt.js';
 import { BROWSER_NOTE } from '../src/browserpod.js';
 import { ACCENTS, cleanSite, LAYOUTS, photoPrompt, renderSite } from '../src/sites.js';
-import { PHOTOS_PER_DAY, PHOTOS_PER_LOGIN, sitePhoto } from '../src/photo.js';
+import { PHOTOS_PER_DAY, PHOTOS_PER_LOGIN, pollinationsPhoto, sitePhoto } from '../src/photo.js';
 
 const PHOTO = `data:image/jpeg;base64,${'A'.repeat(800 * 1024)}`;
 const bytes = (h) => new TextEncoder().encode(h).length;
@@ -202,6 +202,18 @@ describe('drawing the photo', () => {
     const jpeg = new Uint8Array(5000).fill(7);
     const ok = async () => new Response(jpeg, { headers: { 'content-type': 'image/jpeg' } });
     expect(await sitePhoto(env, 'ana', 'a cat', { fetchImpl: ok })).toBe(`data:image/jpeg;base64,${Buffer.from(jpeg).toString('base64')}`);
+  });
+
+  test('Pollinations is asked once more after a 402, then answers', async () => {
+    const jpeg = new Uint8Array(5000).fill(7);
+    let n = 0;
+    const fetchImpl = async () => (++n === 1 ? new Response('{}', { status: 402, headers: { 'content-type': 'application/json' } }) : new Response(jpeg, { headers: { 'content-type': 'image/jpeg' } }));
+    expect(await pollinationsPhoto('a cat', { fetchImpl, retryMs: 1 })).toStartWith('data:image/jpeg;base64,');
+    expect(n).toBe(2);
+    n = -5; // always 402: one retry only, then no photo
+    let calls = 0;
+    expect(await pollinationsPhoto('a cat', { fetchImpl: async () => (calls++, new Response('{}', { status: 402 })), retryMs: 1 })).toBe('');
+    expect(calls).toBe(2);
   });
 
   test('a failed, slow or empty model gives no photo instead of an error', async () => {

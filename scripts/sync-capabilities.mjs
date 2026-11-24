@@ -9,7 +9,7 @@ import { join } from 'node:path';
 
 const root = process.env.CAPS_ROOT || join(homedir(), 'tdk-pr-work');
 const here = join(import.meta.dir, '..');
-const services = (process.env.CAPS_SERVICES || 'grow,citable').split(',');
+const services = (process.env.CAPS_SERVICES || 'grow,citable,studio').split(',');
 mkdirSync(join(here, 'capabilities'), { recursive: true });
 const all = [];
 for (const name of services) {
