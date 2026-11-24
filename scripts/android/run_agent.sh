@@ -12,36 +12,36 @@ for h in $BLOCK_HOSTS; do
   case "$ip" in ""|0.0.0.0|127.*) ;; *) echo "$h reachable from the emulator ($ip): aborting"; exit 1 ;; esac
 done
 # 2. Phone language (the emulator boots in en-US; google_apis images allow adb root)
-if [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]; then
+if [[ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]]; then
   adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
   adb shell "setprop persist.sys.locale $LOCALE; setprop ctl.restart zygote"; sleep 10; adb wait-for-device
-  for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 3; done
+  for i in $(seq 1 60); do [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]] && break; sleep 3; done
 fi
 # 3. App + persona settings. The package inside the APK wins over app_id
 # (which may be the iOS bundle id)
 AAPT2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
-PKG=$([ -n "$AAPT2" ] && "$AAPT2" dump packagename app.apk 2>/dev/null | tr -d '\r')
-if [ -n "$PKG" ] && [ "$PKG" != "$APP_ID" ]; then echo "Package read from the APK (differs from app_id)"; APP_ID=$PKG; fi
+PKG=$([[ -n "$AAPT2" ]] && "$AAPT2" dump packagename app.apk 2>/dev/null | tr -d '\r')
+if [[ -n "$PKG" ]] && [[ "$PKG" != "$APP_ID" ]]; then echo "Package read from the APK (differs from app_id)"; APP_ID=$PKG; fi
 export APP_ID
 adb install -r -g app.apk || adb install -r app.apk
 adb shell settings put system font_scale "${FONT_SCALE:-1.0}"
-[ "${THEME:-light}" = dark ] && adb shell cmd uimode night yes
+[[ "${THEME:-light}" = dark ]] && adb shell cmd uimode night yes
 adb emu geo fix "${GEO#*,}" "${GEO%,*}" >/dev/null 2>&1   # longitude first
 adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 adb logcat -c; sleep 5
 # 4. Optional screen recording, kept in results/ (encrypted like the rest)
 REC=""
-if [ "${RECORD_VIDEO:-false}" = true ]; then
+if [[ "${RECORD_VIDEO:-false}" = true ]]; then
   adb shell settings put system show_touches 1
   SZ=$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1); W=${SZ%x*}; H=${SZ#*x}
   RW=$((W * 2 / 3 / 16 * 16)); RH=$((H * RW / W / 16 * 16))   # 2/3 size, multiples of 16 for the encoder
   rm -f /tmp/stop-rec
   # screenrecord stops at 180 s: chain files until the agent is done
   ( i=0; opt="--size ${RW}x${RH}"
-    while [ ! -f /tmp/stop-rec ] && [ $i -lt 40 ]; do
+    while [[ ! -f /tmp/stop-rec ]] && [[ $i -lt 40 ]]; do
       i=$((i + 1)); t0=$(date +%s)
       adb shell screenrecord $opt --bit-rate 4000000 --time-limit 180 "/sdcard/rec_$(printf %02d $i).mp4"
-      [ $(($(date +%s) - t0)) -lt 3 ] && opt=""   # size refused: native size
+      [[ $(($(date +%s) - t0)) -lt 3 ]] && opt=""   # size refused: native size
     done ) &
   REC=$!
 fi
@@ -52,13 +52,13 @@ claude -p "Read $BRIEF and personas.json, then do the mission until the final re
   --allowedTools "Bash(adb:*),Bash(python3 scripts/android/screen.py:*),Bash(python3 scripts/android/type.py:*),Bash(sleep:*),Bash(ls:*),Bash(cat:*),Bash(mkdir:*),Read,Write,Edit" \
   > results/agent-output.json 2> results/agent-errors.txt
 CODE=$?
-if [ -n "$REC" ]; then
+if [[ -n "$REC" ]]; then
   touch /tmp/stop-rec; adb shell pkill -INT screenrecord; sleep 4; kill "$REC" 2>/dev/null
   mkdir -p "results/$PERSONA/video"
   for f in $(adb shell ls /sdcard/ | tr -d '\r' | grep '^rec_'); do adb pull "/sdcard/$f" "results/$PERSONA/video/" >/dev/null 2>&1; done
 fi
 # A model that ignored its budget stops at the turn cap with no report: say so, so the run is not read as "no findings"
-if [ ! -s "results/$PERSONA/report.md" ]; then
+if [[ ! -s "results/$PERSONA/report.md" ]]; then
   mkdir -p "results/$PERSONA"
   printf '# %s: no report\n\nThe agent stopped (exit %s) before writing its report, most likely at the turn cap (%s). Read the screenshots; this is not a clean run.\n' "$PERSONA" "$CODE" "${MAX_TURNS:-70}" > "results/$PERSONA/report.md"
   printf '{"score": 0, "issues": [{"title": "Agent stopped before reporting (turn cap or model error)", "severity": "minor", "screen": "-", "screens": []}]}\n' > "results/$PERSONA/findings.json"

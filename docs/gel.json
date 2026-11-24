@@ -13,7 +13,13 @@
     "migrations-append-only": "block",
     "release-integrity": "block",
     "tests-with-change": "block",
-    "workflow-permissions": "block"
+    "workflow-permissions": "block",
+    "frozen-install": "report",
+    "product-brief": "report",
+    "install-ignore-scripts": "report",
+    "workflow-checkout-safety": "report",
+    "curl-https-only": "report",
+    "log-injection": "report"
   },
   "north_star": {
     "metric": "bounce rate of chat.flisk.si visits (last 7 days, Flisk Analytics)",
@@ -30,5 +36,26 @@
   "input_in_viewport": {
     "result": "docs/north-star/input-viewport.json",
     "max_age_days": 30
-  }
+  },
+  "status": "active",
+  "owner": "@odykyi",
+  "repo_health": {
+    "inherit": [
+      "CONTRIBUTING",
+      "SECURITY"
+    ]
+  },
+  "reasons": {
+    "frozen-install": "bun and the testers/chat-wrapper lockfile are fixed; two installs remain that cannot take a lockfile: pip install pillow in agent-testers.yml and a one-off playwright@1.56.1 install in e2e-live.yml (both exact-version, no manifest to lock)",
+    "product-brief": "no product brief with measured what/who/why/how/where/when numbers exists yet; not inventing one",
+    "north-star": "the north star is measured and NOT MET (bounce rate); it stays on report until the metric moves, the number is real",
+    "ignore": "src/next-app.generated.js is a minified generated bundle; its regexes are not ours to edit",
+    "install-ignore-scripts": "adding --ignore-scripts to bun/npm installs in check.yml, deploy.yml and e2e-live.yml can break builds that rely on postinstall; needs a maintainer to test each one, tracked as follow-up",
+    "workflow-checkout-safety": "deploy.yml checks out in a workflow_run workflow with a write token; this is a deploy-security change that needs a maintainer review, not a mechanical edit",
+    "curl-https-only": "scripts/ios/run_agent.sh curl probes a local simulator endpoint; needs a maintainer to confirm it can be https-only",
+    "log-injection": "scripts/e2e-live.mjs logs error.message; the CR/LF strip needs a maintainer to confirm the log format the e2e dashboard parses"
+  },
+  "ignore": [
+    "src/next-app.generated.js"
+  ]
 }
