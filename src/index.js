@@ -18,7 +18,7 @@ import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { runOverSocket } from './browserpod.js';
-import { PHOTOS_PER_LOGIN, photosUsed, sitePhoto } from './photo.js';
+import { PHOTOS_PER_LOGIN, photoHistory, photosUsed, sitePhoto } from './photo.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { sentenceSplitter, splitReply } from './talk-stream.js';
@@ -608,7 +608,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     return html(settingsPanelHtml({
       login: session?.login || '', anon: !named, stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY,
       saved: named ? await loadSettings(env, session.login).catch(() => null) : null,
-      usage: await usageToday(),
+      usage: await usageToday(), history: { pictures: session ? await photoHistory(env, session.login) : [] },
       section: url.searchParams.get('section') || '', lang: url.searchParams.get('lang') === 'uk' ? 'uk' : '',
       flash: ok === 'saved' || ok === 'deleted' ? ok : '',
     }));

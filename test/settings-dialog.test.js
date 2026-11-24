@@ -202,6 +202,25 @@ describe('usage today', () => {
     expect(settingsPanelHtml({ login: 'ann', anon: false, usage, section: 'usage' })).not.toContain('More free tasks');
     expect(settingsPanelHtml({ login: 'anon-1', anon: true, usage: [], section: 'usage' })).toContain('Usage is not available right now.');
   });
+  test('the usage tab draws a ring per allowance and a 7-day pictures chart with the limit line', () => {
+    const history = { pictures: ['2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22', '2026-11-23', '2026-11-24'].map((day, i) => ({ day, n: i === 6 ? 6 : i })) };
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage, history, section: 'usage' });
+    expect(html.match(/class="sd-ring"/g)).toHaveLength(3);
+    expect(html).toContain('stroke="var(--sd-red)" stroke-width="7"'); // pictures used up: the ring turns red
+    expect(html).toContain('class="sd-chart"');
+    expect(html.match(/rx="3" fill="var\(--sd-/g)).toHaveLength(7); // one bar per day
+    expect(html).toContain('Limit 6');
+    expect(html).toContain('Tue'); // 2026-11-24 is a Tuesday
+    expect(settingsPanelHtml({ login: 'anon-1', anon: true, usage, history: {}, section: 'usage' })).not.toContain('class="sd-chart"');
+    const uk = settingsPanelHtml({ login: 'anon-1', anon: true, usage, history, section: 'usage', lang: 'uk' });
+    expect(uk).toContain('Ліміт 6');
+    expect(uk).toContain('використано сьогодні');
+  });
+  test('the left list is grouped, with an icon per section', () => {
+    const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage });
+    expect(html.match(/class="sd-gl"/g)).toHaveLength(2);
+    expect(html.match(/class="sd-ic"/g)).toHaveLength(SETTINGS_SECTIONS.length);
+  });
   test('GET /settings/panel hands a guest their real counts, from the counters the gates use', async () => {
     const store = new Map();
     const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };

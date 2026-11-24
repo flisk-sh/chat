@@ -16,6 +16,16 @@ export async function photosUsed(env, login, day = new Date().toISOString().slic
   } catch { return 0; }
 }
 
+// The last `days` days of this login's pictures, oldest first, zero-filled, for the usage chart. [] when the table cannot be read.
+export async function photoHistory(env, login, days = 7, now = Date.now()) {
+  const list = Array.from({ length: days }, (_, i) => new Date(now - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10));
+  try {
+    const rows = await env.DB.prepare('SELECT day, n FROM site_photos WHERE login = ? AND day >= ?').bind(login, list[0]).all();
+    const n = Object.fromEntries((rows.results || []).map((r) => [r.day, Number(r.n) || 0]));
+    return list.map((day) => ({ day, n: n[day] || 0 }));
+  } catch { return []; }
+}
+
 // Counts one photo for the login and for everybody today; false when either count is already at its cap.
 export async function takePhotoSlot(env, login, day = new Date().toISOString().slice(0, 10)) {
   const rows = await env.DB.prepare('SELECT login, n FROM site_photos WHERE day = ? AND login IN (?, ?)').bind(day, login, '*').all();

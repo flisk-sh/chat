@@ -68,10 +68,11 @@ test('the CSS points at the font files, not data: URLs (#351)', () => {
 test('size budget: the page, the app and its fonts stay small (#351)', () => {
   // Measured 2026-11-22: HTML 14.5 KB, JS 511 KB gzip (Astryx core is most of it, already imported per component),
   // CSS 54 KB gzip, fonts 70 KB. A dependency bump that grows these past the budget fails here.
+  // HTML limit 32 -> 34 KB on 2026-11-24: every page carries the settings dialog's CSS and script inline (33.1 KB now).
   const gz = (s) => gzipSync(s).length;
   const fonts = Object.values(NEXT_FONTS).reduce((n, b) => n + Math.floor((b.length * 3) / 4), 0);
   const html = nextPage({ login: 'ada', models: [{ id: 'm' }] });
-  expect({ html: html.length < 32 * 1024, js: gz(NEXT_JS) < 540 * 1024, css: gz(NEXT_CSS) < 70 * 1024, fonts: fonts < 100 * 1024 })
+  expect({ html: html.length < 34 * 1024, js: gz(NEXT_JS) < 540 * 1024, css: gz(NEXT_CSS) < 70 * 1024, fonts: fonts < 100 * 1024 })
     .toEqual({ html: true, js: true, css: true, fonts: true });
 });
 
