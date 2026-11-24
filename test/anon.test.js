@@ -55,7 +55,11 @@ test('anonymous visitors can talk, but PR review settings need GitHub', async ()
   const cookie = await anonCookie(e);
   const talk = await post(e, '/api/talk', { history: [{ role: 'user', content: 'hi' }], ai: { ai: 'wolf' } }, cookie);
   expect(talk.status).toBe(200);
-  expect((await handle(new Request(`${ORIGIN}/reviews`, { headers: { cookie } }), e, { fetchImpl: net })).headers.get('location')).toBe('/auth/start');
+  const panel = await (await handle(new Request(`${ORIGIN}/settings/panel`, { headers: { cookie } }), e, { fetchImpl: net })).text();
+  expect(panel).toContain('Sign in with GitHub to choose your own AI for reviews.');
+  expect(panel).not.toContain('action="/reviews/save"');
+  const save = await handle(new Request(`${ORIGIN}/reviews/save`, { method: 'POST', body: new FormData(), headers: { cookie, origin: ORIGIN, accept: 'application/json' } }), e, { fetchImpl: net });
+  expect(save.status).toBe(403);
   expect((await post(e, '/api/review-ai', { ai: 'openai', key: 'sk-1234567890', model: 'gpt' }, cookie)).status).toBe(403);
 });
 

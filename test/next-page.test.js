@@ -22,7 +22,7 @@ test('the Astryx page links the app files and hands it the visitor facts', () =>
 
 test('a hostile value cannot close the boot script', () => {
   const html = nextPage({ login: '</script><script>alert(1)</script>' });
-  expect(html.match(/<\/script>/g).length).toBe(6); // analytics + bar + boot + app + Earth + bar offset, nothing more
+  expect(html.match(/<\/script>/g).length).toBe(7); // analytics + bar + boot + app + Earth + bar offset + settings dialog, nothing more
 });
 
 test('the page policy allows the app files from this origin and no data: fonts (#351)', () => {

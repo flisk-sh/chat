@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { handle } from '../src/index.js';
 import { nextPage } from '../src/next-page.js';
-import { appPage, reviewsPage } from '../src/page.js';
+import { appPage } from '../src/page.js';
 import { makeSession, newAnonLogin } from '../src/session.js';
 
 const ORIGIN = 'https://chat.test';
@@ -14,7 +14,6 @@ const get = (path, cookie = '') => handle(new Request(`${ORIGIN}${path}`, { head
 test('signed-in pages carry the login in a hidden hook', () => {
   expect(nextPage({ login: 'octocat' }).match(HOOK)[1]).toBe('octocat');
   expect(appPage({ login: 'octocat', connected: [] }).match(HOOK)[1]).toBe('octocat');
-  expect(reviewsPage({ login: 'octocat', saved: null, stored: true, limit: 5 }).match(HOOK)[1]).toBe('octocat');
 });
 
 test('the hook is absent for signed-out and anonymous renders', () => {
@@ -24,7 +23,6 @@ test('the hook is absent for signed-out and anonymous renders', () => {
   expect(appPage({ login: 'anon-0123456789abcdef', anon: true, connected: [] })).not.toContain('data-flisk-login');
   // Even if the anon flag were lost, an anon-<hex> login must never reach the hook.
   expect(nextPage({ login: 'anon-0123456789abcdef' })).not.toContain('data-flisk-login');
-  expect(reviewsPage({ login: 'anon-0123456789abcdef', saved: null, stored: true, limit: 5 })).not.toContain('data-flisk-login');
 });
 
 test('the login is HTML-escaped', () => {
@@ -42,7 +40,7 @@ test('through the worker: an anonymous session gets an empty hook, a signed-in o
     expect(await (await get(path)).text()).not.toContain('data-flisk-login');
   }
   const ann = (await makeSession(env(), 'ann')).split(';')[0];
-  for (const path of ['/', '/classic', '/reviews']) {
+  for (const path of ['/', '/classic', '/settings']) {
     expect((await (await get(path, ann)).text()).match(HOOK)?.[1]).toBe('ann');
   }
 });

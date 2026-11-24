@@ -234,13 +234,14 @@ describe('saved key', () => {
     expect((await loadSettings(env, 'odykyi', { withKey: true })).key).toBe('sk-plain-secret-9');
     expect(await loadSettings({ ...env, KEY_SECRET: 'z'.repeat(32) }, 'odykyi', { withKey: true })).toBeNull();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
-    const page = await handle(new Request('https://chat.test/reviews', { headers: { cookie } }), env);
+    const page = await handle(new Request('https://chat.test/settings/panel', { headers: { cookie } }), env);
     const text = await page.text();
     expect(text).toContain('gpt-x');
-    for (const href of ['https://github.com/apps/flisk-chat/installations/new', 'https://openrouter.ai/keys', 'https://console.anthropic.com/settings/keys', 'https://platform.openai.com/api-keys', 'href="/"', 'class="steps"', 'data-copy="@flisk-chat review run"', '@flisk-chat auto on']) expect(text).toContain(href);
+    for (const href of ['https://github.com/apps/flisk-chat/installations/new', 'https://openrouter.ai/keys', 'https://console.anthropic.com/settings/keys', 'https://platform.openai.com/api-keys', 'data-sd-copy="@flisk-chat review run"', '@flisk-chat auto on']) expect(text).toContain(href);
     expect(text).not.toContain('sk-plain-secret-9');
     const del = await handle(new Request('https://chat.test/reviews/delete', { method: 'POST', headers: { cookie, origin: 'https://chat.test' } }), env);
     expect(del.status).toBe(303);
+    expect(del.headers.get('location')).toBe('/settings?ok=deleted');
     expect(await loadSettings(env, 'odykyi')).toBeNull();
   });
   test('a task that stops at the connect-a-computer step is still saved in the chat history', async () => {
@@ -257,18 +258,19 @@ describe('saved key', () => {
     expect(await head.text()).toBe('');
     expect((await handle(new Request('https://chat.test/nope', { method: 'HEAD' }), env)).status).toBe(404);
   });
-  test('a bad model name shows the error on the settings page and keeps what was typed; unknown flash text is ignored', async () => {
+  test('a bad model name is refused with the reason, as JSON for the dialog and as a message page without script; unknown flash text is ignored', async () => {
     const { env } = await setup();
     const cookie = (await makeSession(env, 'odykyi')).split(';')[0];
-    const f = new FormData();
-    f.set('ai', 'anthropic'); f.set('model', 'bad model!'); f.set('key', 'sk-12345678');
-    const res = await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: f, headers: { cookie, origin: 'https://chat.test' } }), env);
-    const text = await res.text();
+    const f = () => { const x = new FormData(); x.set('ai', 'anthropic'); x.set('model', 'bad model!'); x.set('key', 'sk-12345678'); return x; };
+    const res = await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: f(), headers: { cookie, origin: 'https://chat.test', accept: 'application/json' } }), env);
     expect(res.status).toBe(400);
-    expect(text).toContain('Not saved: the model name may only use');
-    expect(text).toContain('value="bad model!"');
-    expect(text).toContain('<option value="anthropic" selected>');
-    const spoof = await (await handle(new Request('https://chat.test/reviews?ok=%3Cb%3Ex%3C%2Fb%3E', { headers: { cookie } }), env)).text();
+    const body = await res.json();
+    expect(body.error).toContain('the model name may only use');
+    expect(JSON.stringify(body)).not.toContain('sk-12345678');
+    const plain = await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: f(), headers: { cookie, origin: 'https://chat.test' } }), env);
+    expect(plain.status).toBe(400);
+    expect(await plain.text()).toContain('the model name may only use');
+    const spoof = await (await handle(new Request('https://chat.test/settings/panel?ok=%3Cb%3Ex%3C%2Fb%3E', { headers: { cookie } }), env)).text();
     expect(spoof).not.toContain('Deleted.');
     expect(spoof).not.toContain('<b>x</b>');
   });
@@ -289,7 +291,7 @@ describe('saved key', () => {
     expect((await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: form(), headers: { cookie, origin: 'https://evil.test' } }), env)).status).toBe(403);
     expect((await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: form(), headers: { origin: 'https://chat.test' } }), env)).status).toBe(303);
     const ok = await handle(new Request('https://chat.test/reviews/save', { method: 'POST', body: form(), headers: { cookie, origin: 'https://chat.test' } }), env);
-    expect(ok.headers.get('location')).toBe('/reviews?ok=saved');
+    expect(ok.headers.get('location')).toBe('/settings?ok=saved');
   });
   test('signature check rejects a wrong or missing header', async () => {
     expect(await verifySignature('s', 'b', '')).toBe(false);

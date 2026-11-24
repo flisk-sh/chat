@@ -12,7 +12,7 @@ import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } 
 import { lookup } from './lookup.js';
 import { cleanMode, searchWeb } from './search.js';
 import { appAsset, nextPage, nextCsp, embedCsp } from './next-page.js';
-import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, PROVIDER_NAMES, reviewsPage, THEME_IDS } from './page.js';
+import { appPage, cleanModels, DEFAULT_MODELS, messagePage, PROVIDER_CARDS, PROVIDER_NAMES, settingsPanelHtml, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
 import { runResult } from './run.js';
@@ -518,9 +518,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const refund = async (force = false) => chosen.free && (force || !m.answered()) && refundQuota(env, 'chat', { anon, id: await who(login) });
     return { m, refund };
   };
-  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic' || path === '/embed')) {
+  if (request.method === 'GET' && (path === '/' || path === '/next' || path === '/classic' || path === '/embed' || path === '/settings' || path === '/reviews')) {
     // The new Astryx page is the home page; the previous page stays at /classic.
-    const isNext = path !== '/classic';
+    const isNext = path !== '/classic';  // /settings and /reviews are the chat with the settings dialog open over it (the page script opens it)
     // /embed is the chat as a window inside grow.flisk.si: same app, no side bar, no Earth, and only Grow may frame it.
     const embed = path === '/embed';
     const [models, names] = await Promise.all([loadCatalog(env), loadFleetNames(env, fetchImpl)]);
@@ -555,22 +555,36 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     return withLook(page({ login: session.login, anon, connected: Object.keys(connections) }));
   }
 
-  if (request.method === 'GET' && path === '/reviews') {
-    if (!session || anon) return redirect('/auth/start');
-    return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY, flash: url.searchParams.get('ok') || '' }));
+  // The inside of the settings dialog for this visitor. Anyone can open it: a guest sees the account and help sections, a signed-in
+  // visitor also their AI for reviews. Only the AI's name and model come back, never its key.
+  if (request.method === 'GET' && path === '/settings/panel') {
+    const site = request.headers.get('sec-fetch-site');
+    if (site && site !== 'same-origin') return json(403, { error: 'this only works from chat itself' });
+    const ok = url.searchParams.get('ok');
+    const named = session && !anon;
+    return html(settingsPanelHtml({
+      login: session?.login || '', anon: !named, stored: !!env.KEY_SECRET, limit: REVIEWS_PER_DAY,
+      saved: named ? await loadSettings(env, session.login).catch(() => null) : null,
+      section: url.searchParams.get('section') || '', lang: url.searchParams.get('lang') === 'uk' ? 'uk' : '',
+      flash: ok === 'saved' || ok === 'deleted' ? ok : '',
+    }));
   }
   if (request.method === 'POST' && (path === '/reviews/save' || path === '/reviews/delete')) {
-    if (!session || anon) return redirect('/auth/start');
-    if (!sameOrigin(request, origin)) return html(messagePage('Not allowed', 'This only works from the chat page.'), 403);
+    // The dialog posts with fetch and wants JSON; a plain form post (no script) is redirected back to the chat as before.
+    const wantsJson = (request.headers.get('accept') || '').includes('application/json');
+    const fail = (status, error) => (wantsJson ? json(status, { error }) : html(messagePage('Not saved', error), status));
+    if (!session || anon) return wantsJson ? json(403, { error: 'PR reviews need GitHub sign-in' }) : redirect('/auth/start');
+    if (!sameOrigin(request, origin)) return wantsJson ? json(403, { error: 'this only works from chat itself' }) : html(messagePage('Not allowed', 'This only works from the chat page.'), 403);
     if (path === '/reviews/delete') {
       await deleteSettings(env, session.login);
-      return redirect('/reviews?ok=deleted');
+      return wantsJson ? json(200, { ok: true, flash: 'deleted' }) : redirect('/settings?ok=deleted');
     }
     const f = await request.formData().catch(() => null);
     const chosen = resolveModel({ ai: String(f?.get('ai') || ''), key: String(f?.get('key') || ''), model: String(f?.get('model') || '') });
-    if (chosen.error || chosen.free) return html(reviewsPage({ login: session.login, saved: await loadSettings(env, session.login).catch(() => null), stored: true, limit: REVIEWS_PER_DAY, error: chosen.error || 'pick an AI', form: { ai: String(f?.get('ai') || ''), model: String(f?.get('model') || '') } }), 400);
+    if (chosen.error || chosen.free) return fail(400, chosen.error || 'pick an AI');
     const r = await saveSettings(env, session.login, { ai: chosen.ai, model: chosen.model, key: chosen.key });
-    return r.error ? html(messagePage('Not saved', r.error), 503) : redirect('/reviews?ok=saved');
+    if (r.error) return fail(503, r.error);
+    return wantsJson ? json(200, { ok: true, flash: 'saved' }) : redirect('/settings?ok=saved');
   }
 
   // The video repo's voice (Ava Multilingual) reading text aloud, streamed as mp3 so the page's audio player starts on

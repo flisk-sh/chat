@@ -3,6 +3,7 @@ import { EARTH_JS, TEXTURES, earthUsers, orbJs } from './earth.js';
 import { LOGOS } from './logos.js';
 import { UK_WORDS, RU_WORDS } from './lang.js';
 import { REASONING_CSS, REASONING_JS } from './reasoning.js';
+import { SETTINGS_CSS, SETTINGS_JS, settingsPanel } from './settings-dialog.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // JSON inside a <script>: no "</script>" or "<!--" can close it early.
@@ -44,22 +45,6 @@ const CSS = `
 :root{--bg:#F7F6F2;--panel:#fff;--side:#F0EEE7;--line:#E3E0D6;--line2:#D3D0C5;--ink:#1B1B18;--dim:#6B6960;--soft:#9A988E;--green:#2F7D4A;--green-d:#246139;--tint:#EAF3DE;--warn:#B54708;--red:#B42318;
 --t0:#F6D2C2;--t0i:#712B13;--t1:#F7E3B0;--t1i:#633806;--t2:#C9EDE4;--t2i:#085041;--t3:#F4D3E1;--t3i:#72243E;
 --sans:-apple-system-body,ui-sans-serif,-apple-system,system-ui,'Segoe UI',Helvetica,'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji','Segoe UI Symbol';--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--radius:4px}
-.set{display:grid;grid-template-columns:240px minmax(0,1fr);flex:1;min-height:0}
-.setnav{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:14px 12px;overflow:auto}
-.setnav>a{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius);color:var(--ink);text-decoration:none;font-size:14px}.setnav>a:hover,.setnav>a.cur{background:rgba(27,27,24,.06)}
-.setnav .brand{margin-bottom:10px}.setnav .who{margin-top:auto}
-.setmain{overflow:auto;padding:6vh 28px 60px;max-width:760px;width:100%}
-.setmain h1{font:600 32px/1.2 var(--sans);letter-spacing:-.02em;margin:0 0 18px}
-.setcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
-.setcard h2{font:600 18px/1.3 var(--sans);margin:0 0 8px}.setcard p{margin:8px 0}
-.howto{list-style:decimal;padding-left:22px;margin:8px 0;color:var(--dim)}
-.steps{padding-left:0;margin:12px 0;display:flex;flex-direction:column;gap:14px;list-style:none}.steps li::marker{font-weight:600}.steps .row{margin-top:8px}
-.cmds{display:grid;gap:8px;margin-top:10px}.cmd{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);padding:10px 12px}.cmd code{font:14px var(--mono);color:var(--ink)}.cmd span{grid-column:1/-1;color:var(--dim);font-size:13px}.cmd .cp{padding:3px 10px;font-size:12px}
-.row{display:flex;flex-wrap:wrap;gap:8px}
-.setform{display:grid;gap:12px;max-width:440px}.setform label{display:grid;gap:4px;font-size:14px}
-.setform select,.setform input{width:100%;padding:8px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--bg);font:inherit}
-.keylinks,.hint{color:var(--dim);font-size:13px;margin:0}.flash{background:var(--tint);color:var(--green-d);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px}
-@media(max-width:760px){.set{grid-template-columns:1fr;flex:none}.setnav{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}.setnav .who,.setnav .brand{width:100%;margin:0}body{overflow:auto}}
 *{box-sizing:border-box}html,body{height:100%}body{display:flex;flex-direction:column}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);overflow:hidden}
 .skip-link{position:absolute;left:-9999px;top:0;z-index:100;padding:10px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);font:600 13px var(--sans)}.skip-link:focus{left:12px;top:12px;outline:2px solid var(--green);outline-offset:2px}
@@ -417,6 +402,7 @@ html.plus .plusmenu .cats .cat svg{flex:none}html.plus .fam{display:block;flex:n
 html .plusmenu #mpbtn::after{transform:rotate(-45deg)}
 .plusmenu .phl{display:flex;flex-direction:column;gap:1px;min-width:0;text-align:left;line-height:1.25}.plusmenu .phl b{font-weight:600;font-size:15px;color:var(--ink)}.plusmenu .phl small,.pophd .phl small{font-size:13px;color:var(--dim)}.plusmenu .phl small>.pv2{color:var(--soft)}
 .plusmenu .morebody{display:flex;flex-direction:column;gap:2px}
+.plusmenu .morerow{display:flex;align-items:center;width:100%;min-height:56px;padding:8px 10px;border:1px solid transparent;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 html.plus .plusmenu #mpbtn .mpname,html.plus .plusmenu #mpbtn .chev,html.plus .plusmenu #sbsum,html.plus .plusmenu details.pick>summary .chev{display:none}
 html.plus .plusmenu #mpbtn,html.plus .plusmenu details.pick>summary{width:100%;min-height:56px;border-color:transparent;background:transparent;gap:12px;justify-content:flex-start}
 html.plus .plusmenu #mpbtn:hover,html.plus .plusmenu details.pick>summary:hover{background:var(--line)}
@@ -537,8 +523,9 @@ export const ICON_HEAD = `<link rel="icon" href="${FAVICON}"><link rel="apple-to
 import { i18nScript } from './i18n.js';
 const I18N = i18nScript();
 const shell = (title, body, script = '', index = false, theme = '') =>
-  `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"${theme === 'classic' ? '' : ' class="nt"'}` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? SEO_HEAD : '<meta name="robots" content="noindex">'}${ICON_HEAD}<meta name="theme-color" content="#F7F6F2">${index ? '' : '<meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it.">'}${FONTS}<style>${CSS}${REASONING_CSS}</style><script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script><script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script></head><body><a class="skip-link" href="#main">Skip to content</a>${body}<script>${KEYBOARD_FIT}${script}
+  `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"${theme === 'classic' ? '' : ' class="nt"'}` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(title)}</title>${index ? SEO_HEAD : '<meta name="robots" content="noindex">'}${ICON_HEAD}<meta name="theme-color" content="#F7F6F2">${index ? '' : '<meta name="description" content="Ask for a task or a website. Flisk Chat gets a real computer and does it.">'}${FONTS}<style>${CSS}${REASONING_CSS}${SETTINGS_CSS}</style><script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script><script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script></head><body><a class="skip-link" href="#main">Skip to content</a>${body}<script>${KEYBOARD_FIT}${script}
 ;${REASONING_JS}
+;${SETTINGS_JS}
 ;${I18N}</script></body></html>`;
 
 const LOGO = `<a class="logo" href="/">${icon('chat', 26)}<b style="font-weight:inherit">chat<span>.</span>flisk</b></a>`;
@@ -563,40 +550,9 @@ export const KEY_PAGES = { openrouter: ['OpenRouter', 'https://openrouter.ai/key
 // Hidden hook the org bar reads for the signed-in login. Empty for anonymous sessions, whose cookie login (anon-<16hex>) would pass the bar's login check.
 export const loginHook = (login, anon = false) => (login && !anon && !/^anon-/i.test(String(login)) ? `<span data-flisk-login hidden>${esc(login)}</span>` : '');
 
-export const reviewsPage = ({ login, anon = false, saved, stored, limit, flash, error = '', form = {} }) =>
-  shell(
-    'Settings · chat',
-    `${loginHook(login, anon)}<div class="set">
-<nav class="setnav" aria-label="Settings"><div class="brand">${LOGO}</div><a href="/">${icon('chat', 16)}Back to chat</a><a href="#github" class="cur">GitHub reviews</a><a href="#ai">AI for reviews</a><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">Computers</a><a href="https://flisk.si" target="_blank" rel="noopener">Flisk</a><div class="who"><span>@${esc(login)}</span><a href="/auth/signout">Sign out</a></div></nav>
-<main id="main" class="setmain">
-<h1>Settings</h1>
-${error ? `<p class="flash" role="alert" style="background:#FCE8E6;color:var(--red)">Not saved: ${esc(error)}</p>` : flash === 'saved' ? '<p class="flash" role="status">Saved. Your next review uses this AI.</p>' : flash === 'deleted' ? '<p class="flash" role="status">Deleted. Reviews use the free Flisk Wolf model again.</p>' : ''}
-<section id="github" class="setcard"><h2>Get a code review on any pull request</h2>
-<p>Chat reads your pull request and writes a review on GitHub: a summary, comments on the exact lines, one-click fixes and a verdict. You ask for it by writing a comment.</p>
-<ol class="steps"><li><b>1. Install the app once.</b> Pick the repos you want it on.<br><span class="row"><a class="btn go" href="${GITHUB_APP_URL}/installations/new" target="_blank" rel="noopener">Install the GitHub App</a></span></li>
-<li><b>2. Open any pull request on GitHub</b> and write one of these in the comment box at the bottom, then press Comment.
-<div class="cmds">
-<div class="cmd"><code>@flisk-chat review</code><button type="button" class="btn cp" data-copy="@flisk-chat review">Copy</button><span>Reads the changes and posts a review. Takes about 20 seconds.</span></div>
-<div class="cmd"><code>@flisk-chat review run</code><button type="button" class="btn cp" data-copy="@flisk-chat review run">Copy</button><span>The same, and also runs the project's lint and tests on one of your computers. The results are posted when it finishes.</span></div>
-<div class="cmd"><code>@flisk-chat auto on</code><button type="button" class="btn cp" data-copy="@flisk-chat auto on">Copy</button><span>Reviews every new pull request in this repo by itself. Write <code>@flisk-chat auto off</code> to stop.</span></div>
-</div></li>
-<li><b>3. Read the review</b> on the pull request. Nothing is merged or changed for you.</li></ol>
-<p class="hint">Only people who can push to the repo can ask. Reviews use the AI chosen below. A model can be wrong, so read before you merge.</p>
-<p class="row"><a class="btn" href="${GITHUB_APP_URL}" target="_blank" rel="noopener">View on GitHub</a><a class="btn" href="https://github.com/settings/installations" target="_blank" rel="noopener">Manage installed repos</a></p></section>
-<section id="ai" class="setcard"><h2>AI for reviews</h2>
-<p class="cur-ai">${saved ? `Reviews for <b>@${esc(login)}</b> use <b>${esc(saved.model)}</b> (${esc(saved.ai)}) with your key. You pay your provider; no daily limit.` : `Reviews for <b>@${esc(login)}</b> use the free Flisk Wolf model: ${limit} a day, and only the first part of a big diff.`}</p>
-${stored ? `<form method="post" action="/reviews/save" class="setform">
-<label>AI<select name="ai" id="aisel">${Object.entries(KEY_PAGES).map(([v, [n]]) => `<option value="${v}"${(form.ai || saved?.ai) === v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-<p class="keylinks">${Object.entries(KEY_PAGES).map(([v, [n, u]]) => `<a class="keylink" href="${u}" target="_blank" rel="noopener" data-for="${v}"${(saved?.ai || 'openrouter') === v ? '' : ' hidden'}>Get your ${n} key</a>`).join('')}</p>
-<label>Model name<input name="model" required maxlength="80" placeholder="e.g. anthropic/claude-sonnet-5.5" value="${esc(form.model ?? saved?.model ?? '')}"></label>
-<label>API key<input name="key" type="password" required minlength="8" maxlength="300" autocomplete="off"></label>
-<p class="hint">The key is encrypted before it is stored and never shown again.</p>
-<p class="row"><button class="btn go" type="submit">Save for reviews</button></p></form>` : '<p class="hint">Saving a key is not switched on yet.</p>'}
-${saved ? '<form method="post" action="/reviews/delete"><button class="btn" type="submit">Delete my saved key</button></form>' : ''}
-</section>
-</main></div>`,
-    `document.querySelectorAll('.cp').forEach((b)=>b.addEventListener('click',()=>{const t=b.dataset.copy;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1500);}).catch(()=>{b.textContent='Select and copy';});}));const sel=document.getElementById('aisel');if(sel){const show=()=>document.querySelectorAll('.keylink').forEach((a)=>{a.hidden=a.dataset.for!==sel.value});sel.addEventListener('change',show);show();}`,
-  );
+// The settings dialog (src/settings-dialog.js): account, the AI for pull request reviews, GitHub reviews and the link to the computers.
+// GET /settings/panel serves its inside; the key is encrypted before it is stored and never shown again.
+export const settingsPanelHtml = (opts) => settingsPanel({ ...opts, keyPages: KEY_PAGES, appUrl: GITHUB_APP_URL });
 
 // Starter ideas per kind, for people who never write code.
 export const CATS = [
@@ -938,9 +894,10 @@ if(pm&&cats)pm.prepend(cats);
 const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));if(on)placeFloat(pm,pb);};
 if(pb)pb.onclick=()=>setPlus(!document.documentElement.classList.contains('plus'));
 {const mq=matchMedia('(max-width:860px)'),md=document.querySelector('.modes'),mp=document.getElementById('mp'),bar=document.querySelector('.composer .bar'),gr=bar&&bar.querySelector('.grow');
-const more=document.createElement('details');more.className='more';more.innerHTML='<summary>${fam('settings', 26)}<span class="phl"><b>Settings</b><small>AI model, computers, voice, files</small></span></summary><div class="morebody"></div>';
+const more=document.createElement('details');more.className='more';more.innerHTML='<summary>${fam('settings', 26)}<span class="phl"><b>Settings</b><small>AI model, computers, voice, files</small></span></summary><div class="morebody"><button type="button" class="morerow" data-open-settings>Account, reviews, computers</button></div>';
 const mb2=more.querySelector('.morebody'),rows=['attach','fileIn'].map(i=>document.getElementById(i)).concat([pm&&pm.querySelector('details.pick'),document.getElementById('voice'),document.getElementById('orbbtn')]);
 const place=()=>{if(!pm||!md||!mp)return;if(mq.matches){pm.prepend(md);pm.insertBefore(mp,md.nextSibling);mb2.append(mp,...rows.filter(Boolean));pm.append(more);}else{more.remove();rows.filter(Boolean).forEach(n=>pm.appendChild(n));if(gr){bar.insertBefore(md,gr);bar.insertBefore(mp,gr.nextSibling);}}};
+{const sr=more.querySelector('.morerow');if(sr)sr.addEventListener('click',()=>setPlus(false));}
 place();mq.addEventListener('change',place);{const px=document.getElementById('popx');if(px)px.onclick=()=>{closePop();mpBtn.focus({preventScroll:true});};}
 if(md)md.addEventListener('click',()=>{if(mq.matches)setTimeout(()=>setPlus(false),0);});}
 // A kind of task picked in the + menu shows its result: the menu closes, the box says what to type, and the ideas list opens (on Earth it sits behind "Try an idea").
