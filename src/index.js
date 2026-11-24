@@ -128,7 +128,8 @@ export const podBase = (env) => (env.BROWSER_POD_URL === '' ? '' : (env.BROWSER_
 // The browser model runs on inference's own origin, in a hidden iframe (inference's /browser-model page): chat frames that one
 // origin and loads no script from anywhere new, so the engine and the weights never run in the page that holds the session.
 export const inferenceOrigin = (env) => { try { return new URL(env.INFERENCE_URL || 'https://inference.flisk.si/v1/chat/completions').origin; } catch { return 'https://inference.flisk.si'; } };
-export const withFrame = (csp, inf) => (inf ? csp.replace("default-src 'none';", `default-src 'none'; frame-src ${inf};`) : csp);
+// The page itself may be framed (the side panel previews a published /s/<id> page); inference's origin is added when it is set.
+export const withFrame = (csp, inf) => csp.replace("default-src 'none';", `default-src 'none'; frame-src 'self'${inf ? ' ' + inf : ''};`);
 export function cspWithPod(pod, origin) {
   if (!pod) return SECURITY['content-security-policy'];
   const from = new URL(pod).href;

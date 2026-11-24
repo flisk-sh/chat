@@ -230,3 +230,9 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 .next-cta{border:2px solid transparent;background:linear-gradient(var(--_button-fill),var(--_button-fill)) padding-box,conic-gradient(from var(--next-cta-angle),#ef4444,#f59e0b,#eab308,#22c55e,#3b82f6,#8b5cf6,#ef4444) border-box;animation:next-cta-spin 3s linear infinite}
 @keyframes next-cta-spin{to{--next-cta-angle:360deg}}
 @media (prefers-reduced-motion:reduce){.next-cta{animation:none}}
+/* The page preview panel (#438): a column beside the chat on wide screens, the whole screen on phones. */
+.chat-split{display:flex;height:100%;min-height:0}
+.page-panel{display:flex;flex-direction:column;width:min(48%,640px);min-width:360px;flex-shrink:0;border-inline-start:1px solid var(--color-border-primary,#8884);background:var(--color-background-primary,#fff);min-height:0}
+.page-panel-bar{padding:var(--spacing-2) var(--spacing-3);border-block-end:1px solid var(--color-border-primary,#8884)}
+.page-panel-frame{flex:1;width:100%;border:0;background:#fff;min-height:0}
+@media (max-width:767px){.page-panel{position:fixed;inset:0;z-index:60;width:100%;min-width:0}}

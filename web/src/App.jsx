@@ -7,6 +7,7 @@ import {ModelDialog, ComputerDialog, brandOf} from './Pickers.jsx';
 import {BOOT, runTask, podOk, getPod, runInBrowser, keyFor, modelFor, lsGet, orStartLogin, orFinishLogin, loadChats, saveChats, deleteChat, vaultReady} from './api.js';
 import {markEngaged} from './engaged.js';
 import {Widget, WorkerCard, BrowserAnswer} from './Cards.jsx';
+import {PagePanel} from './Panel.jsx';
 import {newTurn, applyEv, nextSteps, chatTitle, shownText, liveText, pictures, wantsVoice, resetText} from './events.js';
 import {QuestionMarkCircleIcon} from '@heroicons/react/24/outline';
 import {AppShell, useAppShellMobile} from '@astryxdesign/core/AppShell';
@@ -66,7 +67,7 @@ async function savePicture(src) {
 
 const copy = (u) => navigator.clipboard && navigator.clipboard.writeText(u).catch(() => {});
 
-function Answer({t, onAgain, onPick}) {
+function Answer({t, onAgain, onPick, onPreview, openUrl}) {
   const text = shownText(t);
   const links = t.link ? [t.link] : [];
   const pics = pictures(text);
@@ -86,6 +87,7 @@ function Answer({t, onAgain, onPick}) {
             <HStack gap={2} align="center"><Badge label="Live" variant="success" /><Text type="supporting" color="secondary">{page ? 'Kept 7 days. Download the page to keep it.' : t.kept && t.kept.days ? 'Kept ' + t.kept.days + ' days' : 'Real link'}</Text></HStack>
             <Text weight="semibold" style={{wordBreak: 'break-all'}}>{u}</Text>
             <HStack gap={2} wrap="wrap">
+              {page && onPreview && <Button label={openUrl === u ? 'Preview open' : 'Preview'} variant="primary" onClick={() => onPreview(u)} />}
               <Tip text="Open the real thing in a new tab."><Button label="Open" variant="primary" href={u} target="_blank" icon={<Icon icon={ArrowTopRightOnSquareIcon} size="sm" />} /></Tip>
               <Button label="Copy link" variant="secondary" onClick={() => copy(u)} />
               {page && <Button label="Download" variant="secondary" href={u} download="index.html" icon={<Icon icon={ArrowDownTrayIcon} size="sm" />} />}
@@ -233,6 +235,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [files, setFiles] = useState([]);
   const [limit, setLimit] = useState(null);
   const [notice, setNotice] = useState('');
+  const [panel, setPanel] = useState(''); // the published page open in the side panel (#438)
   const [chats, setChats] = useState(loadChats);
   const [chatId, setChatId] = useState(() => 'c' + Date.now());
   const [filter, setFilter] = useState('');
@@ -384,7 +387,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   pick.free = sel.free;
 
   const [navOpen, setNavOpen] = useState(false); // the phone chat drawer
-  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); setChatId('c' + Date.now()); setLimit(null); setBusy(false); };
+  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); setChatId('c' + Date.now()); setLimit(null); setBusy(false); setPanel(''); };
   // Delete one past chat from this browser (#355). Deleting the open chat starts a new one.
   const dropChat = (c) => {
     if (!confirm('Delete the chat "' + (c.title || 'Untitled') + '"? This cannot be undone.')) return;
@@ -463,7 +466,8 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       </HStack>
       }
       sideNav={BOOT.embed ? undefined : side}>
-      <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
+      <div className="chat-split">
+      <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
@@ -517,13 +521,15 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
               <ChatMessage sender="user"><ChatMessageBubble>{x.task}{x.files && x.files.length ? '\n📎 ' + x.files.join(', ') : ''}</ChatMessageBubble></ChatMessage>
               <ChatMessage sender="assistant" avatar={<Brand name="wolf" size={32} />}>
                 {busy && i === turns.length - 1 && <Text type="supporting" color="secondary">{x.t.status}…</Text>}
-                <Answer t={x.t} onAgain={(pod) => run(x.task, {pod: !!pod, reuse: true}).catch(() => {})} onPick={pick} />
+                <Answer t={x.t} openUrl={panel} onPreview={setPanel} onAgain={(pod) => run(x.task, {pod: !!pod, reuse: true}).catch(() => {})} onPick={pick} />
               </ChatMessage>
             </div>
           ))}
           {limit && <ChatMessage sender="assistant" avatar={<Brand name="wolf" size={32} />}><LimitCard info={limit} task={limit.task} onPick={pick} /></ChatMessage>}
         </ChatMessageList>
       </ChatLayout>
+      </div>
+      {panel && <PagePanel url={panel} onClose={() => setPanel('')} onCopy={copy} />}
       </div>
     </AppShell>
     </div>
