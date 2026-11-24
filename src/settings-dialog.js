@@ -85,7 +85,7 @@ ${row(t('API key'), t('The key is encrypted before it is stored and never shown 
   // A ring: the share of today's allowance used. Green while there is room, red when it is used up.
   const ring = (u) => {
     const frac = u.limit ? Math.min(1, u.used / u.limit) : 0, C = 2 * Math.PI * 26;
-    return `<svg class="sd-ring" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="${esc(`${u.used} / ${u.limit}`)}"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--sd-line)" stroke-width="7"/><circle cx="32" cy="32" r="26" fill="none" stroke="${frac >= 1 ? 'var(--sd-red)' : 'var(--sd-accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C * frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 32 32)"/></svg>`;
+    return `<svg class="sd-ring" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="${esc(`${u.used} / ${u.limit}`)}"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--sd-line)" stroke-width="7"/>${frac > 0 ? `<circle cx="32" cy="32" r="26" fill="none" stroke="${frac >= 1 ? 'var(--sd-red)' : 'var(--sd-accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C * frac).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 32 32)"/>` : ''}</svg>`;
   };
   const tile = (u) => {
     const left = Math.max(0, u.limit - u.used), name = (USAGE_NAMES[u.key] || [u.key])[0];
@@ -146,8 +146,8 @@ export const SETTINGS_CSS = `
 .sd-in{width:100%;padding:8px 10px;border:1px solid var(--sd-line2);border-radius:var(--radius);background:var(--sd-field);color:var(--sd-ink);font:inherit;font-size:16px}
 .sd-keylinks{margin:0;font-size:13px;text-align:right}.sd-keylink{color:var(--sd-ink)}
 .sd-cur{color:var(--sd-ink)}
-.sd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 16px}.sd-tile{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--sd-line);border-radius:var(--radius);padding:14px 16px}
-.sd-tl,.sd-ts{margin:0}.sd-tl{font-weight:600}.sd-tv{margin:6px 0 2px}.sd-tv b{font-size:26px;font-weight:600}.sd-tv span,.sd-ts{color:var(--sd-dim);font-size:13px}
+.sd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:0 0 16px}.sd-tile{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--sd-line);border-radius:var(--radius);padding:14px 16px}
+.sd-tl,.sd-ts{margin:0}.sd-tl{font-weight:600}.sd-tv{margin:6px 0 2px;white-space:nowrap}.sd-tv b{font-size:26px;font-weight:600}.sd-tv span,.sd-ts{color:var(--sd-dim);font-size:13px}
 .sd-card{border:1px solid var(--sd-line);border-radius:var(--radius);padding:14px 16px 8px;margin:0 0 16px}.sd-chart{width:100%;height:auto;display:block;margin-top:8px}.sd-chart text{fill:var(--sd-dim);font-size:11px}.sd-chart .sd-capl{fill:var(--sd-red)}.sd-note{margin:0 0 16px}
 .sd-actions{display:flex;justify-content:flex-end;padding:12px 0 14px;border-top:1px solid var(--sd-line)}
 .sd-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--sd-line2);background:var(--sd-bg);color:var(--sd-ink);border-radius:var(--radius);padding:7px 14px;font:inherit;text-decoration:none;cursor:pointer;min-height:36px}.sd-btn:hover{border-color:var(--sd-ink)}.sd-btn.go{background:var(--sd-accent);border-color:var(--sd-accent);color:var(--sd-on)}.sd-btn[disabled]{opacity:.6;cursor:default}
