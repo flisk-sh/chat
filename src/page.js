@@ -519,6 +519,39 @@ html[data-theme=voice] .composer .bar #orbbtn{background:var(--flisk-accent);col
 @media (min-width:861px){.only-m{display:none}}
 /* Phones: the composer buttons fit on one row with the send button (Fleet shows its icon only, no arrows). */
 @media (max-width:520px){.composer{padding:10px 8px 8px 10px}.composer .bar{gap:3px}.composer .bar .chev{display:none}.composer .bar .chip{gap:5px;padding-right:7px}#sbsum{display:none}.composer .bar #mic,.composer .bar #voice,.composer .bar #orbbtn,.composer .bar .attach{width:32px;padding-left:0;padding-right:0;justify-content:center}.composer .send{width:36px;height:36px}}
+
+/* Side nav, after Astryx shell-side-nav: one flat left rail, plain icon rows, grouped history, no filled buttons, collapsible. */
+@media (min-width:861px){
+html .side,html .side *{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important}
+.side{padding:12px 8px 8px;gap:2px;font-size:14px;position:relative}
+.side .brand{padding:4px 8px 12px}
+.side .logo{font-size:15px;font-weight:600}
+html .side .newchat,html .side .search{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;box-sizing:border-box;min-height:34px;padding:0 8px;border:0;border-radius:var(--radius);background:none!important;color:var(--ink)!important;font-size:14px;font-weight:400;text-align:left}
+.side .newchat:hover,.side .search:hover,.side .search:focus-within{background:rgba(127,127,120,.14)}
+.side .newchat svg,.side .search svg,.side .sidesec h4 svg{color:var(--dim);flex:none}
+.side .search input{font-size:14px;padding:0}
+.side .histwrap{margin:6px 0 0;padding-top:6px;border-top:1px solid var(--line)}
+#hist .day{padding:0;margin:0;font:inherit;letter-spacing:0;text-transform:none;color:var(--ink)}
+#hist .day button{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:34px;padding:0 8px;border:0;background:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:400;color:var(--ink);text-align:left}
+#hist .day button::after{content:"";width:7px;height:7px;border:solid var(--dim);border-width:0 1.6px 1.6px 0;transform:rotate(-135deg) translate(-2px,-2px);transition:transform .15s}
+#hist .day button[aria-expanded=false]::after{transform:rotate(45deg) translate(-2px,-2px)}
+#hist .day button:hover{background:rgba(127,127,120,.14)}
+#hist li.hid{display:none}
+#hist li:not(.day):not(.more):not(.none){margin-left:10px;padding-left:8px;border-left:1px solid var(--line)}
+#hist li:not(.day) button:first-child{font-size:14px;font-weight:400;color:var(--dim);padding:7px 8px}
+#hist li:hover,#hist li.cur{background:rgba(127,127,120,.14)}
+#hist li:hover button:first-child,#hist li.cur button:first-child{color:var(--ink)}
+.side .sidesec{border-top:0;padding:0}
+.side .sidesec h4{min-height:34px;margin:0;padding:0 8px;font-size:14px;font-weight:400;color:var(--ink);border-radius:var(--radius)}
+.side .who{border-top:1px solid var(--line);padding:8px 8px 6px;margin-top:6px;font-size:13px}
+.side .sidecollapse{align-self:flex-start;display:flex;align-items:center;justify-content:center;width:32px;height:32px;margin:2px 0 0 2px;border:0;border-radius:var(--radius);background:none;color:var(--dim);cursor:pointer}
+.side .sidecollapse:hover{background:rgba(127,127,120,.14);color:var(--ink)}
+.sideexpand{display:none}
+.app.sidecol{grid-template-columns:0 minmax(0,1fr)}
+.app.sidecol .side{visibility:hidden;overflow:hidden;padding:0;border:0}
+.app.sidecol .sideexpand{display:flex;position:fixed;top:56px;left:8px;z-index:30;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--dim);cursor:pointer}
+}
+@media (max-width:860px){.sidecollapse,.sideexpand{display:none!important}}
 `;
 
 const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist+Mono:wght@400;500;600&display=swap">';
@@ -782,11 +815,15 @@ const saveAll=(all)=>{try{localStorage.setItem(KEY,JSON.stringify(all.slice(0,30
 const saveChat=()=>{if(!history.length)return;const prev=loadAll().find(c=>c.id===chatId);const all=loadAll().filter(c=>c.id!==chatId);if(!chatId)chatId=Date.now().toString(36);all.unshift({id:chatId,at:(prev&&prev.at)||Date.now(),title:history[0].content.split('\\n')[0].slice(0,80),msgs:history,memo,memoN});saveAll(all);drawHist();};
 function drawHist(){const q=($('q').value||'').toLowerCase();const all=loadAll().filter(c=>!q||c.title.toLowerCase().includes(q)||(c.msgs||[]).some(m=>String(m.content||'').toLowerCase().includes(q)||(m.files||[]).some(n=>String(n).toLowerCase().includes(q))));hist.textContent='';
   if(!all.length){hist.appendChild(node('li','none',q?'No chats match.':'Your chats show here. They stay in this browser.'));return;}
-  const LIM=10;let showAll=!!q||hist.dataset.all==='1';const rows=showAll?all:all.slice(0,LIM);let lastDay='';
+  const folded=drawHist.folded||(drawHist.folded=new Set());const LIM=10;let showAll=!!q||hist.dataset.all==='1';const rows=showAll?all:all.slice(0,LIM);let lastDay='';
   const dayName=(t)=>{const d=new Date(t),n=new Date(),k=(a)=>a.toDateString();if(k(d)===k(n))return 'Today';const y=new Date(n);y.setDate(n.getDate()-1);if(k(d)===k(y))return 'Yesterday';return d.toLocaleDateString(undefined,{day:'numeric',month:'short'});};
-  rows.forEach(c=>{const dn=c.at?dayName(c.at):'';if(dn&&dn!==lastDay){lastDay=dn;hist.appendChild(node('li','day',dn));}const li=node('li',c.id===chatId?'cur':''),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title+(c.at?' · '+new Date(c.at).toLocaleString():'');b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});
+  rows.forEach(c=>{const dn=c.at?dayName(c.at):'';if(dn&&dn!==lastDay){lastDay=dn;const dl=node('li','day'),db=node('button','',dn);db.type='button';db.setAttribute('aria-expanded',folded.has(dn)?'false':'true');db.onclick=()=>{if(folded.has(dn))folded.delete(dn);else folded.add(dn);drawHist();};dl.appendChild(db);hist.appendChild(dl);}const li=node('li',(c.id===chatId?'cur':'')+(folded.has(dn)?' hid':'')),b=node('button','',c.title),x=node('button','x','×');b.type=x.type='button';b.title=c.title+(c.at?' · '+new Date(c.at).toLocaleString():'');b.onclick=()=>{openChat(c);closeSide();};x.title='Delete this chat';x.setAttribute('aria-label','Delete chat: '+c.title);x.onclick=()=>{saveAll(loadAll().filter(o=>o.id!==c.id));if(chatId===c.id)newChat();drawHist();};li.append(b,x);hist.appendChild(li);});
   if(!showAll&&all.length>LIM){const li=node('li','more'),m=node('button','','Show '+(all.length-LIM)+' older');m.type='button';m.onclick=()=>{hist.dataset.all='1';drawHist();};li.append(m);hist.appendChild(li);}}
 $('q').addEventListener('input',drawHist);
+// The sidebar folds away on a wide screen and the choice is remembered; on a phone the menu button already does this.
+{const app=document.querySelector('.app'),setC=(c)=>{app.classList.toggle('sidecol',c);$('sidecollapse').setAttribute('aria-expanded',c?'false':'true');try{localStorage.setItem('chat_side_col',c?'1':'0');}catch(e){}};
+let c0=false;try{c0=localStorage.getItem('chat_side_col')==='1';}catch(e){}if(c0)app.classList.add('sidecol');
+$('sidecollapse').onclick=()=>setC(true);$('sideexpand').onclick=()=>setC(false);}
 // Older turns fold into one short summary kept with the chat in this browser; the model sees it plus the last few messages.
 async function roll(){const upto=history.length-6;if(memoBusy||upto-memoN<6)return;memoBusy=true;const id=chatId,from=memoN;try{const r=await fetch('/api/memo',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({memo,msgs:history.slice(from,upto).map(m=>({role:m.role,content:m.content})),ai:{ai:aiSel.value,key:byoKey.value,model:cur.model||fixModel(byoModel.value.trim()).model}})});const b=await r.json().catch(()=>({}));if(r.ok&&b.memo&&id===chatId){memo=b.memo;memoN=upto;saveChat();}}catch(e){}memoBusy=false;}
 function newChat(){history=[];chatLang='';memo='';memoN=0;go.disabled=false;treeAnswer=null;box.placeholder='What should it do?';chatId=null;talk.textContent='';setup.hidden=true;signin.hidden=true;chatting(false);drawHist();box.focus();}
@@ -1596,13 +1633,15 @@ export function appPage({ login, anon = false, connected = [], models = DEFAULT_
 <nav class="thx frail" aria-label="Menu"><a class="fl" href="/" aria-label="Chat home">${icon('chat', 30)}</a><button type="button" data-act="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New</button><button type="button" data-act="hist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Computers</a><button type="button" data-act="voice"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/></svg>Voice</button>${login && !anon ? `<a href="/reviews"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</a><a class="end" href="/auth/signout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>` : `<a class="end" href="/auth/start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>Sign in</a>`}</nav>
 <aside id="side" class="side" aria-label="Chats">
 <div class="brand">${LOGO}<button type="button" id="sideclose" class="iconbtn only-m" aria-label="Close the menu">×</button></div>
-<button type="button" id="newchat" class="newchat">${icon('thunder', 18)}New chat</button>
+<button type="button" id="newchat" class="newchat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New chat</button>
 <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search your chats" aria-label="Search your chats" autocomplete="off"></label>
 <div class="histwrap"><ul id="hist"></ul></div>
 <section class="sidesec"><h4><span style="display:inline-flex;align-items:center;gap:6px">${icon('fleet', 16)}Computers</span><a href="https://fleet.flisk.si/console?section=providers" target="_blank" rel="noopener">manage</a></h4><ul class="comps">${comps}</ul></section>
 <section class="sidesec"><h4>Voice</h4><div class="soon">Voice talk: tap the wave and just talk, it answers out loud <span class="tag">new</span></div></section>
 <div class="who">${login && anon ? '<div class="optwrap"><a class="btn" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a><small class="optin">Optional. It keeps your computers on every device and unlocks PR reviews and higher limits.</small></div>' : login ? `<span>@${esc(login)}</span><a href="/reviews">Settings</a><a href="/auth/signout">Sign out</a>` : '<a class="btn go" href="/auth/start" style="width:100%;justify-content:center">Sign in with GitHub</a>'}</div>
+<button type="button" id="sidecollapse" class="sidecollapse" aria-label="Collapse the sidebar" aria-expanded="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
 </aside>
+<button type="button" id="sideexpand" class="sideexpand" aria-label="Expand the sidebar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
 <div id="scrim" class="scrim" aria-hidden="true"></div>
 <main id="main" class="main">
 <div class="top"><button type="button" id="sideopen" class="iconbtn" aria-label="Open the menu"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>${LOGO}</div>
