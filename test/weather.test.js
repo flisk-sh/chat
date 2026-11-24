@@ -11,7 +11,21 @@ test('the place is the word after "in", then the other words', () => {
   expect(placeGuesses('Яка погода у Львові сьогодні?')[0]).toBe('Львові');
 });
 
-test('sky codes become words', () => { expect(sky(0)).toBe('clear sky'); expect(sky(63)).toBe('rain'); expect(sky(96)).toBe('thunderstorm'); });
+test.each([
+  [0, 'clear sky'],
+  [56, 'light freezing drizzle'],
+  [63, 'rain'],
+  [66, 'light freezing rain'],
+  [77, 'snow grains'],
+  [85, 'light snow showers'],
+  [96, 'thunderstorm with slight hail'],
+  [97, 'heavy thunderstorm'],
+  [99, 'thunderstorm with heavy hail'],
+  [94, 'unknown'],
+  [null, 'unknown'],
+])('sky code %s describes %s', (code, label) => {
+  expect(sky(code)).toBe(label);
+});
 
 const fakeNet = (places) => async (u) => {
   u = String(u);

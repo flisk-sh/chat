@@ -15,8 +15,21 @@ export function placeGuesses(text) {
   return [...new Set([...after, ...words])].filter((w) => w.length >= 3).slice(0, 4);
 }
 
-const CODES = [[0, 'clear sky'], [1, 'mostly clear'], [2, 'partly cloudy'], [3, 'overcast'], [45, 'fog'], [48, 'fog'], [51, 'light drizzle'], [55, 'drizzle'], [61, 'light rain'], [63, 'rain'], [65, 'heavy rain'], [71, 'light snow'], [73, 'snow'], [75, 'heavy snow'], [80, 'rain showers'], [82, 'heavy showers'], [95, 'thunderstorm']];
-export const sky = (c) => ([...CODES].reverse().find(([k]) => c >= k) || [0, 'unknown'])[1];
+// Open-Meteo weather codes are discrete, not severity thresholds.
+const CODES = new Map([
+  [0, 'clear sky'], [1, 'mostly clear'], [2, 'partly cloudy'], [3, 'overcast'],
+  [45, 'fog'], [48, 'rime fog'],
+  [51, 'light drizzle'], [53, 'moderate drizzle'], [55, 'dense drizzle'],
+  [56, 'light freezing drizzle'], [57, 'dense freezing drizzle'],
+  [61, 'light rain'], [63, 'rain'], [65, 'heavy rain'],
+  [66, 'light freezing rain'], [67, 'heavy freezing rain'],
+  [71, 'light snow'], [73, 'snow'], [75, 'heavy snow'], [77, 'snow grains'],
+  [80, 'light rain showers'], [81, 'moderate rain showers'], [82, 'heavy rain showers'],
+  [85, 'light snow showers'], [86, 'heavy snow showers'],
+  [95, 'thunderstorm'], [96, 'thunderstorm with slight hail'],
+  [97, 'heavy thunderstorm'], [99, 'thunderstorm with heavy hail'],
+]);
+export const sky = (c) => CODES.get(c) ?? 'unknown';
 
 const ALIAS = [[/^киев/i, 'Київ'], [/^харьков/i, 'Харків'], [/^днепр/i, 'Дніпро'], [/^львов/i, 'Львів'], [/^одесс/i, 'Одеса']];
 
