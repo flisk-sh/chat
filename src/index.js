@@ -156,12 +156,15 @@ const readJson = async (request) => {
 const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 // Build analytics: one row per finished task (no login, no key), so a weak result can be traced to its cause.
-export async function recordRun(env, { task, ai, free, anon, result }) {
+export async function recordRun(env, { task, ai, free, anon, result, login = null }) {
   if (!env.DB) return;
   const st = result.stats || {};
   await env.DB.prepare('INSERT INTO task_runs (created, who, task, ai, free, provider, steps, errors, bad_json, empty, provider_retries, big, system, first_action, shared, copy, links, ms, error, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(new Date().toISOString(), anon ? 'anon' : 'user', String(task).slice(0, 300), String(ai || '').slice(0, 80), free ? 1 : 0, result.provider || null, result.steps.length, st.errors || 0, st.bad || 0, st.empty || 0, st.provider || 0, st.big ? 1 : 0, st.system ? 1 : 0, st.firstAction || null, st.shared ? 1 : 0, st.copy ? 1 : 0, result.links.length, result.ms || 0, result.error ? String(result.error).slice(0, 200) : null, result.answer ? String(result.answer).slice(0, 400) : null)
     .run();
+  // A signed-in person's day, once: lets us count different people and returns. Its own catch, so a database where
+  // user_days is not created yet still records the task.
+  if (!anon && login) await env.DB.prepare('INSERT OR IGNORE INTO user_days (login, day) VALUES (?, ?)').bind(String(login), new Date().toISOString().slice(0, 10)).run().catch(() => {});
 }
 
 // Why a finished task is worth a look: it failed, a bigger app skipped the "system" builder, most of its steps failed,
@@ -798,7 +801,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
         .then(async (r) => {
           if (needPod) return;
           for (const e of buffered) send(e);
-          await recordRun(env, { task, ai: modelLabel(chosen), free: !!chosen.free, anon, result: r }).catch(() => {});
+          await recordRun(env, { task, ai: modelLabel(chosen), free: !!chosen.free, anon, result: r, login }).catch(() => {});
           await alertRun(env, { task, ai: modelLabel(chosen), anon, result: r }, fetchImpl).catch(() => {});
           for (const t of runEvents(r, runProblem(r), '/api/run', turnLang)) await sendTrace(env, t, fetchImpl);
           if (!needPod) send({ type: 'done', ms: r.ms, error: r.error });

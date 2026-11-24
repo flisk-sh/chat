@@ -125,3 +125,13 @@ CREATE TABLE IF NOT EXISTS review_runs (
   finished TEXT
 );
 CREATE INDEX IF NOT EXISTS review_runs_created ON review_runs (created);
+
+-- Which signed-in people used chat on which day: one row per login and day, written the first time they run a task that day.
+-- No task text, no key. It answers "how many different people, and how many came back on another day" (task_runs has no login).
+-- On a database made before this table existed, run once: bunx wrangler@4 d1 execute flisk-chat --remote --file schema.sql
+CREATE TABLE IF NOT EXISTS user_days (
+  login TEXT NOT NULL,
+  day TEXT NOT NULL,            -- UTC date, YYYY-MM-DD
+  PRIMARY KEY (login, day)
+);
+CREATE INDEX IF NOT EXISTS user_days_day ON user_days (day);

@@ -18,6 +18,21 @@ describe('build analytics', () => {
     expect(row).toMatchObject({ who: 'user', big: 1, system: 0, bad_json: 1, errors: 1, steps: 1, first_action: 'run', answer: 'done' });
   });
 
+  test('a signed-in person is counted once per day, an anonymous one never, and a missing table does not lose the task', async () => {
+    const DB = fakeD1(SCHEMA);
+    const result = { steps: [], links: [], ms: 5, stats: {} };
+    const run = (anon, login, env = { DB }) => recordRun(env, { task: 't', ai: 'a', free: true, anon, result, login });
+    await run(false, 'alice');
+    await run(false, 'alice');
+    await run(true, 'anon-xyz');
+    const rows = DB.raw.query('SELECT login, day FROM user_days').all();
+    expect(rows).toEqual([{ login: 'alice', day: new Date().toISOString().slice(0, 10) }]);
+    expect(DB.raw.query('SELECT COUNT(*) AS n FROM task_runs').get().n).toBe(3);
+    const old = fakeD1(SCHEMA.split('-- Which signed-in people')[0]);
+    await run(false, 'bob', { DB: old });
+    expect(old.raw.query('SELECT COUNT(*) AS n FROM task_runs').get().n).toBe(1);
+  });
+
   test('the admin summary needs the key and never shows a login', async () => {
     const DB = fakeD1(SCHEMA);
     await recordRun({ DB }, { task: 't', ai: 'a', free: true, anon: true, result: { steps: [], links: [], ms: 5, stats: {} } });
