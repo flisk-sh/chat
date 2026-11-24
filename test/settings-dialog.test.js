@@ -10,6 +10,11 @@ import { UK } from '../src/i18n.js';
 import { fakeD1 } from './d1.js';
 
 // The browser script is checked in its source: a bundler rewrites quotes and operators in the text of the function.
+const guestEnv = () => {
+  const store = new Map();
+  const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+  return { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+};
 const SRC = readFileSync(new URL('../src/settings-dialog.js', import.meta.url), 'utf8');
 const SCHEMA = readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
 const ORIGIN = 'https://chat.test';
@@ -238,17 +243,13 @@ describe('usage today', () => {
     expect(nav.match(/class="sd-ic"/g)).toHaveLength(SETTINGS_SECTIONS.length);
   });
   test('GET /settings/panel hands a guest their real counts, from the counters the gates use', async () => {
-    const store = new Map();
-    const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
-    const env = { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+    const env = guestEnv();
     const res = await handle(new Request('https://chat.test/settings/panel?section=usage', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('left of 10'); // no session yet: the guest share, nothing used
   });
   test('GET /settings/data is the JSON the Astryx dialog reads: a guest gets counts and no login, and only chat itself may ask', async () => {
-    const store = new Map();
-    const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
-    const env = { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+    const env = guestEnv();
     const res = await handle(new Request('https://chat.test/settings/data', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
     expect(res.status).toBe(200);
     const d = await res.json();

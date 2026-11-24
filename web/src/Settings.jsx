@@ -55,6 +55,8 @@ const Row = ({icon, label, description, control}) => (
   </div>
 );
 
+const SignIn = () => <Button label="Sign in with GitHub" variant="primary" href="/auth/start" />;
+
 function Profile({scheme, setScheme, explain, onExplain, onModel, onClose, data}) {
   const named = !!data?.named;
   return (
@@ -64,7 +66,7 @@ function Profile({scheme, setScheme, explain, onExplain, onModel, onClose, data}
           control={<TextInput label="Display name" isLabelHidden value={named ? '@' + data.login : 'Guest'} isReadOnly width={200} onChange={() => {}} />} />
         {named
           ? <Row icon={CodeBracketSquareIcon} label="GitHub account" description={<>Signed in as <b>@{data.login}</b></>} control={<Button label="Sign out" variant="secondary" href="/auth/signout" />} />
-          : <Row icon={CodeBracketSquareIcon} label="Not signed in" description="Signing in with GitHub is optional. It keeps your chats and unlocks reviews of your pull requests." control={<Button label="Sign in with GitHub" variant="primary" href="/auth/start" />} />}
+          : <Row icon={CodeBracketSquareIcon} label="Not signed in" description="Signing in with GitHub is optional. It keeps your chats and unlocks reviews of your pull requests." control={<SignIn />} />}
       </Group>
       <Group title="Appearance">
         <Row icon={SunIcon} label="Look of the page" description="Earth, light, dark, or the same as your phone."
@@ -92,7 +94,7 @@ function Usage({data, go}) {
         }) : <Row icon={ClockIcon} label="Usage is not available right now." />}
       </Group>
       <Text type="supporting" color="secondary">Counts reset every day at midnight UTC. {data?.named ? '' : 'Signing in with GitHub gives more free tasks, and keeps your chats.'}</Text>
-      {!data?.named && <Group><Row icon={UserIcon} label="More free tasks" description="No card. Keeps your chats too." control={<Button label="Sign in with GitHub" variant="primary" href="/auth/start" />} /></Group>}
+      {!data?.named && <Group><Row icon={UserIcon} label="More free tasks" description="No card. Keeps your chats too." control={<SignIn />} /></Group>}
     </VStack>
   );
 }
@@ -115,7 +117,7 @@ function Reviews({data, reload}) {
     setBusy(false);
   }, [reload]);
   if (!data) return <Text color="secondary">Loading…</Text>;
-  if (!data.named) return <Group><Row icon={SparklesIcon} label="Your own AI" description="Sign in with GitHub to choose your own AI for reviews." control={<Button label="Sign in with GitHub" variant="primary" href="/auth/start" />} /></Group>;
+  if (!data.named) return <Group><Row icon={SparklesIcon} label="Your own AI" description="Sign in with GitHub to choose your own AI for reviews." control={<SignIn />} /></Group>;
   const current = data.saved
     ? <>Reviews for <b>@{data.login}</b> use <b>{data.saved.model}</b> ({data.saved.ai}) with your key. You pay your provider; no daily limit.</>
     : <>Reviews for <b>@{data.login}</b> use the free Flisk Wolf model: {data.limit} a day, and only the first part of a big diff.</>;
