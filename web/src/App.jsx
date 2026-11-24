@@ -491,7 +491,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         composer={
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder="Ask or build…" {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
-            input={<ChatComposerInput enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
+            input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
             }} />}
             headerActions={
