@@ -16,6 +16,7 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
   const [you, setYou] = useState('');
   const [say, setSay] = useState('');
   const live = useRef({on: false, stream: null, ctx: null, rec: null, aud: null, turns: [], lang: '', stopListen: null, stopSpeak: null});
+  const closeRef = useRef(null);
   const o = (st, m) => { setState(st); setMsg(m); };
 
   const speak = (text) => new Promise((done) => {
@@ -50,7 +51,7 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
     const timer = setInterval(tick, 60);
     L.stopListen = () => { if (r.state !== 'inactive') r.stop(); };
     r.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-    r.onstop = () => { clearInterval(timer); try { src.disconnect(); } catch (e) { /* done */ } L.stopListen = null; done(spoke ? new Blob(chunks, {type: r.mimeType || type || 'audio/webm'}) : null); };
+    r.onstop = () => { clearInterval(timer); try { src.disconnect(); } catch (e) { /* done */ } L.stopListen = null; done(spoke && talked >= 350 ? new Blob(chunks, {type: r.mimeType || type || 'audio/webm'}) : null); };
     r.start();
   });
 
@@ -90,6 +91,8 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
     onClose();
   };
 
+  closeRef.current = close;
+
   const micHelp = (e) => {
     const n = e && e.name;
     if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'No microphone found on this device.';
@@ -128,6 +131,16 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
     return () => { L.open = false; if (L.on) { L.on = false; if (L.stopListen) L.stopListen(); if (L.stopSpeak) L.stopSpeak(); if (L.stream) L.stream.getTracks().forEach((t) => t.stop()); if (L.ctx) { try { L.ctx.close(); } catch (e) { /* closed */ } } } };
   }, [open]);
 
+  // The Back button closes the talk, like Esc, instead of leaving it open behind the page.
+  useEffect(() => {
+    if (!open) return undefined;
+    history.pushState({oracle: true}, '');
+    let popped = false;
+    const back = () => { popped = true; closeRef.current(); };
+    window.addEventListener('popstate', back);
+    return () => { window.removeEventListener('popstate', back); if (!popped && history.state && history.state.oracle) history.back(); };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return undefined;
     const k = (e) => { if (e.key === 'Escape') close(); };
@@ -137,6 +150,7 @@ export function Oracle({open, onClose, aiBlock, onKeep, onBuild}) {
   if (!open) return null;
   const tap = () => {
     const L = live.current;
+    const now = Date.now(); if (now - (L.lastTap || 0) < 400) return; L.lastTap = now;
     if (state === 'speaking' && L.stopSpeak) { L.stopSpeak(); return; }
     if (state === 'listening' && L.stopListen) { L.stopListen(); return; }
     if (state === 'idle') {

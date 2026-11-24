@@ -163,9 +163,14 @@ export function voiceDesc(info = {}) {
 }
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
 const redirect = (location, extra = {}) => new Response(null, { status: 303, headers: { location, ...extra } });
+// A body bigger than the audio limit allows is refused before it is read, so a huge upload costs nothing.
+const MAX_BODY = 2_000_000;
 const readJson = async (request) => {
   try {
-    const v = JSON.parse((await request.text()) || '{}');
+    if (Number(request.headers.get('content-length') || 0) > MAX_BODY) return null;
+    const text = await request.text();
+    if (text.length > MAX_BODY) return null;
+    const v = JSON.parse(text || '{}');
     return v && typeof v === 'object' ? v : null;
   } catch {
     return null;

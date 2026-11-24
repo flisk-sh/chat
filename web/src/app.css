@@ -35,6 +35,9 @@ html[data-scheme=earth] .chips button{background:rgba(0,0,0,.72)!important;color
 html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{background:#121214!important;max-height:min(70vh,420px);overflow:auto}
 
 .earth-talk .earth-orb{border:0;padding:0;cursor:pointer}
+/* The talk screen is always black, so its words are light whatever the page theme is (they were black on black). */
+.earth-talk,.earth-talk p,.earth-talk span,.earth-talk div{color:#EDEDEE!important}.earth-talk [role=status]{color:#B8C0CC!important}
+.earth-talk button:not(.earth-orb){color:#EDEDEE!important;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.4)!important}
 .earth-talk.listening .earth-orb{box-shadow:0 0 60px rgba(120,180,255,.5)}
 .earth-talk.speaking .earth-orb{animation:orb .7s ease-in-out infinite alternate}
 .earth-talk.idle .earth-orb{filter:saturate(.55) brightness(.75)}

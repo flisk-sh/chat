@@ -563,3 +563,20 @@ test('voice talk keeps one voice for a whole reply', () => {
   // a later sentence Ava failed to give is asked again before the browser's own (different) voice reads it
   expect(page).toContain('if(!url)url=await getBlob(it.words,it.lg);');
 });
+
+test('transcribe drops Whisper phantoms: stock phrases and clips it rates as not speech', async () => {
+  for (const text of ['Thanks for watching!', 'you', 'so', 'Subtitles by the Amara.org community']) {
+    expect((await transcribe({ AI: ai({ text }) }, { audio: 'QUJD' })).text).toBe('');
+  }
+  const quiet = { text: 'I am going to show you how it works.', segments: [{ no_speech_prob: 0.9, avg_logprob: -1.6 }] };
+  expect((await transcribe({ AI: ai(quiet) }, { audio: 'QUJD' })).text).toBe('');
+  const real = { text: 'Build me a bakery site', segments: [{ no_speech_prob: 0.02, avg_logprob: -0.2 }] };
+  expect((await transcribe({ AI: ai(real) }, { audio: 'QUJD' })).text).toBe('Build me a bakery site');
+});
+
+test('a request body over the audio limit is refused before it is read', async () => {
+  const big = JSON.stringify({ audio: 'A'.repeat(2_100_000) });
+  const res = await handle(new Request(`${ORIGIN}/api/talk`, { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: big }), env({ AI: ai({ text: 'x' }) }), { fetchImpl: async () => Response.json({}) });
+  expect(res.status).toBeLessThan(500);
+  expect((await res.json()).heard).toBeUndefined();
+});

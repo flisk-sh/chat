@@ -76,6 +76,16 @@ export function hedgedRun(run, hedgeMs = WHISPER_HEDGE_MS) {
     timer = setTimeout(start, hedgeMs);
   });
 }
+// Whisper writes words for noise and silence: stock phrases from its training subtitles, or a clip it rates as "not speech".
+// Such a clip is treated as nothing heard, so the Oracle does not answer a person who never spoke.
+const STOCK = /^\W*(thanks? for watching|thank you for watching|please subscribe|subtitles? by .*|amara\.org.*|you|bye\.?|so|uh|um|hmm+|mm+)\W*$/i;
+export function phantom(r) {
+  const text = String(r?.text || '').trim();
+  if (!text) return true;
+  if (STOCK.test(text)) return true;
+  const segs = Array.isArray(r?.segments) ? r.segments : [];
+  return segs.length > 0 && segs.every((g) => Number(g?.no_speech_prob) > 0.6 && Number(g?.avg_logprob) < -1);
+}
 export async function transcribe(env, body, { hedgeMs = WHISPER_HEDGE_MS } = {}) {
   const audio = typeof body?.audio === 'string' ? body.audio : '';
   if (!audio) return { status: 400, error: 'no audio was recorded' };
@@ -85,7 +95,7 @@ export async function transcribe(env, body, { hedgeMs = WHISPER_HEDGE_MS } = {})
   try {
     const r = await hedgedRun(() => env.AI.run(WHISPER_MODEL, { audio }), hedgeMs);
     const lang = String(r?.transcription_info?.language || '').toLowerCase().replace(/[^a-z-]/g, '').slice(0, 8);
-    return { status: 200, text: String(r?.text || '').trim(), lang };
+    return { status: 200, text: phantom(r) ? '' : String(r?.text || '').trim(), lang };
   } catch (e) {
     return { status: 502, error: 'could not hear that, try again: ' + String(e?.message || e).slice(0, 120) };
   }
