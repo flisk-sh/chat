@@ -49,6 +49,19 @@ describe('the panel', () => {
     expect(guest).not.toContain('/auth/signout');
     expect(guest).not.toContain('anon-0123456789abcdef');
   });
+  test('account is a profile in the Astryx settings-dialog look: headed cards of icon rows, a name field, nothing leaks for a guest', () => {
+    const h = panel();
+    expect(h).toContain('<h4 class="sd-st">Identity</h4>');
+    expect(h).toContain('<h4 class="sd-st">Free allowance</h4>');
+    expect(h.match(/class="sd-row sd-irow"/g).length).toBe(4);
+    expect(h).toContain('id="sd-name" value="@ann" readonly');
+    expect(h).toContain('data-sd-go="usage"');
+    const guest = panel({ login: 'anon-0123456789abcdef', anon: true });
+    expect(guest).toContain('id="sd-name" value="Guest" readonly');
+    expect(guest).not.toContain('anon-0123456789abcdef');
+    expect(panel({ lang: 'uk' })).toContain('Особисті дані');
+    expect(SRC).toContain('[data-sd-go]');
+  });
   test('AI for reviews: the free model line, the saved one, the form and the provider key links', () => {
     expect(panel()).toContain('free Flisk Wolf model: 5 a day');
     const saved = panel({ saved: { ai: 'openai', model: 'gpt-x' } });
@@ -220,7 +233,8 @@ describe('usage today', () => {
   test('the left list is grouped, with an icon per section', () => {
     const html = settingsPanelHtml({ login: 'anon-1', anon: true, usage });
     expect(html.match(/class="sd-gl"/g)).toHaveLength(2);
-    expect(html.match(/class="sd-ic"/g)).toHaveLength(SETTINGS_SECTIONS.length);
+    const nav = html.slice(html.indexOf('class="sd-tabs"'), html.indexOf('class="sd-none"'));
+    expect(nav.match(/class="sd-ic"/g)).toHaveLength(SETTINGS_SECTIONS.length);
   });
   test('GET /settings/panel hands a guest their real counts, from the counters the gates use', async () => {
     const store = new Map();

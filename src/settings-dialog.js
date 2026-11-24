@@ -33,7 +33,7 @@ const ICONS = {
   computers: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
 };
 const icon = (id) => `<svg class="sd-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[id] || ''}</svg>`;
-const NAMES = { account: 'Account', usage: 'Usage today', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
+const NAMES = { account: 'Profile', usage: 'Usage today', ai: 'AI for reviews', github: 'GitHub reviews', computers: 'Computers' };
 
 // Ukrainian lives in i18n.js (the page script reads it too); here the server uses it for ?lang=uk.
 const tr = (lang) => (s) => (lang === 'uk' ? UK[s] || s : s);
@@ -43,6 +43,11 @@ const row = (label, hint, control, forId = '') =>
   `<div class="sd-row"><div class="sd-lab">${forId ? `<label for="${forId}">${label}</label>` : `<span class="sd-name">${label}</span>`}${hint ? `<p class="sd-hint">${hint}</p>` : ''}</div><div class="sd-ctl">${control}</div></div>`;
 const group = (title, body) => `<div class="sd-group"${title ? ` role="group" aria-label="${esc(title)}"` : ''}>${title ? `<h4>${esc(title)}</h4>` : ''}${body}</div>`;
 
+// The Astryx settings-dialog look for the profile: a small heading above a rounded card, and rows with an icon, a label and hint, and the control.
+const irow = (ic, label, hint, control, forId = '') =>
+  `<div class="sd-row sd-irow"><span class="sd-ri">${icon(ic)}</span><div class="sd-lab">${forId ? `<label for="${forId}">${label}</label>` : `<span class="sd-name">${label}</span>`}${hint ? `<p class="sd-hint">${hint}</p>` : ''}</div><div class="sd-ctl">${control}</div></div>`;
+const card = (title, body) => `<section class="sd-sec" aria-label="${esc(title)}"><h4 class="sd-st">${esc(title)}</h4><div class="sd-group">${body}</div></section>`;
+
 // The inside of the dialog for one visitor. `saved` is the AI they stored (never its key), `form` what they typed after a refused save.
 export function settingsPanel({ login = '', anon = false, saved = null, stored = false, limit = 5, section = '', flash = '', error = '', form = {}, lang = '', keyPages, appUrl, themeNote = '', usage = [], history = {} } = {}) {
   const t = tr(lang);
@@ -50,9 +55,15 @@ export function settingsPanel({ login = '', anon = false, saved = null, stored =
   const cur = SETTINGS_SECTIONS.includes(section) ? section : 'account';
   const who = login ? `<b>@${esc(login)}</b>` : '';
 
-  const account = group('', named
-    ? row(t('GitHub account'), t('Signed in as {login}').replace('{login}', `<b>@${esc(login)}</b>`), '<a class="sd-btn" href="/auth/signout">' + t('Sign out') + '</a>')
-    : row(t('Not signed in'), t('Signing in with GitHub is optional. It keeps your chats and unlocks reviews of your pull requests.'), '<a class="sd-btn go" href="/auth/start">' + t('Sign in with GitHub') + '</a>'));
+  const nameField = `<input class="sd-in" id="sd-name" value="${named ? '@' + esc(login) : esc(t('Guest'))}" readonly aria-readonly="true">`;
+  const account = card(t('Identity'),
+    irow('account', t('Display name'), t('Shown on your chats and reviews. It comes from your GitHub account.'), nameField, 'sd-name') +
+    (named
+      ? irow('github', t('GitHub account'), t('Signed in as {login}').replace('{login}', `<b>@${esc(login)}</b>`), '<a class="sd-btn" href="/auth/signout">' + t('Sign out') + '</a>')
+      : irow('github', t('Not signed in'), t('Signing in with GitHub is optional. It keeps your chats and unlocks reviews of your pull requests.'), '<a class="sd-btn go" href="/auth/start">' + t('Sign in with GitHub') + '</a>'))) +
+    card(t('Free allowance'),
+      irow('usage', t('Free tasks'), t('Counts reset every day at midnight UTC.'), `<button type="button" class="sd-btn" data-sd-go="usage">${t('See usage')}</button>`) +
+      irow('ai', t('AI model and keys'), t('Flisk Wolf is free, or add your own key.'), `<button type="button" class="sd-btn" data-sd-model>${t('Choose the AI')}</button>`));
 
   const keyLinks = Object.entries(keyPages).map(([v, [n, u]]) => `<a class="sd-keylink" href="${u}" target="_blank" rel="noopener" data-for="${v}"${(form.ai || saved?.ai || 'openrouter') === v ? '' : ' hidden'}>${t('Get your {name} key').replace('{name}', esc(n))}</a>`).join('');
   const curLine = saved
@@ -139,6 +150,9 @@ export const SETTINGS_CSS = `
 .sd-main{overflow:auto;padding:22px 28px 28px;min-width:0;min-height:0}
 .sd-pane{outline:0}.sd-pane h3{margin:0 0 14px;font-size:20px;font-weight:600;letter-spacing:-.01em}
 .sd-group{border:1px solid var(--sd-line);border-radius:var(--radius);margin:0 0 16px;padding:0 16px}.sd-group h4{margin:12px 0 0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--sd-dim)}
+.sd-sec{margin:0 0 20px}.sd-sec .sd-group{margin:0}.sd-st{margin:0 0 8px 2px;font-size:13px;font-weight:600;color:var(--sd-dim)}
+.sd-row.sd-irow{grid-template-columns:auto minmax(0,1fr) minmax(0,1.1fr);gap:8px 14px}.sd-ri{display:inline-grid;place-items:center;color:var(--sd-dim)}.sd-ri .sd-ic{width:18px;height:18px}
+.sd-irow .sd-in[readonly]{background:var(--sd-field);color:var(--sd-ink);cursor:default}
 .sd-group>p{margin:12px 0}
 .sd-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 20px;align-items:center;padding:14px 0;border-top:1px solid var(--sd-line)}.sd-group>.sd-row:first-child,.sd-group>h4+.sd-row,.sd-form>.sd-row:first-child,.sd-group>form>.sd-row:first-child{border-top:0}
 .sd-lab label,.sd-name{font-weight:500;display:block}.sd-hint{margin:2px 0 0;color:var(--sd-dim);font-size:13px}.sd-lead{color:var(--sd-dim);margin:12px 0}
@@ -162,7 +176,7 @@ html.sd-lock,html.sd-lock body{overflow:hidden}
 .sd-side{border-right:0;border-bottom:1px solid var(--sd-line);padding:12px 12px 8px;gap:8px;overflow:visible}
 .sd-tabs{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px}.sd-tab{white-space:nowrap;flex:none}
 .sd-main{padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
-.sd-row{grid-template-columns:1fr}.sd-ctl,.sd-keylinks{justify-content:flex-start;text-align:left}
+.sd-row,.sd-row.sd-irow{grid-template-columns:1fr}.sd-ri{display:none}.sd-ctl,.sd-keylinks{justify-content:flex-start;text-align:left}
 }
 @media (prefers-reduced-motion:no-preference){.sd:not([hidden]){animation:sd-in .12s ease-out}@keyframes sd-in{from{opacity:0}}}
 `;
@@ -283,11 +297,12 @@ function settingsClient() {
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { back(w.copied); }).catch(function () { back(w.copyfail); });
   };
   var onClick = function (e) {
-    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],[data-sd-model],.sd-tab') : null;
+    var el = e.target.closest ? e.target.closest('[data-sd-close],[data-sd-copy],[data-sd-model],[data-sd-go],.sd-tab') : null;
     if (!el) return;
     if (el.hasAttribute('data-sd-close')) close();
     else if (el.hasAttribute('data-sd-model')) { close(); window.dispatchEvent(new CustomEvent('flisk:model')); }
     else if (el.hasAttribute('data-sd-copy')) copy(el);
+    else if (el.hasAttribute('data-sd-go')) select(el.getAttribute('data-sd-go'), true);
     else select(el.dataset.sec);
   };
   var onSubmit = function (e) {
