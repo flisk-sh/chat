@@ -19,7 +19,7 @@ export function nextPage({ login = null, anon = false, connected = [], models = 
 <title>Flisk Chat</title>${SEO_HEAD}
 ${ICON_HEAD}
 <script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>
-<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>
+<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>
 <link rel="modulepreload" href="${NEXT_JS_PATH}"><link rel="stylesheet" href="${NEXT_CSS_PATH}">
 <style>${BAR_CSS}</style></head><body><canvas id="earth" class="earthc" aria-hidden="true"></canvas><div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>

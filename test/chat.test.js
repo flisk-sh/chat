@@ -418,7 +418,7 @@ test('the page reads its models from inference /v1/catalog through the binding',
   expect(models.map((m) => m.id)).toEqual(['flisk-wolf-chat', 'new-one']);
   const page = appPageUi({ login: 'ann', connected: [], models });
   expect(page).toContain('"id":"new-one"');
-  expect(page.replace('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>', '').replace('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>', '').split('</script>').length).toBe(2);
+  expect(page.replace('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>', '').replace('<script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>', '').split('</script>').length).toBe(2);
   expect(await loadCatalog({}, 2e13)).toBe(DEFAULT_MODELS);
 });
 
@@ -870,7 +870,7 @@ describe('search visibility', () => {
 test('pages load the shared Flisk bar and the CSP allows it', async () => {
   const res = await handle(new Request(`${ORIGIN}/classic`), env());
   const html = await res.text();
-  expect(html).toContain('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>');
+  expect(html).toContain('<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>');
   const csp = res.headers.get('content-security-policy');
   expect(csp).toMatch(/script-src [^;]*https:\/\/flisk\.si/);
   expect(csp).toMatch(/img-src [^;]*https:\/\/flisk\.si/);
