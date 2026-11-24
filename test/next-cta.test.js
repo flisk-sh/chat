@@ -22,10 +22,10 @@ test('the classic landing marks exactly one element, the first button after the 
 });
 
 test('the app landing marks the hero button once, and the built app carries it', () => {
-  expect(app.match(/data-next-cta/g)).toHaveLength(1);
+  expect(app.match(/data-next-cta/g)).toHaveLength(3); // hero, phone header, desktop header; one shows per visitor state
   expect(app).toContain('<Button label="Start free with GitHub" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN} />');
   expect(NEXT_JS).toContain('data-next-cta');
-  expect(NEXT_JS.match(/data-next-cta/g)).toHaveLength(1);
+  expect(NEXT_JS.match(/data-next-cta/g)).toHaveLength(3);
 });
 
 test('the CSS spins the border and has a prefers-reduced-motion rule, in source and in the build', () => {
@@ -42,4 +42,27 @@ test('the classic page has the same CSS recipe', () => {
   const home = homePage();
   expect(home).toMatch(/\.next-cta\{[^}]*animation:next-cta-spin 3s linear infinite/);
   expect(home).toMatch(/@media \(prefers-reduced-motion:reduce\)\{[^{}]*\.next-cta\{[^}]*animation:none/);
+});
+
+// One marked button per visitor state: signed out (the hero button), anonymous guest (the header button, desktop or phone),
+// signed in with GitHub (none). The states are exclusive in the source, so each state shows exactly one.
+test('each visitor state has exactly one marked button', () => {
+  const marks = [...app.matchAll(/^.*data-next-cta.*$/gm)].map((m) => m[0]);
+  expect(marks).toHaveLength(3);
+  const [phone, hero, desktop] = [
+    marks.find((l) => l.includes('signIn && !tiny')),
+    marks.find((l) => l.includes('!BOOT.login && <ChatMessageBubble')),
+    marks.find((l) => l.includes('BOOT.anon && <Tip')),
+  ];
+  // Signed out: only the hero button is marked; the header buttons are not (the phone one is marked for guests only).
+  expect(hero).toBeTruthy();
+  expect(phone).toContain("className={guest ? 'next-cta' : undefined} data-next-cta={guest ? '' : undefined}");
+  expect(app).toContain('const guest = BOOT.login && BOOT.anon;');
+  expect(app).toMatch(/\{BOOT\.login \? <Tip[^\n]*<Badge[^\n]*: <Button label="Start free with GitHub" size="sm" variant="primary" href=\{HERO_SIGNIN\} \/>\}/);
+  // Guest: the desktop header button is marked, and it only renders for BOOT.anon; the phone one only when guest.
+  expect(desktop).toContain('className="next-cta" data-next-cta=""');
+  // Signed in: neither the hero (needs !BOOT.login) nor a header button (needs anon) is marked.
+  expect(hero).toContain('{!BOOT.login &&');
+  // The marker class styles Astryx buttons and plain links alike, because the recipe is on .next-cta alone.
+  expect(css).toMatch(/\n\.next-cta\{/);
 });

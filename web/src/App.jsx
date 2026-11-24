@@ -175,7 +175,7 @@ function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
   if (isMobile) {
     return (
       <HStack gap={1} align="center" className="chat-head-end">
-        {signIn && !tiny && <Button label="Start free with GitHub" size="sm" variant="primary" href={HERO_SIGNIN} />}
+        {signIn && !tiny && <Button label="Start free with GitHub" size="sm" variant="primary" href={HERO_SIGNIN} className={guest ? 'next-cta' : undefined} data-next-cta={guest ? '' : undefined} />}
         {BOOT.login && !BOOT.anon && !tiny && <Badge label={'@' + BOOT.login} />}
         <MoreMenu label="More: explain, look, AI model" size="sm" presentation="adaptive" alignment="end" items={[
           ...(guest ? [{label: 'You are a guest', description: 'Sign in with GitHub to keep your chats and get more free tasks', isDisabled: true}, {type: 'divider'}] : []),
@@ -190,7 +190,7 @@ function HeaderEnd({explain, onExplain, scheme, onLook, onModel}) {
   return (
     <HStack gap={1}>
       {BOOT.login ? <Tip text="Free tasks run on Flisk Wolf. The count resets every day."><span><Badge label={BOOT.anon ? 'Guest' : '@' + BOOT.login} /></span></Tip> : <Button label="Start free with GitHub" size="sm" variant="primary" href={HERO_SIGNIN} />}
-      {BOOT.anon && <Tip text="No card. Sign in with GitHub to keep your chats and get more free tasks."><Button label="Start free with GitHub" size="sm" variant="primary" href={HERO_SIGNIN} /></Tip>}
+      {BOOT.anon && <Tip text="No card. Sign in with GitHub to keep your chats and get more free tasks."><Button label="Start free with GitHub" size="sm" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN} /></Tip>}
       <Tip passThrough text="Explain mode: tap anything to read what it does, without running it. Needed on phones, which have no hover."><Button label={explain ? 'Leave explain mode' : 'Explain'} variant={explain ? 'primary' : 'ghost'} size="sm" icon={<Icon icon={QuestionMarkCircleIcon} size="sm" />} onClick={onExplain} /></Tip>
       <Tip title="Look of the page" text="Look: tap to switch between Earth, light, dark and the same as your phone."><Button label={'Look of the page: ' + scheme} variant="ghost" size="sm" isIconOnly icon={<Icon icon={SunIcon} size="sm" />} onClick={onLook} /></Tip>
       <Tip title="AI model and keys" scene="model" text="Choose the AI and add your own keys."><Button label="AI model and keys" variant="ghost" size="sm" isIconOnly icon={<Icon icon={Cog6ToothIcon} size="sm" />} onClick={onModel} /></Tip>
