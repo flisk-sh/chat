@@ -1,12 +1,12 @@
 {
- "value": 73,
+ "value": 72,
  "baseline": 66,
  "unit": "% bounce",
  "site": "chat.flisk.si",
  "range": "7d",
- "visits": 253,
- "visitors": 86,
- "measuredAt": "2026-11-23T16:09:22.034Z",
- "run": "https://github.com/flisk-sh/chat/actions/runs/45213247677",
- "commit": "0eae58e8ce637663b2b27c7aba5bb38d8a3c76c6"
+ "visits": 241,
+ "visitors": 91,
+ "measuredAt": "2026-11-24T12:19:34.011Z",
+ "run": "https://github.com/flisk-sh/chat/actions/runs/45389650516",
+ "commit": "854637c8695fc85166aaf2c97df75eb20e3cbcdd"
 }
