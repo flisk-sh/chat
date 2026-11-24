@@ -150,19 +150,20 @@ describe('the routes', () => {
       expect(res.status).toBe(200);
       const t = await res.text();
       expect(t).toContain('<div id="root">');
-      expect(t).toContain('settings/panel');
-      expect(t).toContain('.sd-box');
+      expect(t).toContain('"computersUrl"'); // the Astryx dialog reads its links from the boot data
+      expect(t).not.toContain('.sd-box'); // and the old hand-built dialog is not on this page
     }
   });
 });
 
 describe('the pages', () => {
-  test('both pages carry the dialog styles and script; the embedded chat does not', () => {
-    for (const h of [appPage({ login: 'ann', connected: [] }), chatPage({ login: 'ann' })]) {
-      expect(h).toContain('.sd-box{');
-      expect(h).toContain('/settings/panel?lang=');
-    }
-    expect(chatPage({ login: 'ann', embed: true })).not.toContain('/settings/panel');
+  test('the classic page carries the hand-built dialog; the Astryx page uses its own React one', () => {
+    const classic = appPage({ login: 'ann', connected: [] });
+    expect(classic).toContain('.sd-box{');
+    expect(classic).toContain('/settings/panel?lang=');
+    const home = chatPage({ login: 'ann' });
+    expect(home).not.toContain('.sd-box{');
+    expect(home).not.toContain('/settings/panel');
   });
   test('the phone sheet has a row that opens the dialog', () => {
     expect(appPage({ login: 'ann', connected: [] })).toContain('data-open-settings>Account, reviews, computers');
@@ -243,5 +244,18 @@ describe('usage today', () => {
     const res = await handle(new Request('https://chat.test/settings/panel?section=usage', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
     expect(res.status).toBe(200);
     expect(await res.text()).toContain('left of 10'); // no session yet: the guest share, nothing used
+  });
+  test('GET /settings/data is the JSON the Astryx dialog reads: a guest gets counts and no login, and only chat itself may ask', async () => {
+    const store = new Map();
+    const LIMIT_CACHE = { match: async (u) => (store.has(u) ? new Response(store.get(u)) : undefined), put: async (u, r) => void store.set(u, await r.text()) };
+    const env = { DB: fakeD1(SCHEMA), SESSION_SECRET: 's3cret-long-enough-for-tests', LIMIT_CACHE };
+    const res = await handle(new Request('https://chat.test/settings/data', { headers: { 'sec-fetch-site': 'same-origin' } }), env);
+    expect(res.status).toBe(200);
+    const d = await res.json();
+    expect(d.named).toBe(false);
+    expect(d.login).toBe('');
+    expect(d.saved).toBe(null);
+    expect(d.usage.map((u) => u.key)).toEqual(['tasks', 'pictures', 'talk']);
+    expect((await handle(new Request('https://chat.test/settings/data', { headers: { 'sec-fetch-site': 'cross-site' } }), env)).status).toBe(403);
   });
 });

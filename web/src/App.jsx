@@ -4,6 +4,7 @@ import {Brand} from './Brand.jsx';
 import {Oracle} from './Oracle.jsx';
 import {Demo} from './MenuDemos.jsx';
 import {ModelDialog, ComputerDialog, brandOf} from './Pickers.jsx';
+import {SettingsDialog, settingsSection} from './Settings.jsx';
 import {BOOT, runTask, podOk, getPod, runInBrowser, keyFor, modelFor, lsGet, orStartLogin, orFinishLogin, loadChats, saveChats, deleteChat, vaultReady} from './api.js';
 import {markEngaged} from './engaged.js';
 import {Widget, WorkerCard, BrowserAnswer} from './Cards.jsx';
@@ -226,6 +227,11 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     return () => document.removeEventListener('pointerdown', first);
   }, []);
   const [mdlOpen, setMdlOpen] = useState(false);
+  // The settings dialog opens from the header, the side list, or straight from /settings and /reviews.
+  const [setOpen, setSetOpen] = useState(() => /^\/(settings|reviews)$/.test(location.pathname));
+  const [setSec, setSetSec] = useState(() => { const q = new URLSearchParams(location.search), h = location.hash.slice(1); return location.pathname === '/reviews' && !q.get('ok') && !h ? 'github' : q.get('ok') ? 'ai' : settingsSection(h === 'account' ? 'profile' : h || q.get('section')); });
+  const openSettings = (sec) => { if (sec) setSetSec(sec); setSetOpen(true); };
+  const closeSettings = () => { setSetOpen(false); if (/^\/(settings|reviews)$/.test(location.pathname)) { try { history.replaceState(null, '', '/'); } catch (_) {} } };
   // The settings dialog (outside React) asks for the AI picker with this event.
   useEffect(() => { const open = () => setMdlOpen(true); window.addEventListener('flisk:model', open); return () => window.removeEventListener('flisk:model', open); }, []);
   const [pcOpen, setPcOpen] = useState(false);
@@ -453,7 +459,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
           <SideNavSection title="Your chats">
             {shown.map((c) => <SideNavItem key={c.id} label={c.title || 'Untitled'} icon={ChatBubbleLeftIcon} isSelected={c.id === chatId} onClick={() => openChat(c)}
               actions={<Button label={'Delete chat: ' + (c.title || 'Untitled')} variant="ghost" isIconOnly icon={<Icon icon={TrashIcon} size="sm" />} onClick={() => dropChat(c)} />} />)}
-            {!!BOOT.login && !BOOT.anon && <SideNavItem label="Reviews of your pull requests" href="/reviews" />}
+            {!!BOOT.login && !BOOT.anon && <SideNavItem label="Reviews of your pull requests" href="/reviews" onClick={(e) => { e?.preventDefault?.(); openSettings('github'); }} />}
             {!shown.length && <Text type="supporting" color="secondary" style={{padding: 8}}>Nothing here yet. Your chats stay in this browser.</Text>}
           </SideNavSection>
         </SideNav>
@@ -475,7 +481,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       topNav={BOOT.embed ? undefined : 
       <HStack gap={2} align="center" justify="space-between" wrap="wrap" className="chat-head" style={{padding: 'var(--spacing-2) var(--spacing-3)'}}>
         <HStack gap={1} align="center"><MobileNavToggle /></HStack>
-        <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onSettings={() => (window.__openSettings ? window.__openSettings('usage') : setMdlOpen(true))} />
+        <HeaderEnd explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} scheme={scheme} onLook={() => setScheme(nextLook(scheme))} onSettings={() => openSettings('usage')} />
       </HStack>
       }
       sideNav={BOOT.embed ? undefined : side}>
@@ -546,6 +552,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       </div>
     </AppShell>
     </div>
+      <SettingsDialog open={setOpen} onClose={closeSettings} section={setSec} onSection={setSetSec} scheme={scheme} setScheme={setScheme} explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} onModel={() => setMdlOpen(true)} />
       <ModelDialog open={mdlOpen} onClose={() => setMdlOpen(false)} models={BOOT.models || []} value={sel} onUse={setSel} />
       <Oracle open={talk} onClose={() => setTalk(false)} aiBlock={aiBlock}
         onBuild={(t) => { run(t).catch(() => {}); }}

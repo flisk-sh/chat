@@ -3,9 +3,9 @@
 // and hands it what the server knows about the visitor (the same facts the current page gets).
 import { APP_CSS, APP_CSS_PATH, APP_FONTS, APP_JS, APP_JS_PATH } from './app.generated.js';
 import { EARTH_JS } from './earth.js';
-import { SETTINGS_CSS, SETTINGS_JS } from './settings-dialog.js';
+import { COMPUTERS_URL } from './settings-dialog.js';
 import { jaScript } from './i18n-ja.js';
-import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, seoHead, loginHook } from './page.js';
+import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, GITHUB_APP_URL, seoHead, loginHook } from './page.js';
 
 const LS = new RegExp('[\\u2028\\u2029]', 'g');
 const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
@@ -15,7 +15,7 @@ const BAR_CSS = '.vv-root{top:calc(var(--vv-top,0px) + var(--fbar,0px));height:c
 const BAR_JS = `(function(){var r=document.documentElement,h;function find(){return [].find.call(document.body.children,function(e){return /2147483000/.test(e.style.cssText)})}function set(){r.style.setProperty('--fbar',(h?h.offsetHeight:0)+'px')}function go(){h=find();if(!h)return setTimeout(go,100);set();if(window.ResizeObserver)new ResizeObserver(set).observe(h)}go()})();`;
 
 export function chatPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false, lang = 'en' } = {}) {
-  const boot = { embed, login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES };
+  const boot = { embed, login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES, appUrl: GITHUB_APP_URL, computersUrl: COMPUTERS_URL };
   return `<!doctype html><html lang="${lang === 'ja' ? 'ja' : 'en'}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>${lang === 'ja' ? 'Flisk Chat: 一言でウェブサイトとアプリを作る' : 'Flisk Chat'}</title>${seoHead(lang)}
@@ -23,10 +23,10 @@ ${ICON_HEAD}
 <script defer data-domain="chat.flisk.si" src="https://flisk.sh/a.js"></script>
 ${embed ? '' : `<script src="https://flisk.si/assets/bar.js" data-product="Chat" data-icon="chat" data-accent="#2F7D4A" data-free-key data-siblings="Cilytics,Ranker" data-text="Type a task and a computer does it." defer></script>`}
 <link rel="modulepreload" href="${APP_JS_PATH}"><link rel="stylesheet" href="${APP_CSS_PATH}">
-<style>${embed ? '' : BAR_CSS + SETTINGS_CSS}</style></head><body>${embed ? '' : '<canvas id="earth" class="earthc" aria-hidden="true"></canvas>'}<div id="root"></div>${loginHook(login, anon)}
+<style>${embed ? '' : BAR_CSS}</style></head><body>${embed ? '' : '<canvas id="earth" class="earthc" aria-hidden="true"></canvas>'}<div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>
 <script type="module" src="${APP_JS_PATH}"></script>
-${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>\n<script>${SETTINGS_JS}</script>`}${lang === 'ja' ? `\n<script>${jaScript()}</script>` : ''}</body></html>`;
+${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>`}${lang === 'ja' ? `\n<script>${jaScript()}</script>` : ''}</body></html>`;
 }
 
 // The embedded chat can be framed by grow.flisk.si (and analytics, as everywhere); nothing else.
