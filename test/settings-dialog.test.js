@@ -4,7 +4,7 @@ import { handle } from '../src/index.js';
 import { saveSettings } from '../src/keys.js';
 import { makeSession } from '../src/session.js';
 import { appPage, settingsPanelHtml } from '../src/page.js';
-import { nextPage } from '../src/next-page.js';
+import { chatPage } from '../src/app-page.js';
 import { SETTINGS_CSS, SETTINGS_JS, SETTINGS_SECTIONS } from '../src/settings-dialog.js';
 import { UK } from '../src/i18n.js';
 import { fakeD1 } from './d1.js';
@@ -145,11 +145,11 @@ describe('the routes', () => {
 
 describe('the pages', () => {
   test('both pages carry the dialog styles and script; the embedded chat does not', () => {
-    for (const h of [appPage({ login: 'ann', connected: [] }), nextPage({ login: 'ann' })]) {
+    for (const h of [appPage({ login: 'ann', connected: [] }), chatPage({ login: 'ann' })]) {
       expect(h).toContain('.sd-box{');
       expect(h).toContain('/settings/panel?lang=');
     }
-    expect(nextPage({ login: 'ann', embed: true })).not.toContain('/settings/panel');
+    expect(chatPage({ login: 'ann', embed: true })).not.toContain('/settings/panel');
   });
   test('the phone sheet has a row that opens the dialog', () => {
     expect(appPage({ login: 'ann', connected: [] })).toContain('data-open-settings>Account, reviews, computers');

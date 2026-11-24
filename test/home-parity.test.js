@@ -7,7 +7,7 @@ const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const app = read('web/src/App.jsx');
 const cards = read('web/src/Cards.jsx');
 const page = read('src/page.js');
-const built = read('src/next-app.generated.js'); // what / really serves
+const built = read('src/app.generated.js'); // what / really serves
 
 test('every field a turn collects is read by the page', () => {
   // A field events.js fills but nothing renders is a card the visitor never sees (widgets, workers and browser were).
@@ -73,11 +73,11 @@ test('the Oracle re-requests microphone permissions on tap after refusal (#359)'
 });
 
 test('the home page at / can be found by search engines and shows a link preview, as /classic does (#350)', async () => {
-  const {nextPage} = await import('../src/next-page.js');
+  const {chatPage} = await import('../src/app-page.js');
   const {appPage} = await import('../src/page.js');
   const head = (html) => html.slice(0, html.indexOf('</head>'));
   const tags = (html) => [...head(html).matchAll(/<(?:meta (?:name|property)="(?:robots|description|og:[a-z:]+|twitter:[a-z]+)"|link rel="(?:canonical|icon|apple-touch-icon)")[^>]*>/g)].map((m) => m[0]).sort();
-  const home = nextPage({login: null, anon: true});
+  const home = chatPage({login: null, anon: true});
   expect(home).not.toContain('noindex');
   expect(home).toContain('<meta name="robots" content="index,follow">');
   expect(home).toContain('<link rel="canonical" href="https://chat.flisk.si/">');

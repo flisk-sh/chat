@@ -11,7 +11,7 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, searchWeb } from './search.js';
-import { appAsset, nextPage, nextCsp, embedCsp } from './next-page.js';
+import { appAsset, chatPage, appCsp, embedCsp } from './app-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, notFoundPage, PROVIDER_CARDS, PROVIDER_NAMES, settingsPanelHtml, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
 import { githubWebhook, reportLostReviews, REVIEWS_PER_DAY } from './review.js';
@@ -80,6 +80,7 @@ let fleetNames = { at: 0, names: null };
 let healthCache = { at: 0, result: null };
 export const HEALTH_CACHE_MS = 10_000;
 export function resetHealthCache() { healthCache = { at: 0, result: null }; }
+export function resetFleetNames() { fleetNames = { at: 0, names: null }; }
 export async function loadFleetNames(env, fetchImpl = fetch, now = Date.now()) {
   if (fleetNames.names && now - fleetNames.at < 300_000) return fleetNames.names;
   try {
@@ -555,7 +556,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   };
   if (request.method === 'GET' && (path === '/' || path === '/ja' || path === '/next' || path === '/classic' || path === '/embed' || path === '/settings' || path === '/reviews')) {
     // The new Astryx page is the home page; the previous page stays at /classic.
-    const isNext = path !== '/classic';  // /settings and /reviews are the chat with the settings dialog open over it (the page script opens it)
+    const isApp = path !== '/classic';  // /settings and /reviews are the chat with the settings dialog open over it (the page script opens it)
     // /embed is the chat as a window inside grow.flisk.si: same app, no side bar, no Earth, and only Grow may frame it.
     const embed = path === '/embed';
     const [models, names] = await Promise.all([loadCatalog(env), loadFleetNames(env, fetchImpl)]);
@@ -574,7 +575,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const page = (opts) => {
       const inf = inferenceOrigin(env);
       const csp = withFrame(cspWithPod(pod, origin), inf);
-      if (isNext) return html(nextPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed, lang: path === '/ja' ? 'ja' : 'en' }), 200, { 'content-security-policy': embed ? embedCsp(nextCsp(csp)) : nextCsp(csp) });
+      if (isApp) return html(chatPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed, lang: path === '/ja' ? 'ja' : 'en' }), 200, { 'content-security-policy': embed ? embedCsp(appCsp(csp)) : appCsp(csp) });
       let body = appPage({ ...opts, models, theme, here, pod, inf, names });
       if (geo === 'UA') body = body.replace('<head>', `<head><script>window.__GEO="UA"</script>`);
       return html(body, 200, { 'content-security-policy': csp });

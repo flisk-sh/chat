@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { homePage } from '../src/page.js';
-import { NEXT_CSS, NEXT_JS } from '../src/next-app.generated.js';
+import { APP_CSS, APP_JS } from '../src/app.generated.js';
 
 // GEL guard `next-cta`: the one thing a visitor most likely does next carries data-next-cta and the class next-cta
 // (a spinning rainbow border), and it is the first link or button after the first <h1>. Here that is "Start free with GitHub".
@@ -24,12 +24,12 @@ test('the classic landing marks exactly one element, the first button after the 
 test('the app landing marks the hero button once, and the built app carries it', () => {
   expect(app.match(/data-next-cta/g)).toHaveLength(3); // hero, phone header, desktop header; one shows per visitor state
   expect(app).toContain('<Button label="Start free with GitHub" variant="primary" className="next-cta" data-next-cta="" href={HERO_SIGNIN} />');
-  expect(NEXT_JS).toContain('data-next-cta');
-  expect(NEXT_JS.match(/data-next-cta/g)).toHaveLength(3);
+  expect(APP_JS).toContain('data-next-cta');
+  expect(APP_JS.match(/data-next-cta/g)).toHaveLength(3);
 });
 
 test('the CSS spins the border and has a prefers-reduced-motion rule, in source and in the build', () => {
-  for (const c of [css, NEXT_CSS]) {
+  for (const c of [css, APP_CSS]) {
     expect(c).toMatch(/\.next-cta\s*\{[^}]*animation:[^;}]*next-cta-spin/);
     expect(c).toMatch(/\.next-cta\s*\{[^}]*conic-gradient\(from var\(--next-cta-angle\)/);
     expect(c).toMatch(/@keyframes next-cta-spin/);

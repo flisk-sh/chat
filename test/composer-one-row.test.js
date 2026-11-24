@@ -6,7 +6,7 @@ const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const app = read('web/src/App.jsx');
 const tip = read('web/src/Tip.jsx');
 const css = read('web/src/app.css');
-const built = read('src/next-app.generated.js'); // what / really serves
+const built = read('src/app.generated.js'); // what / really serves
 
 test('the page always sends ask: the Jev router decides, there is no mode picker', () => {
   expect(app).toContain("const mode = 'ask';");

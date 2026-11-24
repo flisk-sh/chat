@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import worker from '../src/index.js';
-import { nextPage } from '../src/next-page.js';
+import { chatPage } from '../src/app-page.js';
 
 const origin = 'https://chat.flisk.si';
 const get = (path) => worker.fetch(new Request(`${origin}${path}`), {}, { waitUntil() {} });
@@ -11,8 +11,8 @@ const dims = (bytes) => {
 };
 
 test('the home page declares an apple-touch-icon', async () => {
-  // Built from nextPage directly: GET / would fill the shared fleet-names cache and break test/fleet-names.test.js.
-  const html = nextPage();
+  // Built from chatPage directly: GET / would fill the shared fleet-names cache and break test/fleet-names.test.js.
+  const html = chatPage();
   expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
 });
 

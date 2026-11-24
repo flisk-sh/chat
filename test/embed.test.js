@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { embedCsp, nextPage } from '../src/next-page.js';
+import { embedCsp, chatPage } from '../src/app-page.js';
 
 describe('the chat as a window inside Grow (/embed)', () => {
   test('only grow.flisk.si and analytics may frame it', () => {
@@ -10,14 +10,14 @@ describe('the chat as a window inside Grow (/embed)', () => {
   });
 
   test('the embedded page has no bar and no Earth, and says it is embedded', () => {
-    const t = nextPage({ embed: true, theme: 'system' });
+    const t = chatPage({ embed: true, theme: 'system' });
     expect(t).toContain('"embed":true');
     expect(t).not.toContain('assets/bar.js');
     expect(t).not.toContain('id="earth"');
   });
 
   test('the normal page keeps its bar and Earth', () => {
-    const t = nextPage({});
+    const t = chatPage({});
     expect(t).toContain('assets/bar.js');
     expect(t).toContain('id="earth"');
     expect(t).toContain('"embed":false');

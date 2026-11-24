@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { JA, JA_PATTERNS, jaScript } from '../src/i18n-ja.js';
-import { nextPage } from '../src/next-page.js';
+import { chatPage } from '../src/app-page.js';
 import { SEO_HEAD, seoHead } from '../src/page.js';
 import worker from '../src/index.js';
 
@@ -8,7 +8,7 @@ const hreflangs = (html) => [...html.matchAll(/<link rel="alternate" hreflang="(
 const SET = ['en https://chat.flisk.si/', 'ja https://chat.flisk.si/ja/', 'x-default https://chat.flisk.si/'];
 
 test('English stays the default: / is lang en, canonical to /, with no Japanese script', () => {
-  const html = nextPage({ login: 'ada' });
+  const html = chatPage({ login: 'ada' });
   expect(html).toContain('<html lang="en">');
   expect(html).toContain('<link rel="canonical" href="https://chat.flisk.si/">');
   expect(html).not.toContain("window.__LANG='ja'");
@@ -17,7 +17,7 @@ test('English stays the default: / is lang en, canonical to /, with no Japanese 
 });
 
 test('/ja/ is lang ja, canonical to itself, and lists the same hreflang set', () => {
-  const html = nextPage({ login: 'ada', lang: 'ja' });
+  const html = chatPage({ login: 'ada', lang: 'ja' });
   expect(html).toContain('<html lang="ja">');
   expect(html).toContain('<link rel="canonical" href="https://chat.flisk.si/ja/">');
   expect(html).toContain('<meta property="og:locale" content="ja_JP">');
