@@ -6,6 +6,10 @@ export const ANSWER_PER_DAY = 500;
 export const ANSWER_PER_ASKER_PER_DAY = 10;
 export const MAX_QUESTION = 500;
 export const MAX_CONTEXT = 400;
+export const IMAGES_PER_DAY = 30;
+export const IMAGES_PER_ASKER_PER_DAY = 3;
+// "draw a cat", "generate an image of ...", "make me a picture of ...": the bot answers with a drawn picture, not words.
+export const DRAW = /^\s*(please\s+)?(draw|paint|sketch|illustrate)\b|\b(draw|paint|sketch|illustrate|generate|create|make|render|design)\b[^.?!]{0,40}\b(image|picture|pic|photo|drawing|illustration|painting|artwork|poster|logo)\b/i;
 export const MAX_ANSWER = 270; // a post holds 280; the bot adds nothing but a space
 
 const same = (a, b) => {
@@ -41,7 +45,7 @@ export function postable(raw) {
 export const cleanQuestion = (q) => String(q || '').replace(/@askflisk\b/gi, ' ').replace(/\s+/g, ' ').trim();
 
 // deps: { weather(q) -> note, search(q) -> { results } | { error }, ask(messages) -> { text } | { error }, over(scope, id, limit) -> bool }
-export async function answer(request, env, { weather, search, ask, over, format }) {
+export async function answer(request, env, { weather, search, ask, over, format, image }) {
   const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
   const key = env.X_BOT_KEY || '';
   const given = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
@@ -54,6 +58,13 @@ export async function answer(request, env, { weather, search, ask, over, format 
   const asker = String(body?.asker || '').replace(/[^0-9A-Za-z_]/g, '').slice(0, 40);
   if (asker && (await over('x-asker', asker, ANSWER_PER_ASKER_PER_DAY))) return json(429, { error: 'that account asked a lot today', kind: 'asker' });
   if (await over('x-bot', 'everyone', ANSWER_PER_DAY)) return json(429, { error: 'out of answers for today', kind: 'day' });
+  // A picture was asked for: chat draws it (FLUX on Workers AI, Pollinations as the fallback) and the bot attaches it to its reply.
+  if (image && DRAW.test(question)) {
+    if (asker && (await over('x-image-asker', asker, IMAGES_PER_ASKER_PER_DAY))) return json(200, { text: 'That is enough pictures from you for today. Come back tomorrow.' });
+    if (await over('x-image', 'everyone', IMAGES_PER_DAY)) return json(200, { text: 'I have drawn enough pictures for today. Try again tomorrow.' });
+    const picture = await image(question.replace(/^\s*(please\s+)?/i, '')).catch(() => '');
+    return json(200, picture ? { text: 'Here you go. Tag me with changes if you want it different.', image: picture } : { text: 'I could not draw that right now. Try again in a minute.' });
+  }
   // The post being replied to, so "is neon good?" in a thread about Gemini is understood: it helps the search and the model.
   const context = cleanQuestion(String(body?.context || '').replace(/@\w+/g, ' ')).slice(0, MAX_CONTEXT);
   const note = await weather(question).catch(() => '');

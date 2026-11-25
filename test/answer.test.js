@@ -58,3 +58,19 @@ test('the post being replied to goes into the search and the prompt', async () =
   expect(seen[0].content).toContain('Today is 20');
   expect(seen[0].content).toContain('not sure');
 });
+
+test('a picture ask is drawn, capped, and falls back to words when nothing was drawn', async () => {
+  const drawn = [];
+  const d = (extra = {}) => deps({ image: async (p) => { drawn.push(p); return 'data:image/jpeg;base64,AAAA'; }, ask: async () => { throw new Error('the model must not be asked'); }, ...extra });
+  const res = await answer(req({ question: '@askflisk draw image of cat eating spaghetti', asker: '5' }), { X_BOT_KEY: KEY }, d());
+  const body = await res.json();
+  expect(body.image).toBe('data:image/jpeg;base64,AAAA');
+  expect(drawn).toEqual(['draw image of cat eating spaghetti']);
+  expect((await (await answer(req({ question: 'make me a picture of a fox', asker: '5' }), { X_BOT_KEY: KEY }, d())).json()).image).toBeTruthy();
+  expect((await (await answer(req({ question: 'draw a cat', asker: '5' }), { X_BOT_KEY: KEY }, d({ image: async () => '' }))).json()).text).toContain('could not draw');
+  const capped = await (await answer(req({ question: 'draw a cat', asker: '5' }), { X_BOT_KEY: KEY }, d({ over: async (s) => s === 'x-image-asker' }))).json();
+  expect(capped.image).toBeUndefined();
+  expect(capped.text).toContain('enough pictures');
+  // Not a picture ask: answered in words as before.
+  expect((await (await answer(req({ question: 'who drew the Mona Lisa?' }), { X_BOT_KEY: KEY }, deps({ image: async () => 'x' }))).json()).text).toBe('Rainy, 9°C.');
+});

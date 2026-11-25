@@ -481,6 +481,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       weather: (q) => weatherNote(q, fetchImpl, null),
       search: (q) => searchWeb(q, { fetch: fetchImpl }),
       format: formatResults,
+      image: (prompt) => sitePhoto(env, 'x-bot', prompt, { fetchImpl }),
       over: (scope, id, limit) => overDailyLimit(id, { cache: env.LIMIT_CACHE, limit, scope }),
       ask: (messages) => modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))(messages),
     });
