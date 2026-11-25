@@ -92,7 +92,7 @@ export async function answer(request, env, { weather, search, ask, over, format,
     if (await over('x-build', 'everyone', BUILDS_PER_DAY)) return json(200, { text: 'I have built enough apps for today. Try again tomorrow.' });
     const game = GAME.test(question);
     const made = await build(question, game).catch(() => ({ error: 'failed' }));
-    return json(200, made?.url ? { text: game ? 'Built it. Play it and tell me what to change.' : 'Built it. Open it and tell me what to change.', link: made.url } : { text: 'I could not build that right now. Try again in a minute.' });
+    return json(200, made?.url ? { text: game ? 'Built it. Play it and tell me what to change.' : 'Built it. Open it and tell me what to change.', link: made.url, ...(made.image ? { image: made.image } : {}) } : { text: 'I could not build that right now. Try again in a minute.' });
   }
   // The post being replied to, so "is neon good?" in a thread about Gemini is understood: it helps the search and the model.
   const context = cleanQuestion(String(body?.context || '').replace(/@\w+/g, ' ')).slice(0, MAX_CONTEXT);

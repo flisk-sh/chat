@@ -81,6 +81,10 @@ test('an app ask is built, published and returned as a link; capped; failures an
   const body = await (await answer(req({ question: '@askflisk make me crm', asker: '5' }), { X_BOT_KEY: KEY }, d())).json();
   expect(body.link).toBe('https://chat.flisk.si/s/abc');
   expect(built).toEqual(['make me crm']);
+  expect(body.image).toBeUndefined();
+  const shot = await (await answer(req({ question: '@askflisk make me crm', asker: '5' }), { X_BOT_KEY: KEY }, d({ build: async () => ({ url: 'https://chat.flisk.si/s/abc', image: 'data:image/jpeg;base64,AAAA' }) }))).json();
+  expect(shot.image).toBe('data:image/jpeg;base64,AAAA');
+  expect(shot.link).toBe('https://chat.flisk.si/s/abc');
   expect((await (await answer(req({ question: 'build a todo app', asker: '5' }), { X_BOT_KEY: KEY }, d({ build: async () => ({ error: 'x' }) }))).json()).text).toContain('could not build');
   const capped = await (await answer(req({ question: 'build a todo app', asker: '5' }), { X_BOT_KEY: KEY }, d({ over: async (s) => s === 'x-build-asker' }))).json();
   expect(capped.link).toBeUndefined();
@@ -106,4 +110,18 @@ test('a picture in the post is read and the answer is made from it', async () =>
   const f = async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 });
   expect(await seeImages({ AI: fakeAI }, ['https://pbs.twimg.com/media/a.jpg'], 'what', f)).toBe('a chart');
   expect(await seeImages({}, ['https://pbs.twimg.com/media/a.jpg'], 'what', f)).toBe('');
+});
+
+test('pageShot renders html to a jpeg data URL and gives up quietly', async () => {
+  const { pageShot } = await import('../src/shot.js');
+  const env = { CF_ACCOUNT_ID: 'acc', CF_BROWSER_TOKEN: 'tok' };
+  const calls = [];
+  const ok = async (u, init) => (calls.push([u, init]), new Response(new Uint8Array([255, 216, 255, 217]), { headers: { 'content-type': 'image/jpeg' } }));
+  expect(await pageShot(env, '<h1>hi</h1>', { fetchImpl: ok })).toBe('data:image/jpeg;base64,/9j/2Q==');
+  expect(calls[0][0]).toBe('https://api.cloudflare.com/client/v4/accounts/acc/browser-rendering/screenshot');
+  expect(calls[0][1].headers.authorization).toBe('Bearer tok');
+  expect(JSON.parse(calls[0][1].body).html).toBe('<h1>hi</h1>');
+  expect(await pageShot({}, '<h1>hi</h1>', { fetchImpl: ok })).toBe('');
+  expect(await pageShot(env, '<h1>hi</h1>', { fetchImpl: async () => new Response('no', { status: 500 }) })).toBe('');
+  expect(await pageShot(env, '<h1>hi</h1>', { fetchImpl: async () => { throw new Error('x'); } })).toBe('');
 });

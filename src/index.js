@@ -23,6 +23,7 @@ import { runResult } from './run.js';
 import { KEEP_DAYS, KEPT_PER_LOGIN } from './share.js';
 import { runOverSocket } from './browserpod.js';
 import { PHOTOS_PER_LOGIN, photoHistory, photosUsed, sitePhoto } from './photo.js';
+import { pageShot } from './shot.js';
 import { ANON_DAYS, clearSession, isAnon, makeSession, newAnonLogin, readSession, sameOrigin } from './session.js';
 import { speakStream, MAX_SPEAK } from './tts.js';
 import { sentenceSplitter, splitReply } from './talk-stream.js';
@@ -498,7 +499,10 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       build: async (q, game) => {
         const r = await modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))([{ role: 'system', content: game ? GAME_SYSTEM : BUILD_SYSTEM }, { role: 'user', content: q }]);
         const html = r.error ? '' : extractHtml(r.text);
-        return html ? publishSite(env, 'x-bot', html, origin) : { error: r.error || 'the model sent no page' };
+        if (!html) return { error: r.error || 'the model sent no page' };
+        const made = await publishSite(env, 'x-bot', html, origin);
+        // A picture of the page, so the post can show it and the link can go by DM. '' when screenshots are not set up or failed.
+        return made.url ? { ...made, image: await pageShot(env, html, { fetchImpl }).catch(() => '') } : made;
       },
       over: (scope, id, limit) => overDailyLimit(id, { cache: env.LIMIT_CACHE, limit, scope }),
       ask: (messages) => modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))(messages),

@@ -67,3 +67,8 @@ database_id = "fea52917-992e-4d99-98c9-cf007f233fd7"
 # @askflisk on X: POST /api/answer with Authorization: Bearer <X_BOT_KEY> returns one short answer for a post (src/answer.js).
 # Secret X_BOT_KEY, 24+ random characters, the same value as the X bot's CHAT_ANSWER_KEY. Unset = the endpoint answers 404.
 #   bunx wrangler@4 secret put X_BOT_KEY
+
+# A picture of an app @askflisk built (src/shot.js): the X post shows it and the bot sends the link by DM. Optional; without
+# these the bot posts the link itself. CF_BROWSER_TOKEN is an API token with Browser Rendering: Edit.
+#   bunx wrangler@4 secret put CF_ACCOUNT_ID
+#   bunx wrangler@4 secret put CF_BROWSER_TOKEN
