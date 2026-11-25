@@ -93,6 +93,8 @@ test('an app ask is built, published and returned as a link; capped; failures an
 test('a picture in the post is read and the answer is made from it', async () => {
   const { seeImages, imageUrls } = await import('../src/see.js');
   expect(imageUrls(['https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/V.jpg', 'https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large', 'https://evil.test/a.jpg', 'http://pbs.twimg.com/media/x.jpg'])).toEqual(['https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/V.jpg', 'https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large']);
+  const bsky = ['https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:abc123/bafkreiabc@jpeg', 'https://video.bsky.app/watch/did%3Aplc%3Aabc123/bafkreivid/thumbnail.jpg'];
+  expect(imageUrls([...bsky, 'https://cdn.bsky.app.evil.test/img/feed_thumbnail/plain/did:plc:a/b@jpeg', 'https://cdn.bsky.app/img/avatar/plain/did:plc:a/b@jpeg', 'http://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:a/b@jpeg'])).toEqual(bsky);
   const seenWith = [];
   const asked = [];
   const d = deps({ see: async (urls, q) => (seenWith.push(urls, q), 'Tier C: Claude Code, Cline'), ask: async (m) => (asked.push(m[0].content), { text: 'It is not on the list.' }) });
