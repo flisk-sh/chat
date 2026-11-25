@@ -8,8 +8,8 @@ export const ANSWER_PER_DAY = 500;
 export const ANSWER_PER_ASKER_PER_DAY = 10;
 export const MAX_QUESTION = 500;
 export const MAX_CONTEXT = 400;
-export const BUILDS_PER_DAY = 10;
-export const BUILDS_PER_ASKER_PER_DAY = 2;
+export const BUILDS_PER_DAY = 30;
+export const BUILDS_PER_ASKER_PER_DAY = 6;
 // "make me a crm", "build a todo app", "create a landing page": chat writes the app as one web page and the bot replies with its link.
 export const BUILD = /\b(?:build|make|create|code|develop)\b[^.?!]{0,40}\b(?:app|application|website|web ?site|site|page|crm|dashboard|landing|tool|calculator|game|shop|store|tracker|todo|planner|saas|kanban|inbox|admin)\b/i;
 // "make a snake game", "build me a platformer": a playable canvas game, not an app.
