@@ -9,7 +9,7 @@ export const MAX_CONTEXT = 400;
 export const IMAGES_PER_DAY = 30;
 export const IMAGES_PER_ASKER_PER_DAY = 3;
 // "draw a cat", "generate an image of ...", "make me a picture of ...": the bot answers with a drawn picture, not words.
-export const DRAW = /^\s*(please\s+)?(draw|paint|sketch|illustrate)\b|\b(draw|paint|sketch|illustrate|generate|create|make|render|design)\b[^.?!]{0,40}\b(image|picture|pic|photo|drawing|illustration|painting|artwork|poster|logo)\b/i;
+export const DRAW = /(?:^\s*(?:please\s+)?(?:draw|paint|sketch|illustrate)\b)|(?:\b(?:draw|paint|sketch|illustrate|generate|create|make|render|design)\b[^.?!]{0,40}\b(?:image|picture|pic|photo|drawing|illustration|painting|artwork|poster|logo)\b)/i;
 export const MAX_ANSWER = 270; // a post holds 280; the bot adds nothing but a space
 
 const same = (a, b) => {
