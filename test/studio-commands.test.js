@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parseStudioCommand } from '../web/src/studio-commands.js';
-import { nextCsp, STUDIO_ORIGIN } from '../src/next-page.js';
+import { appCsp, STUDIO_ORIGIN } from '../src/app-page.js';
 import catalog from '../plugins/catalog.json';
 
 describe('Studio voice and typed commands', () => {
@@ -21,7 +21,7 @@ describe('Studio voice and typed commands', () => {
     }
   });
   test('the new app may frame studio.flisk.si, and only that besides itself and inference', () => {
-    const csp = nextCsp("default-src 'none'; frame-src 'self' https://inf.test; script-src 'unsafe-inline'");
+    const csp = appCsp("default-src 'none'; frame-src 'self' https://inf.test; script-src 'unsafe-inline'");
     expect(csp.match(/frame-src [^;]*/)[0]).toBe(`frame-src 'self' ${STUDIO_ORIGIN} https://inf.test`);
   });
 });
