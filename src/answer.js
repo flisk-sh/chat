@@ -5,7 +5,7 @@
 import { KIT_GUIDE, KIT_MARK } from './kit.js';
 import { imageUrls } from './see.js';
 export const ANSWER_PER_DAY = 500;
-export const ANSWER_PER_ASKER_PER_DAY = 10;
+export const ANSWER_PER_ASKER_PER_DAY = 40;
 export const MAX_QUESTION = 500;
 export const MAX_CONTEXT = 400;
 export const BUILDS_PER_DAY = 30;
