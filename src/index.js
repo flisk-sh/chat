@@ -11,7 +11,7 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, formatResults, searchWeb } from './search.js';
-import { answer as answerApi } from './answer.js';
+import { answer as answerApi, BUILD_SYSTEM, extractHtml } from './answer.js';
 import { appAsset, chatPage, appCsp, embedCsp } from './app-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, notFoundPage, PROVIDER_CARDS, PROVIDER_NAMES, settingsPanelHtml, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
@@ -482,6 +482,11 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       search: (q) => searchWeb(q, { fetch: fetchImpl }),
       format: formatResults,
       image: (prompt) => sitePhoto(env, 'x-bot', prompt, { fetchImpl }),
+      build: async (q) => {
+        const r = await modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))([{ role: 'system', content: BUILD_SYSTEM }, { role: 'user', content: q }]);
+        const html = r.error ? '' : extractHtml(r.text);
+        return html ? publishSite(env, 'x-bot', html, origin) : { error: r.error || 'the model sent no page' };
+      },
       over: (scope, id, limit) => overDailyLimit(id, { cache: env.LIMIT_CACHE, limit, scope }),
       ask: (messages) => modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))(messages),
     });

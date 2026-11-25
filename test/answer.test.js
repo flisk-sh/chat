@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ANSWER_PER_ASKER_PER_DAY, MAX_ANSWER, answer, cleanQuestion, postable } from '../src/answer.js';
+import { ANSWER_PER_ASKER_PER_DAY, BUILD, MAX_ANSWER, answer, cleanQuestion, extractHtml, postable } from '../src/answer.js';
 
 const KEY = 'k'.repeat(32);
 const req = (body, auth = `Bearer ${KEY}`) => new Request('https://chat.flisk.si/api/answer', { method: 'POST', headers: { authorization: auth, 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -73,4 +73,19 @@ test('a picture ask is drawn, capped, and falls back to words when nothing was d
   expect(capped.text).toContain('enough pictures');
   // Not a picture ask: answered in words as before.
   expect((await (await answer(req({ question: 'who drew the Mona Lisa?' }), { X_BOT_KEY: KEY }, deps({ image: async () => 'x' }))).json()).text).toBe('Rainy, 9°C.');
+});
+
+test('an app ask is built, published and returned as a link; capped; failures answer in words', async () => {
+  const built = [];
+  const d = (extra = {}) => deps({ build: async (q) => { built.push(q); return { url: 'https://chat.flisk.si/s/abc' }; }, ask: async () => { throw new Error('the model must not be asked'); }, ...extra });
+  const body = await (await answer(req({ question: '@askflisk make me crm', asker: '5' }), { X_BOT_KEY: KEY }, d())).json();
+  expect(body.link).toBe('https://chat.flisk.si/s/abc');
+  expect(built).toEqual(['make me crm']);
+  expect((await (await answer(req({ question: 'build a todo app', asker: '5' }), { X_BOT_KEY: KEY }, d({ build: async () => ({ error: 'x' }) }))).json()).text).toContain('could not build');
+  const capped = await (await answer(req({ question: 'build a todo app', asker: '5' }), { X_BOT_KEY: KEY }, d({ over: async (s) => s === 'x-build-asker' }))).json();
+  expect(capped.link).toBeUndefined();
+  expect(capped.text).toContain('enough builds');
+  expect(extractHtml('Here:\n```html\n<!doctype html><html><body>hi</body></html>\n```\nenjoy')).toBe('<!doctype html><html><body>hi</body></html>');
+  expect(extractHtml('no page here')).toBe('');
+  expect(BUILD.test('what is a crm?')).toBe(false);
 });
