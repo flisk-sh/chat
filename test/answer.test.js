@@ -92,7 +92,7 @@ test('an app ask is built, published and returned as a link; capped; failures an
 
 test('a picture in the post is read and the answer is made from it', async () => {
   const { seeImages, imageUrls } = await import('../src/see.js');
-  expect(imageUrls(['https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large', 'https://evil.test/a.jpg', 'http://pbs.twimg.com/media/x.jpg'])).toEqual(['https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large']);
+  expect(imageUrls(['https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/V.jpg', 'https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large', 'https://evil.test/a.jpg', 'http://pbs.twimg.com/media/x.jpg'])).toEqual(['https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/V.jpg', 'https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large']);
   const seenWith = [];
   const asked = [];
   const d = deps({ see: async (urls, q) => (seenWith.push(urls, q), 'Tier C: Claude Code, Cline'), ask: async (m) => (asked.push(m[0].content), { text: 'It is not on the list.' }) });

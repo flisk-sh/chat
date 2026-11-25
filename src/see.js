@@ -4,7 +4,7 @@ export const VISION_MODELS = ['@cf/meta/llama-3.2-11b-vision-instruct', '@cf/lla
 export const MAX_IMAGE_BYTES = 3_000_000;
 export const MAX_IMAGES = 2;
 // Only pictures that X itself hosts: the bot sends links, chat fetches them, so no link to anywhere else is followed.
-export const IMAGE_URL = /^https:\/\/pbs\.twimg\.com\/media\/[\w.-]+(?:\?[\w=&.%-]*)?$/;
+export const IMAGE_URL = /^https:\/\/pbs\.twimg\.com\/(?:media|ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)\/[\w./-]+(?:\?[\w=&.%-]*)?$/;
 export const imageUrls = (list) => (Array.isArray(list) ? list.filter((u) => typeof u === 'string' && IMAGE_URL.test(u)).slice(0, MAX_IMAGES) : []);
 
 // What is in these pictures, for someone who asked `question`: plain text, '' when none could be read.
