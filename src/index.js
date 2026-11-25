@@ -11,6 +11,7 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, formatResults, searchWeb } from './search.js';
+import { seeImages } from './see.js';
 import { answer as answerApi, BUILD_SYSTEM, GAME_SYSTEM, extractHtml } from './answer.js';
 import { KIT_CSS, withKit } from './kit.js';
 import { previewHost } from './share.js';
@@ -493,6 +494,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       search: (q) => searchWeb(q, { fetch: fetchImpl }),
       format: formatResults,
       image: (prompt) => sitePhoto(env, 'x-bot', prompt, { fetchImpl }),
+      see: (urls, q) => seeImages(env, urls, q, fetchImpl),
       build: async (q, game) => {
         const r = await modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))([{ role: 'system', content: game ? GAME_SYSTEM : BUILD_SYSTEM }, { role: 'user', content: q }]);
         const html = r.error ? '' : extractHtml(r.text);

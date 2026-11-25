@@ -3,6 +3,7 @@
 // web search as chat itself, in a form that fits one post.
 // Auth: Authorization: Bearer <X_BOT_KEY>. Unset key = endpoint answers 404, like /api/admin/runs.
 import { KIT_GUIDE, KIT_MARK } from './kit.js';
+import { imageUrls } from './see.js';
 export const ANSWER_PER_DAY = 500;
 export const ANSWER_PER_ASKER_PER_DAY = 10;
 export const MAX_QUESTION = 500;
@@ -65,7 +66,7 @@ export function postable(raw) {
 export const cleanQuestion = (q) => String(q || '').replace(/@askflisk\b/gi, ' ').replace(/\s+/g, ' ').trim();
 
 // deps: { weather(q) -> note, search(q) -> { results } | { error }, ask(messages) -> { text } | { error }, over(scope, id, limit) -> bool }
-export async function answer(request, env, { weather, search, ask, over, format, image, build }) {
+export async function answer(request, env, { weather, search, ask, over, format, image, build, see }) {
   const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
   const key = env.X_BOT_KEY || '';
   const given = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
@@ -97,6 +98,12 @@ export async function answer(request, env, { weather, search, ask, over, format,
   const context = cleanQuestion(String(body?.context || '').replace(/@\w+/g, ' ')).slice(0, MAX_CONTEXT);
   const note = await weather(question).catch(() => '');
   let facts = note;
+  // A picture in the post (a ranking, a screenshot): a vision model reads it, and the answer comes from that.
+  const urls = imageUrls(body?.images);
+  if (!facts && see && urls.length) {
+    const seen = await see(urls, question).catch(() => '');
+    if (seen) facts = `The picture in the post, read by a vision model (it can misread small text; say so if unsure):\n${seen}`;
+  }
   if (!facts) {
     const found = await search(context ? `${question} ${context.slice(0, 100)}` : question).catch(() => null);
     if (found?.results?.length) facts = `Web results (use them, never quote a link):\n${format(found.results.slice(0, 4))}`;

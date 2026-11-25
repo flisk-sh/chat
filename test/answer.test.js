@@ -89,3 +89,19 @@ test('an app ask is built, published and returned as a link; capped; failures an
   expect(extractHtml('no page here')).toBe('');
   expect(BUILD.test('what is a crm?')).toBe(false);
 });
+
+test('a picture in the post is read and the answer is made from it', async () => {
+  const { seeImages, imageUrls } = await import('../src/see.js');
+  expect(imageUrls(['https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large', 'https://evil.test/a.jpg', 'http://pbs.twimg.com/media/x.jpg'])).toEqual(['https://pbs.twimg.com/media/AbC-1.jpg?format=jpg&name=large']);
+  const seenWith = [];
+  const asked = [];
+  const d = deps({ see: async (urls, q) => (seenWith.push(urls, q), 'Tier C: Claude Code, Cline'), ask: async (m) => (asked.push(m[0].content), { text: 'It is not on the list.' }) });
+  const body = await (await answer(req({ question: '@askflisk missing askflisk', asker: '9', images: ['https://pbs.twimg.com/media/AbC-1.jpg', 'https://evil.test/x.png'] }), { X_BOT_KEY: KEY }, d)).json();
+  expect(body.text).toBe('It is not on the list.');
+  expect(seenWith[0]).toEqual(['https://pbs.twimg.com/media/AbC-1.jpg']);
+  expect(asked[0]).toContain('Tier C: Claude Code, Cline');
+  const fakeAI = { run: async (model) => (model.includes('11b') ? {} : { description: 'a chart' }) };
+  const f = async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+  expect(await seeImages({ AI: fakeAI }, ['https://pbs.twimg.com/media/a.jpg'], 'what', f)).toBe('a chart');
+  expect(await seeImages({}, ['https://pbs.twimg.com/media/a.jpg'], 'what', f)).toBe('');
+});
