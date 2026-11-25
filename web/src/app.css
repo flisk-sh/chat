@@ -238,7 +238,9 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 .page-panel{display:flex;flex-direction:column;width:min(48%,640px);min-width:360px;flex-shrink:0;border-inline-start:1px solid var(--color-border,#8884);background:var(--color-background-surface,#262626);min-height:0}
 .page-panel-bar{padding:var(--spacing-2) var(--spacing-3);border-block-end:1px solid var(--color-border,#8884)}
 .page-panel-frame{flex:1;width:100%;border:0;background:#fff;min-height:0}
+/* On a phone the panel sits under the chat (not over it), so the box stays in reach for spoken and typed commands. */
 @media (max-width:767px){.page-panel{position:fixed;inset:0;z-index:60;width:100%;min-width:0}}
+@media (max-width:767px){.chat-split:has(.studio-panel){flex-direction:column}.studio-panel.page-panel{position:static;width:100%;min-width:0;height:55dvh;flex-shrink:0;border-inline-start:0;border-block-start:1px solid var(--color-border,#8884)}}
 
 /* Settings dialog (the Astryx settings-dialog template): section list on the left, the chosen section on the right. */
 .settings-dialog{display:flex;flex-direction:column;gap:var(--spacing-4);max-height:min(86dvh,720px);min-height:0}

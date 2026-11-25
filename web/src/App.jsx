@@ -514,12 +514,13 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
                   button={{label: 'More', variant: 'ghost', size: 'sm', isIconOnly: true, icon: <Icon icon={PlusIcon} size="sm" />}}
                   items={[
                     {label: 'Dictate', description: 'Speak your task, it turns into text', icon: MicrophoneIcon, endContent: <Demo kind="dictate" />, onClick: dictate},
-                    {label: 'Plugins', description: 'Edit photos and PDFs, and more: 50 plugins, 22 ready', icon: PhotoIcon, onClick: () => setPlugOpen(true)},
+                    {label: 'Plugins', description: 'Photos, PDFs and more: 50 plugins, 22 ready', icon: PhotoIcon, onClick: () => setPlugOpen(true)},
                     {label: 'Voice talk', description: 'Talk out loud with the Flisk Oracle', icon: SpeakerWaveIcon, endContent: <Demo kind="talk" />, onClick: () => setTalk(true)},
                     {label: 'Attach files', description: 'Up to 3 files, 5 MB in all', icon: PaperClipIcon, endContent: <Demo kind="attach" />, onClick: () => fileIn.current && fileIn.current.click()},
                     {label: 'Choose computers', description: 'Which of your computers may run it', icon: ComputerDesktopIcon, endContent: <Demo kind="computers" />, onClick: () => setPcOpen(true)},
                     {label: 'Choose AI model', description: 'Flisk Wolf is free; or use your own Claude, OpenAI or OpenRouter key', icon: KeyIcon, endContent: <Demo kind="model" />, onClick: () => setMdlOpen(true)},
                   ]} /></span></Tip>
+                {studio && <Tip title="Studio is listening" text="Say or type “remove the background” or “crop to square”: it goes to the editor, not the chat." more="Tap to close Studio."><span><Button label="Studio" variant="secondary" size="sm" icon={<Icon icon={PhotoIcon} size="sm" />} onClick={() => setStudio(false)} /></span></Tip>}
                 {files.map((f, i) => <Tip key={f.name + i} title="Attached file" scene="attach" text={'Sent with your message: ' + f.name + '.'} more="Tap it to take it off again."><span><Badge label={f.name} onClick={() => setFiles(files.filter((_, j) => j !== i))} /></span></Tip>)}
                 {dictating && <Tip title="Listening" scene="dictate" text="Stops listening and writes what you said into the box."><span><Button label="Stop and write what I said" variant="primary" size="sm" icon={<Icon icon={MicrophoneIcon} size="sm" />} onClick={dictate} /></span></Tip>}
               </HStack>
@@ -558,13 +559,13 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         </ChatMessageList>
       </ChatLayout>
       </div>
-      {studio && <StudioPanel frameRef={studioFrame} onClose={() => setStudio(false)} onReply={onStudioReply} />}
+      {studio && <StudioPanel frameRef={studioFrame} onClose={() => setStudio(false)} onReply={onStudioReply} onQuick={(m) => sendToStudio(studioFrame.current, m)} />}
       {panel && <PagePanel url={panel} onClose={() => setPanel('')} onCopy={copy} />}
       </div>
     </AppShell>
     </div>
       <SettingsDialog open={setOpen} onClose={closeSettings} section={setSec} onSection={setSetSec} scheme={scheme} setScheme={setScheme} explain={explain} onExplain={() => { setExplain((e) => !e); setCaption(''); }} onModel={() => setMdlOpen(true)} />
-      <PluginsDialog open={plugOpen} onClose={() => setPlugOpen(false)} onStudio={() => setStudio(true)} />
+      <PluginsDialog open={plugOpen} onClose={() => setPlugOpen(false)} onStudio={() => setStudio(true)} onAsk={(t) => setValue(t)} />
       <ModelDialog open={mdlOpen} onClose={() => setMdlOpen(false)} models={BOOT.models || []} value={sel} onUse={setSel} />
       <Oracle open={talk} onClose={() => setTalk(false)} aiBlock={aiBlock}
         onBuild={(t) => { run(t).catch(() => {}); }}

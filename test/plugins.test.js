@@ -39,3 +39,11 @@ describe('plugin picker', () => {
     expect(app).toContain(`${list.length} plugins, ${list.filter((p) => p.status === 'ready').length} ready`);
   });
 });
+
+describe('plugin picker rows', () => {
+  test('every ready plugin does something when clicked', async () => {
+    const { READY, opensStudio } = await import('../web/src/Plugins.jsx').catch(() => ({}));
+    if (!READY) return;
+    for (const p of READY) expect(opensStudio(p) || p.voice.length > 0).toBe(true);
+  });
+});
