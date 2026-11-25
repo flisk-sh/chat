@@ -77,3 +77,17 @@ export async function shareApp({ computer, podId, spec, provider = '', fetchImpl
   const expiresAt = end ? new Date(end).toISOString() : wakesOnVisit ? null : new Date(Date.now() + 3600_000).toISOString();
   return { url, wakesOnVisit, expiresAt };
 }
+
+// A sandbox preview link (https://<name>-<port>.preview.box.upstash.com) on our own host: https://<name>-<port>.<appHost>,
+// which chat's Worker proxies back (index.js). With no appHost, or a link of another provider, the link is returned as it is.
+export function friendlyUrl(url, appHost) {
+  const m = /^https:\/\/([a-z0-9-]+-\d{2,5})\.preview\.box\.upstash\.com(\/.*)?$/.exec(String(url || ''));
+  return m && /^[a-z0-9.-]+$/.test(appHost || '') ? `https://${m[1]}.${appHost}${m[2] || ''}` : url;
+}
+// The host name of a proxied preview ("name-3000.app.flisk.si") -> the real preview host, or '' when it is not one.
+export function previewHost(hostname, appHost) {
+  const h = String(hostname || '').toLowerCase();
+  if (!appHost || !h.endsWith(`.${appHost}`)) return '';
+  const label = h.slice(0, -appHost.length - 1);
+  return /^[a-z0-9-]+-\d{2,5}$/.test(label) ? `${label}.preview.box.upstash.com` : '';
+}

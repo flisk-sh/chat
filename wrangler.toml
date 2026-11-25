@@ -20,6 +20,11 @@ LOGIN_PUBLIC_KEY = "g_3cGlqaMDf4mM4Bgfv8EO6js7yW_bcSW7cOUpSwLc0"
 FLEET_URL = "https://fleet.flisk.si"
 INFERENCE_URL = "https://inference.flisk.si/v1/chat/completions"
 INFERENCE_MODEL = "flisk-wolf-chat"
+# Links on our own host. Set only after DNS and routes exist (an A record for app.flisk.si and a wildcard *.app.flisk.si, proxied, and
+# routes app.flisk.si/* and *.app.flisk.si/* to this Worker): APP_ORIGIN is where published pages are linked, APP_HOST where sandbox
+# previews are shown as <name>-<port>.APP_HOST.
+# APP_ORIGIN = "https://app.flisk.si"
+# APP_HOST = "app.flisk.si"
 
 # The free model is the flisk-inference Worker on our own domain: a direct link, because a Worker cannot call another
 # Worker by its public address on the same domain (Cloudflare error 1033).

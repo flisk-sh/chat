@@ -2,6 +2,7 @@
 // ("@askflisk weather in london"): the bot sends the question, chat answers with the same free model, live weather and
 // web search as chat itself, in a form that fits one post.
 // Auth: Authorization: Bearer <X_BOT_KEY>. Unset key = endpoint answers 404, like /api/admin/runs.
+import { KIT_GUIDE, KIT_MARK } from './kit.js';
 export const ANSWER_PER_DAY = 500;
 export const ANSWER_PER_ASKER_PER_DAY = 10;
 export const MAX_QUESTION = 500;
@@ -9,8 +10,15 @@ export const MAX_CONTEXT = 400;
 export const BUILDS_PER_DAY = 10;
 export const BUILDS_PER_ASKER_PER_DAY = 2;
 // "make me a crm", "build a todo app", "create a landing page": chat writes the app as one web page and the bot replies with its link.
-export const BUILD = /\b(?:build|make|create|code|develop)\b[^.?!]{0,40}\b(?:app|application|website|web ?site|site|page|crm|dashboard|landing|tool|calculator|game|shop|store|tracker|todo|planner)\b/i;
-export const BUILD_SYSTEM = `You build a small working web app as ONE complete HTML document: inline CSS and inline JavaScript, no external libraries, fonts or network calls. It must really work: add, edit and delete items, keep them in localStorage, start with 3 sample rows, look clean on a phone, dark background. Keep the whole document under 6000 characters. Reply with ONLY the HTML, starting with <!doctype html>, no explanation, no Markdown fence.`;
+export const BUILD = /\b(?:build|make|create|code|develop)\b[^.?!]{0,40}\b(?:app|application|website|web ?site|site|page|crm|dashboard|landing|tool|calculator|game|shop|store|tracker|todo|planner|saas|kanban|inbox|admin)\b/i;
+// "make a snake game", "build me a platformer": a playable canvas game, not an app.
+export const GAME = /\b(?:build|make|create|code|develop)\b[^.?!]{0,40}\b(?:game|snake|tetris|pong|platformer|shooter|runner|clicker|survivors|arcade|puzzle|flappy|breakout)\b/i;
+export const BUILD_SYSTEM = `You build a small working web APP (not a landing page) as ONE complete HTML document: inline JavaScript, no external libraries, fonts or network calls. It must really work: add, edit and delete items, keep them in localStorage, start with 5 realistic sample rows, work on a phone. Keep the whole document under 7000 characters.
+${KIT_GUIDE}
+Reply with ONLY the HTML, starting with <!doctype html>, no explanation, no Markdown fence.`;
+// A game like the Kitchen Rush on run-my-agents.flisk.si/play: one canvas, a title screen, a loop that gets harder, keyboard and touch.
+export const GAME_SYSTEM = `You build a small, fun, playable browser GAME as ONE complete HTML document: a <canvas>, inline JavaScript, no libraries, no network. Keep it under 7000 characters. ${KIT_MARK} goes in <head> and the body is <div class="game"><div class="hud"><span class="badge">Score <b id="s">0</b></span><span class="badge">Best <b id="b">0</b></span></div><canvas id="c" width="480" height="640"></canvas><small>Arrows or WASD to move, tap and drag on a phone</small></div>.
+The game: a state machine "title" | "play" | "dead" (tap or Space starts and restarts), a requestAnimationFrame loop with delta time, simple shapes (pixel squares and circles, bright colours on the dark canvas), enemies or obstacles that spawn faster the longer you live, a score, the best score in localStorage, a little screen shake or particles when something is hit, keyboard (arrows, WASD) AND touch (drag to steer, tap to act). Text on the canvas: the game's name, "Tap or press Space", and "Game over, score N" on death. Make it feel good in the first 10 seconds. Reply with ONLY the HTML, starting with <!doctype html>, no explanation, no Markdown fence.`;
 // The page out of a model's reply: the part from <!doctype or <html to </html>, or '' when there is none.
 export function extractHtml(raw) {
   const t = String(raw || '').replace(/```(?:html)?/gi, '');
@@ -78,11 +86,12 @@ export async function answer(request, env, { weather, search, ask, over, format,
     return json(200, picture ? { text: 'Here you go. Tag me with changes if you want it different.', image: picture } : { text: 'I could not draw that right now. Try again in a minute.' });
   }
   // An app was asked for: chat writes it as one page, publishes it, and the bot replies with the link (a link post costs more on X, so builds are few).
-  if (build && BUILD.test(question)) {
+  if (build && (BUILD.test(question) || GAME.test(question))) {
     if (asker && (await over('x-build-asker', asker, BUILDS_PER_ASKER_PER_DAY))) return json(200, { text: 'That is enough builds from you for today. Come back tomorrow.' });
     if (await over('x-build', 'everyone', BUILDS_PER_DAY)) return json(200, { text: 'I have built enough apps for today. Try again tomorrow.' });
-    const made = await build(question).catch(() => ({ error: 'failed' }));
-    return json(200, made?.url ? { text: 'Built it. Open it and tell me what to change.', link: made.url } : { text: 'I could not build that right now. Try again in a minute.' });
+    const game = GAME.test(question);
+    const made = await build(question, game).catch(() => ({ error: 'failed' }));
+    return json(200, made?.url ? { text: game ? 'Built it. Play it and tell me what to change.' : 'Built it. Open it and tell me what to change.', link: made.url } : { text: 'I could not build that right now. Try again in a minute.' });
   }
   // The post being replied to, so "is neon good?" in a thread about Gemini is understood: it helps the search and the model.
   const context = cleanQuestion(String(body?.context || '').replace(/@\w+/g, ' ')).slice(0, MAX_CONTEXT);

@@ -11,7 +11,9 @@ import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } fro
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
 import { cleanMode, formatResults, searchWeb } from './search.js';
-import { answer as answerApi, BUILD_SYSTEM, extractHtml } from './answer.js';
+import { answer as answerApi, BUILD_SYSTEM, GAME_SYSTEM, extractHtml } from './answer.js';
+import { KIT_CSS, withKit } from './kit.js';
+import { previewHost } from './share.js';
 import { appAsset, chatPage, appCsp, embedCsp } from './app-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, notFoundPage, PROVIDER_CARDS, PROVIDER_NAMES, settingsPanelHtml, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
@@ -238,7 +240,7 @@ export async function publishSite(env, login, content, origin, limit = MAX_SITE_
   const id = hex(8);
   await env.DB.prepare('INSERT INTO sites (id, login, html, created) VALUES (?, ?, ?, ?)').bind(id, login, content, new Date().toISOString()).run();
   await env.DB.prepare('DELETE FROM sites WHERE login = ? AND id NOT IN (SELECT id FROM sites WHERE login = ? ORDER BY created DESC LIMIT ?)').bind(login, login, SITES_PER_LOGIN).run();
-  return { url: `${origin}/s/${id}` };
+  return { url: `${(env.APP_ORIGIN || origin).replace(/\/$/, '')}/s/${id}` };
 }
 
 // A video a task made: kept as base64 parts in D1 (a row holds at most 2 MB), linked by an unguessable id, 7 days,
@@ -350,7 +352,7 @@ function siteResponse(row) {
   const bar = `<div style="position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;background:#111;color:#eee;font:12px/16px ui-monospace,Menlo,monospace;padding:4px 10px;z-index:2147483647;pointer-events:none"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Made with Flisk Chat by @${String(row.login).replace(/[^A-Za-z0-9-]/g, '')} · anyone can make a page here, so only enter what you would enter on any site</span><a style="color:#7ee787;flex:none;pointer-events:auto" href="https://github.com/flisk-sh/chat/issues/new?title=Report%20chat%20page%20${row.id}">report</a></div>`;
   // The bar is fixed to the bottom edge: leave room under the page so its last line is not hidden behind it.
   const room = '<style>body{padding-bottom:40px!important}</style>';
-  const page = withStorageShim(row.html);
+  const page = withStorageShim(withKit(row.html));
   const body = /<\/body>/i.test(page) ? page.replace(/<\/body>/i, () => `${room}${bar}</body>`) : page + room + bar;
   return new Response(body, {
     headers: {
@@ -383,6 +385,15 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const origin = env.PUBLIC_ORIGIN || url.origin;
+
+  // <name>-<port>.app.flisk.si is a sandbox preview shown on our own host (share.js friendlyUrl): pass the request through.
+  const preview = previewHost(url.hostname, env.APP_HOST);
+  if (preview) {
+    const res = await fetchImpl(new Request(`https://${preview}${url.pathname}${url.search}`, request));
+    const out = new Response(res.body, res);
+    out.headers.set('x-robots-tag', 'noindex');
+    return out;
+  }
 
   if (request.method === 'GET' && path === '/og.png') return new Response(OG_PNG, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
   if (request.method === 'GET' && path === '/apple-touch-icon.png') return new Response(TOUCH_ICON_PNG, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
@@ -482,8 +493,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       search: (q) => searchWeb(q, { fetch: fetchImpl }),
       format: formatResults,
       image: (prompt) => sitePhoto(env, 'x-bot', prompt, { fetchImpl }),
-      build: async (q) => {
-        const r = await modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))([{ role: 'system', content: BUILD_SYSTEM }, { role: 'user', content: q }]);
+      build: async (q, game) => {
+        const r = await modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))([{ role: 'system', content: game ? GAME_SYSTEM : BUILD_SYSTEM }, { role: 'user', content: q }]);
         const html = r.error ? '' : extractHtml(r.text);
         return html ? publishSite(env, 'x-bot', html, origin) : { error: r.error || 'the model sent no page' };
       },
@@ -492,6 +503,9 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     });
   }
   if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil });
+
+  // The app kit (Astryx look) as a stylesheet, for pages and apps that are not published as one file.
+  if (request.method === 'GET' && path === '/_kit/astryx.css') return new Response(KIT_CSS, { headers: { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'public, max-age=3600', 'access-control-allow-origin': '*', 'x-content-type-options': 'nosniff' } });
 
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
   if (sm && request.method === 'GET') {

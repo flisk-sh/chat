@@ -1,5 +1,6 @@
 // Chat's view of fleet.flisk.si: a trusted site that signs users in itself and calls fleet for them.
 // One computer (pod) per task: start on the first action, stop at the end, unless the task shared the running app (share.js).
+import { friendlyUrl } from './share.js';
 export function fleetClient(env, login, fetchImpl = fetch) {
   const base = (env.FLEET_URL || 'https://fleet.flisk.si').replace(/\/$/, '');
   const call = async (method, path, body) => {
@@ -17,7 +18,11 @@ export function fleetClient(env, login, fetchImpl = fetch) {
     // order: provider ids to use, in this order; empty means fleet picks the cheapest of the connected ones.
     // public: a computer that can later give a port a public URL (share.js). Fleet starts a normal one where that is not possible.
     start: async (order = []) => call('POST', '/v1/pods', { cpu: 2, ram: 4, public: true, ...(order.length ? { order } : {}) }),
-    share: async (id, port, startup) => call('POST', `/v1/pods/${encodeURIComponent(id)}/public`, { port, startup }),
+    share: async (id, port, startup) => {
+      const r = await call('POST', `/v1/pods/${encodeURIComponent(id)}/public`, { port, startup });
+      if (r.data?.url && env.APP_HOST) r.data.url = friendlyUrl(r.data.url, env.APP_HOST); // https://name-3000.app.flisk.si instead of the provider's address
+      return r;
+    },
     run: async (id, command) => call('POST', `/v1/pods/${encodeURIComponent(id)}/run`, { command, timeout: 60 }),
     write: async (id, path, content) => call('PUT', `/v1/pods/${encodeURIComponent(id)}/files`, { path, content }),
     read: async (id, path) => call('GET', `/v1/pods/${encodeURIComponent(id)}/files?path=${encodeURIComponent(path)}`),

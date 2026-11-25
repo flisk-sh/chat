@@ -7,6 +7,7 @@
 // Then `flisk up` starts everything as plain processes, and chat adds, reads and deletes one record in every part
 // through the website's port, the same way a visitor's clicks go. The model then shares the website's port, so the
 // user gets the real website and the real API behind it, never a copy.
+import { KIT_TOKENS } from './kit.js';
 export const MAX_SERVICES = 12;
 export const FIRST_PORT = 4101;
 export const MAX_FIELDS = 6;
@@ -199,27 +200,28 @@ export const indexHtml = (spec) => {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(spec.title)}</title>
 <style>
-:root{--bg:#faf9f6;--card:#fff;--ink:#171714;--dim:#6b6a63;--line:#e6e3da;--ok:#23794a;--bad:#b42318;font:15px/1.5 ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--bg)}
-*{box-sizing:border-box}body{margin:0}header{border-bottom:1px solid var(--line);background:var(--card)}
-.skip-link{position:absolute;left:-9999px;top:0;z-index:100;padding:10px 14px;background:var(--card);color:var(--ink);border:1px solid var(--line)}.skip-link:focus{left:12px;top:12px;outline:2px solid var(--ok);outline-offset:2px}
-.wrap{max-width:1040px;margin:0 auto;padding:0 16px}h1{font-size:22px;letter-spacing:-.02em;margin:0;padding:18px 0 10px}
-nav{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px}nav button{border:1px solid transparent;background:none;padding:6px 12px;border-radius:0;font:inherit;color:var(--dim);cursor:pointer;white-space:nowrap}
-nav button[aria-current=true]{border-color:var(--line);background:var(--bg);color:var(--ink);font-weight:600}
-main{padding:24px 16px 48px}h2{font-size:18px;margin:0 0 2px;text-transform:capitalize}p.does{color:var(--dim);margin:0 0 16px}
-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;background:var(--card);border:1px solid var(--line);border-radius:0;padding:12px;margin-bottom:16px}
-input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:0;background:#fff;min-width:0}
-button.go{font:inherit;font-weight:600;padding:8px 14px;border:0;border-radius:0;background:var(--ink);color:#fff;cursor:pointer}
-.table{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:0}table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
-tr:last-child td{border-bottom:0}td.x{width:1%;white-space:nowrap}button.del{font:inherit;font-size:13px;border:1px solid var(--line);background:none;border-radius:0;padding:4px 10px;cursor:pointer;color:var(--bad)}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px;cursor:pointer}
-.card b{text-transform:capitalize}.n{font-size:28px;font-weight:650;letter-spacing:-.02em}.up{color:var(--ok)}.down{color:var(--bad)}
-.msg{color:var(--bad);margin:8px 0}.empty{color:var(--dim);padding:18px 12px}
-h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);margin:28px 0 10px}.dim{color:var(--dim)}td.dim,.x.dim{font-size:13px}tr[data-go]{cursor:pointer}tr[data-go]:hover{background:var(--bg)}
-.card.plain{cursor:default}.bar{position:relative;display:flex;justify-content:space-between;gap:8px;padding:4px 6px;margin-top:6px;font-size:13px}.bar i{position:absolute;left:0;top:0;bottom:0;background:#e9efe9;z-index:0}.bar span,.bar em{position:relative;z-index:1;font-style:normal}
-.bar-row{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.bar-row input{flex:1;min-width:180px}.seg{margin-left:auto;display:flex}.seg button{font:inherit;padding:6px 12px;border:1px solid var(--line);background:var(--card);cursor:pointer}.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
-button.plain{font:inherit;padding:8px 14px;border:1px solid var(--line);background:none;cursor:pointer}.tag{display:inline-block;padding:1px 8px;border:1px solid var(--line);background:var(--bg);font-size:13px}
-.board{display:flex;gap:12px;overflow-x:auto;align-items:flex-start}.col{min-width:230px;flex:1;background:#f1efe8;padding:10px}.col h4{margin:0 0 8px;text-transform:capitalize;font-size:13px}.kcard{background:var(--card);border:1px solid var(--line);padding:10px;margin-bottom:8px}.kcard .acts{display:flex;gap:6px;margin-top:8px}.kcard select{font:inherit;font-size:13px;flex:1;min-width:0}
+${KIT_TOKENS}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Figtree,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+header{border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:5}
+.skip-link{position:absolute;left:-9999px;top:0;z-index:100;padding:10px 14px;background:var(--raised);color:var(--text);border:1px solid var(--line);border-radius:0}.skip-link:focus{left:12px;top:12px;outline:2px solid var(--info);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}h1{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0;padding:16px 0 4px}
+nav{display:flex;gap:2px;overflow-x:auto}nav button{border:0;border-bottom:2px solid transparent;background:none;padding:10px 14px;font:inherit;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;text-transform:capitalize}
+nav button:hover{color:var(--text)}nav button[aria-current=true]{border-bottom-color:var(--accent);color:var(--text)}
+main{padding:24px 20px 56px}h2{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:0 0 2px;text-transform:capitalize}p.does{color:var(--text2);margin:0 0 18px}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;background:var(--raised);border:1px solid var(--line);border-radius:0;box-shadow:var(--shadow);padding:14px;margin-bottom:16px}
+input{font:inherit;color:var(--text);padding:9px 12px;border:1px solid var(--line2);border-radius:0;background:var(--raised);min-width:0}input:focus,select:focus,button:focus-visible{outline:2px solid var(--info);outline-offset:1px}
+button.go{font:inherit;font-weight:600;padding:9px 16px;border:0;border-radius:0;background:var(--accent);color:var(--on-accent);cursor:pointer}button.go:hover{opacity:.9}
+.table{overflow-x:auto;background:var(--raised);border:1px solid var(--line);border-radius:0;box-shadow:var(--shadow)}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);font-weight:600}
+tr:last-child td{border-bottom:0}td.x{width:1%;white-space:nowrap}button.del{font:inherit;font-size:13px;border:1px solid var(--line2);background:none;border-radius:0;padding:4px 10px;cursor:pointer;color:var(--err)}button.del:hover{background:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.card{background:var(--raised);border:1px solid var(--line);border-radius:0;box-shadow:var(--shadow);padding:16px;cursor:pointer}.card:hover{border-color:var(--line2)}
+.card b{text-transform:capitalize}.n{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2}.up{color:var(--ok)}.down{color:var(--err)}
+.msg{color:var(--err);margin:8px 0}.empty{color:var(--text2);padding:22px 14px}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin:28px 0 10px}.dim{color:var(--text2)}td.dim,.x.dim{font-size:13px}tr[data-go]{cursor:pointer}tr[data-go]:hover{background:var(--muted)}
+.card.plain{cursor:default}.bar{position:relative;display:flex;justify-content:space-between;gap:8px;padding:5px 8px;margin-top:6px;font-size:13px;border-radius:0;overflow:hidden}.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);z-index:0}.bar span,.bar em{position:relative;z-index:1;font-style:normal}
+.bar-row{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.bar-row input{flex:1;min-width:180px}.seg{margin-left:auto;display:flex}.seg button{font:inherit;padding:6px 12px;border:1px solid var(--line2);background:var(--raised);color:var(--text);cursor:pointer}.seg button:first-child{border-radius:0}.seg button:last-child{border-radius:0}.seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+button.plain{font:inherit;padding:9px 14px;border:1px solid var(--line2);border-radius:0;background:none;color:var(--text);cursor:pointer}.tag{display:inline-block;padding:2px 10px;border-radius:0;background:var(--blue);color:var(--blue-t);font-size:12px;font-weight:650}
+.board{display:flex;gap:14px;overflow-x:auto;align-items:flex-start}.col{min-width:240px;flex:1;background:var(--muted);border:1px solid var(--line);border-radius:0;padding:12px}.col h4{margin:0 0 10px;text-transform:capitalize;font-size:13px}.kcard{background:var(--raised);border:1px solid var(--line);border-radius:0;padding:10px;margin-bottom:8px}.kcard .acts{display:flex;gap:6px;margin-top:8px}.kcard select{font:inherit;font-size:13px;flex:1;min-width:0;color:var(--text);background:var(--raised);border:1px solid var(--line2);border-radius:0}
 </style>
 </head>
 <body>
