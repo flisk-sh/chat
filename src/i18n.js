@@ -233,7 +233,7 @@ export const UK = {
   'Could not connect OpenRouter': 'Не вдалося підключити OpenRouter',
   'Running low on credits': 'Кредитів залишається мало',
   'Out of credits': 'Кредити закінчилися',
-  'Add your own provider key to keep running tasks. Top-up is coming soon.': 'Додайте власний ключ провайдера, щоб далі запускати завдання. Поповнення скоро з’явиться.',
+  'Add your own provider key to keep running tasks. Paid top-up is not live yet.': 'Додайте власний ключ провайдера, щоб далі запускати завдання. Поповнення скоро з’явиться.',
   'Add your own provider key to keep running tasks without a limit.': 'Додайте власний ключ провайдера, щоб запускати завдання без ліміту.',
   'Use my own key (BYOK)': 'Використати мій ключ (BYOK)',
   'Top up credits': 'Поповнити кредити',
