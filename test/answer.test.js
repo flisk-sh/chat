@@ -47,3 +47,14 @@ test('postable makes one safe line that fits a post', () => {
   expect(long.length).toBeLessThanOrEqual(MAX_ANSWER);
   expect(cleanQuestion('@AskFlisk  hey   @askflisk')).toBe('hey');
 });
+
+test('the post being replied to goes into the search and the prompt', async () => {
+  let query, seen;
+  const d = deps({ search: async (q) => { query = q; return { results: [{ title: 'Gemini 4 Neon', url: 'https://a.b', snippet: 's' }] }; }, format: () => '[1] Gemini 4 Neon', ask: async (m) => { seen = m; return { text: 'ok' }; } });
+  await answer(req({ question: '@askflisk is neon good model?', context: '@rayan Google just shipped Gemini 4 Neon today' }), { X_BOT_KEY: KEY }, d);
+  expect(query).toContain('is neon good model?');
+  expect(query).toContain('Gemini 4 Neon');
+  expect(seen[0].content).toContain('The post being replied to: "Google just shipped Gemini 4 Neon today"');
+  expect(seen[0].content).toContain('Today is 20');
+  expect(seen[0].content).toContain('not sure');
+});
