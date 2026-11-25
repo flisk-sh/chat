@@ -58,3 +58,7 @@ database_id = "fea52917-992e-4d99-98c9-cf007f233fd7"
 # read+write, Issues read+write, Contents read, Metadata read, events "Issue comment" and "Pull request" (the second one only for automatic reviews). Secrets: GITHUB_APP_ID, GITHUB_APP_KEY
 # (the .pem made PKCS#8: openssl pkcs8 -topk8 -nocrypt -in app.pem), GITHUB_WEBHOOK_SECRET, KEY_SECRET (long random; it
 # encrypts saved AI keys, so never change it). Then: bunx wrangler@4 d1 execute flisk-chat --remote --file schema.sql
+
+# @askflisk on X: POST /api/answer with Authorization: Bearer <X_BOT_KEY> returns one short answer for a post (src/answer.js).
+# Secret X_BOT_KEY, 24+ random characters, the same value as the X bot's CHAT_ANSWER_KEY. Unset = the endpoint answers 404.
+#   bunx wrangler@4 secret put X_BOT_KEY

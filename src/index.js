@@ -10,7 +10,8 @@ import { fleetClient } from './fleet.js';
 import { BYO_STEPS, GITHUB_STEPS, cleanFiles, MAX_STEPS, MAX_TASK, runTask } from './loop.js';
 import { decide, gradeReply, imageIntent, modelFrom, modelLabel, resolveModel } from './model.js';
 import { lookup } from './lookup.js';
-import { cleanMode, searchWeb } from './search.js';
+import { cleanMode, formatResults, searchWeb } from './search.js';
+import { answer as answerApi } from './answer.js';
 import { appAsset, chatPage, appCsp, embedCsp } from './app-page.js';
 import { appPage, cleanModels, DEFAULT_MODELS, messagePage, notFoundPage, PROVIDER_CARDS, PROVIDER_NAMES, settingsPanelHtml, THEME_IDS } from './page.js';
 import { deleteSettings, loadSettings, saveSettings } from './keys.js';
@@ -474,6 +475,16 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
   }
 
   if (request.method === 'GET' && path === '/api/admin/runs') return adminRuns(request, env);
+  // @askflisk on X: a bot (not a browser) sends a question with a bearer key, see src/answer.js.
+  if (request.method === 'POST' && path === '/api/answer') {
+    return answerApi(request, env, {
+      weather: (q) => weatherNote(q, fetchImpl, null),
+      search: (q) => searchWeb(q, { fetch: fetchImpl }),
+      format: formatResults,
+      over: (scope, id, limit) => overDailyLimit(id, { cache: env.LIMIT_CACHE, limit, scope }),
+      ask: (messages) => modelFrom(env, fetchImpl, resolveModel({ ai: 'wolf' }), freeModelOpts(env, 'x-bot', false))(messages),
+    });
+  }
   if (request.method === 'POST' && path === '/github/run-result') return runResult(request, { ...env, PUBLIC_ORIGIN: origin }, { fetchImpl, waitUntil });
 
   const sm = /^\/s\/([a-f0-9]{16})$/.exec(path);
