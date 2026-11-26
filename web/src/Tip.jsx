@@ -59,7 +59,7 @@ export function Tip({text, title, brand, more, scene, scenes, passThrough, place
 }
 
 const CSS = `@keyframes peekFade{from{opacity:0}to{opacity:1}}
-@keyframes peekGrow{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
+@keyframes peekGrow{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}
 @keyframes peekRise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
 @keyframes peekPop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
 @keyframes peekReveal{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
@@ -86,9 +86,9 @@ function Peek({at, title, brand, text, more, scene, scenes, onClose}) {
     <div role="dialog" aria-modal="true" aria-label={title || BRAND_NAME[brand] || 'What this does'} onPointerDown={onClose}
       style={{position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,.34)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', animation: 'peekFade .2s ease-out'}}>
       <style>{CSS}</style>
-      <span aria-hidden="true" style={{position: 'absolute', left: at.x - 20, top: at.y - 20, width: 40, height: 40, borderRadius: '50%', border: '2px solid #7aa2ff', animation: 'peekRing .7s ease-out both', pointerEvents: 'none'}} />
+      <span aria-hidden="true" style={{position: 'absolute', left: at.x - 20, top: at.y - 20, width: 40, height: 40, borderRadius: '50%', border: '2px solid #7aa2ff', animation: 'peekRing .7s ease-out both', display: 'none', pointerEvents: 'none'}} />
       <div style={{position: 'absolute', left: '50%', top: '50%', width: w, marginLeft: -w / 2, transform: 'translateY(-50%)', maxHeight: '92vh', overflow: 'auto'}}>
-        <div className="peek-card" style={{transformOrigin: `${at.x - (innerWidth - w) / 2}px ${at.y - innerHeight / 2 + 80}px`, animation: 'peekGrow .34s cubic-bezier(.2,.9,.3,1.1)',
+        <div className="peek-card" style={{transformOrigin: `${at.x - (innerWidth - w) / 2}px ${at.y - innerHeight / 2 + 80}px`, animation: 'peekGrow .16s ease-out',
           background: '#fff', color: '#111', colorScheme: 'light', borderRadius: 22, padding: 18, boxShadow: '0 24px 70px rgba(0,0,0,.4)'}}>
           <div className="peek-head" style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10}}>
             {brand && <span className="peek-brand" style={{display: 'inline-flex'}}><Brand name={brand} size={40} /></span>}

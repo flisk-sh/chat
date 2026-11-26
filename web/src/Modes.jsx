@@ -1,7 +1,9 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
+import {ChatSystemMessage, ChatMessageBubble} from '@astryxdesign/core/Chat';
 import {Card} from '@astryxdesign/core/Card';
+import {Spinner} from '@astryxdesign/core/Spinner';
 import {Icon} from '@astryxdesign/core/Icon';
 import {Kbd} from '@astryxdesign/core/Kbd';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
@@ -66,23 +68,22 @@ const SHORT = {fast: 'Quick', ask: 'Ask me', long: 'Take time'};
 export function AnswerBar({value, onChange, held}) {
   const narrow = useNarrow();
   return (
-    <VStack gap={1}>
+    <div style={{position: 'relative'}}>
       {held && (
-        <Card>
-          <HStack gap={4} vAlign="center" wrap="wrap" role="status" aria-label="Keyboard shortcuts">
+        <div className="cmd-hints"><Card padding={2}>
+          <HStack gap={3} vAlign="center" role="status" aria-label="Keyboard shortcuts">
             <Text type="caption" color="secondary">Shortcuts</Text>
             {ANSWER_MODES.map((m, i) => <HStack key={m.id} gap={1} vAlign="center"><Kbd keys={'mod+' + (i + 1)} /><Text type="caption">{m.name}</Text></HStack>)}
             <HStack gap={1} vAlign="center"><Kbd keys="mod+k" /><Text type="caption">Commands</Text></HStack>
           </HStack>
-        </Card>
+        </Card></div>
       )}
       <HStack gap={3} vAlign="center" wrap="wrap">
         <SegmentedControl size="sm" value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
-          {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={held ? m.name + ' ⌘' + (i + 1) : narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
+          {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
         </SegmentedControl>
-        
       </HStack>
-    </VStack>
+    </div>
   );
 }
 
@@ -113,7 +114,7 @@ export function AskFirst({task, onDone, onSkip}) {
     return () => window.removeEventListener('keydown', h);
   }, [a, onDone, onSkip]);
   return (
-    <Card padding={3}>
+    <div style={{padding: 'var(--spacing-3)'}}>
       <VStack gap={2}>
         <HStack gap={2} vAlign="center" hAlign="between">
           <Text weight="semibold">A few quick questions</Text>
@@ -128,7 +129,7 @@ export function AskFirst({task, onDone, onSkip}) {
           <HStack gap={1} vAlign="center"><Kbd keys="mod+enter" /><Text type="caption" color="secondary">to start</Text></HStack>
         </HStack>
       </VStack>
-    </Card>
+    </div>
   );
 }
 
@@ -148,21 +149,25 @@ export function LongPill({long, onSwitch, isLast}) {
   }, [done, isLast, onSwitch]);
   const text = shownText(long.t) || '';
   const label = switched ? 'Showing the long answer' : state === 'done' ? 'Long answer is ready' : state === 'error' ? 'The long answer did not finish' : 'Long answer is cooking\u2026';
+  const busy = state !== 'done' && state !== 'error' && !switched;
   return (
-    <div style={{display: 'block'}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
+    <VStack gap={1}>
       {(hover || pinned) && !switched && (
-        <div style={{marginBottom: 8, width: 'min(420px, 100%)'}}>
-          <Card padding={4}>
+        <ChatMessageBubble variant="ghost" width="100%">
+          <Card padding={3}>
             <VStack gap={2}>
               <Text weight="semibold">{state === 'done' ? 'Long answer' : state === 'error' ? 'It did not finish' : long.t.status || 'Working'}</Text>
               {text && <Text size="xsm" color="secondary">{text.length > 400 ? text.slice(0, 400) + '\u2026' : text}</Text>}
               {done && <HStack gap={2}><Button label={'Switch to this answer  \u2325\u21b5'} size="sm" variant="primary" onClick={onSwitch} /></HStack>}
             </VStack>
           </Card>
-        </div>
+        </ChatMessageBubble>
       )}
-      <Button label={label} size="sm" variant="secondary" aria-live="polite" onClick={() => setPinned((p) => !p)} />
-    </div>
+      <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)} onClick={() => setPinned((p) => !p)} role="button" tabIndex={0} aria-live="polite" aria-label={label}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPinned((p) => !p); } }} style={{cursor: 'pointer', alignSelf: 'flex-start'}}>
+        <ChatSystemMessage icon={busy ? <Spinner size="sm" /> : undefined}>{label}</ChatSystemMessage>
+      </div>
+    </VStack>
   );
 }
 

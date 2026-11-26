@@ -126,7 +126,7 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
    Colour is currentColor and hierarchy is opacity, so it follows every theme. */
 .demo-wrap{position:relative;display:inline-block;width:100px;height:30px;flex:none}
 .demo{position:absolute;right:0;top:0;transform-origin:right center;transition:transform .38s cubic-bezier(.2,.9,.2,1),box-shadow .38s;overflow:visible;color:currentColor;border-radius:var(--radius,4px)}
-.astryx-item:hover .demo,.astryx-item:focus-visible .demo,.astryx-item:focus-within .demo,.astryx-item[data-highlighted] .demo,.astryx-item[aria-selected=true] .demo{transform:scale(2.7);z-index:30;box-shadow:0 10px 30px -8px rgba(0,0,0,.35)}
+.astryx-item:hover .demo,.astryx-item:focus-visible .demo,.astryx-item:focus-within .demo,.astryx-item[data-highlighted] .demo,.astryx-item[aria-selected=true] .demo{transform:scale(1.4);z-index:30;box-shadow:0 10px 30px -8px rgba(0,0,0,.35)}
 .demo *{transform-box:fill-box}
 .demo .bg{fill:Canvas;stroke:currentColor;stroke-opacity:.16}
 .demo path,.demo circle,.demo rect.zone{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -255,3 +255,7 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 .earth-content.empty .astryx-chat-layout { justify-content: center; }
 .earth-content.empty .astryx-chat-layout > div:first-child { flex: 0 0 auto; }
 .earth-content.empty .astryx-chat-layout > div:last-child { position: static; }
+/* Held ⌘: the shortcut list floats above the mode chips, so the message box never gets squeezed. */
+.cmd-hints { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 20; white-space: nowrap; }
+.plug-row { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; background: transparent; color: inherit; border: 0; border-radius: var(--radius); }
+.plug-row:not(:disabled):hover, .plug-row:focus-visible { background: var(--color-background-secondary, #8882); }

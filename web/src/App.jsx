@@ -29,7 +29,7 @@ import {Avatar} from '@astryxdesign/core/Avatar';
 import {Markdown} from '@astryxdesign/core/Markdown';
 import {DropdownMenu} from '@astryxdesign/core/DropdownMenu';
 import {
-  ChatComposer, ChatComposerInput, ChatLayout, ChatMessage, ChatMessageBubble,
+  ChatComposer, ChatComposerDrawer, ChatComposerInput, ChatLayout, ChatMessage, ChatMessageBubble,
   ChatMessageList, ChatToolCalls,
 } from '@astryxdesign/core/Chat';
 import {
@@ -532,7 +532,6 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <div className={'earth-content' + (turns.length || limit ? '' : ' empty')} style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={<>
-          {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
           <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} actions={[
             {id: 'new', label: 'New chat', run: newChat},
             {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},
@@ -543,7 +542,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
             {id: 'talk', label: 'Voice talk', run: () => setTalk(true)},
             {id: 'settings', label: 'Settings and usage', run: () => openSettings('usage')},
           ]} />
-          <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
+          <ChatComposer className="one-row" drawer={asking ? <ChatComposerDrawer label="Questions"><AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} /></ChatComposerDrawer> : undefined} value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder={PLACEHOLDER[answer] || 'Ask or build…'} {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
