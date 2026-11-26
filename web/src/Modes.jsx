@@ -6,7 +6,7 @@ import {Icon} from '@astryxdesign/core/Icon';
 import {Kbd} from '@astryxdesign/core/Kbd';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
-import {TextArea} from '@astryxdesign/core/TextArea';
+import {TextInput} from '@astryxdesign/core/TextInput';
 import {CommandPalette} from '@astryxdesign/core/CommandPalette';
 import {createStaticSource} from '@astryxdesign/core/Typeahead';
 import {BoltIcon, ClipboardDocumentListIcon, RocketLaunchIcon} from '@heroicons/react/24/outline';
@@ -113,19 +113,19 @@ export function AskFirst({task, onDone, onSkip}) {
     return () => window.removeEventListener('keydown', h);
   }, [a, onDone, onSkip]);
   return (
-    <Card padding={4}>
-      <VStack gap={3}>
-        <Text weight="semibold">You know this topic. Three quick questions first.</Text>
-        <Text type="caption" color="secondary">{task}</Text>
+    <Card padding={3}>
+      <VStack gap={2}>
+        <HStack gap={2} vAlign="center" hAlign="between">
+          <Text weight="semibold">A few quick questions</Text>
+          <Text type="caption" color="secondary">All optional</Text>
+        </HStack>
         {ASK_QUESTIONS.map((q, i) => (
-          <VStack key={q} gap={1}>
-            <Text size="xsm">{q}</Text>
-            <TextArea value={a[i]} onChange={(v) => set(i, typeof v === 'string' ? v : v?.target?.value ?? '')} aria-label={q} rows={1} autoFocus={i === 0} />
-          </VStack>
+          <TextInput key={q} label={q} isLabelHidden placeholder={q} size="sm" value={a[i]} onChange={(v) => set(i, v)} autoFocus={i === 0} />
         ))}
         <HStack gap={2} vAlign="center">
-          <Button label="Start with my answers  ⌘↵" variant="primary" size="sm" onClick={() => onDone(a)} />
-          <Button label="Skip and let it guess  Esc" variant="secondary" size="sm" onClick={onSkip} />
+          <Button label="Start" variant="primary" size="sm" onClick={() => onDone(a)} />
+          <Button label="Skip" variant="ghost" size="sm" onClick={onSkip} />
+          <HStack gap={1} vAlign="center"><Kbd keys="mod+enter" /><Text type="caption" color="secondary">to start</Text></HStack>
         </HStack>
       </VStack>
     </Card>
