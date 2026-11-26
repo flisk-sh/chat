@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded in part by 0002 (the answer modes are visible again)
 ---
 # Composer: no mode picker, one + menu
 

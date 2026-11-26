@@ -1,4 +1,5 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
+import {AnswerBar, AnswerPalette, AskFirst, frame, readSlash, useAnswerKeys, useHeldModifier} from './Modes.jsx';
 import {Tip, ExplainContext} from './Tip.jsx';
 import {Brand} from './Brand.jsx';
 import {Oracle} from './Oracle.jsx';
@@ -250,6 +251,13 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [limit, setLimit] = useState(null);
   const [notice, setNotice] = useState('');
   const [plugOpen, setPlugOpen] = useState(false);
+  // How the person wants the answer: Quick (default), Ask me first, Take your time. docs/adr/0002.
+  const [answer, setAnswerRaw] = useState(() => { try { const v = sessionStorage.getItem('chat_answer'); return ['fast', 'ask', 'long'].includes(v) ? v : 'fast'; } catch (e) { return 'fast'; } });
+  const setAnswer = useCallback((v) => { setAnswerRaw(v); try { sessionStorage.setItem('chat_answer', v); } catch (e) { /* storage blocked */ } }, []);
+  const [palette, setPalette] = useState(false);
+  const [asking, setAsking] = useState(null); // {task, files} waiting for the three answers
+  const held = useHeldModifier();
+  useAnswerKeys(setAnswer, useCallback(() => setPalette((o) => !o), []));
   const [studio, setStudio] = useState(false), studioFrame = useRef(null); // the Studio plugin beside the chat
   const [panel, setPanel] = useState(''); // the published page open in the side panel (#438)
   const [chats, setChats] = useState(loadChats);
@@ -324,7 +332,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     setTurns((all) => (opts.reuse ? all : [...all, {task, files: sendFiles.map((f) => f.name), t}]));
     setLimit(null); setBusy(true);
     const ac = new AbortController(); ctl.current = ac;
-    const payload = {mode: m, pod: !!opts.pod, cat, task, history: hist.current.slice(-6).map((x) => ({role: x.role, content: x.content})), lang: task.length > 3 ? lang(task) : '', memo: memo.current.text, ui: '', providers: picked, files: sendFiles, ai: aiBlock()};
+    const payload = {mode: m, pod: !!opts.pod, cat, task: opts.send || task, history: hist.current.slice(-6).map((x) => ({role: x.role, content: x.content})), lang: task.length > 3 ? lang(task) : '', memo: memo.current.text, ui: '', providers: picked, files: sendFiles, ai: aiBlock()};
     let res;
     try { res = await runTask(payload, (ev) => put(applyEv(t, ev)), ac.signal); }
     catch (e) { res = {status: e.name === 'AbortError' ? 0 : -1}; if (res.status === -1) put({...t, error: {message: 'Could not reach Chat. Check your connection and try again.', kind: 'busy'}}); }
@@ -392,9 +400,17 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     const task = (text || '').trim();
     if (!task && !files.length) return;
     if (!files.length && toStudio(task)) { setValue(''); return; }
+    const slash = readSlash(task);
+    const picked1 = slash ? slash.answer : answer;
+    const words = slash ? slash.rest.trim() : task;
+    if (slash) setAnswer(slash.answer);
+    if (!words && !files.length) { setValue(''); return; }
     const fs = files; setValue(''); setFiles([]);
-    run(task, {files: fs}).catch(() => {});
+    if (picked1 === 'ask') { setAsking({task: words, files: fs}); return; }
+    run(words, {files: fs, send: frame(words, picked1)}).catch(() => {});
   };
+  const startAsked = (answers) => { const a = asking; setAsking(null); if (a) run(a.task, {files: a.files, send: frame(a.task, 'ask', answers)}).catch(() => {}); };
+  const skipAsked = () => startAsked([]);
 
   const pick = (what) => {
     if (what === 'setup-key' || what === 'choose-model' || what === 'change-provider' || what === 'change-model') setMdlOpen(true);
@@ -497,7 +513,10 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <div className="chat-split">
       <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
-        composer={
+        composer={<>
+          {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
+          <AnswerBar value={answer} onChange={setAnswer} held={held} />
+          <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} />
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder="Ask or build…" {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
@@ -531,7 +550,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
               </HStack>
             }
           />
-        }>
+        </>}>
         <ChatMessageList>
           {!turns.length && (
             <ChatMessage sender="assistant" avatar={<Brand name="wolf" size={32} />}>
