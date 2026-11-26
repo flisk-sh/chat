@@ -76,12 +76,19 @@ export function AnswerBar({value, onChange, held}) {
   );
 }
 
-// ⌘K: pick how to answer by name, with the key shown on each row.
-export function AnswerPalette({open, onOpenChange, onPick}) {
-  const source = useMemo(() => createStaticSource(ANSWER_MODES.map((m) => ({id: m.id, label: m.name, auxiliaryData: {group: 'How to answer'}}))), []);
+// ⌘K: pick how to answer, or run any of the chat's own actions by name. `actions` is [{id, label, run}].
+export function AnswerPalette({open, onOpenChange, onPick, actions = []}) {
+  const source = useMemo(() => createStaticSource([
+    ...ANSWER_MODES.map((m) => ({id: m.id, label: m.name, auxiliaryData: {group: 'How to answer'}})),
+    ...actions.map((x) => ({id: 'do:' + x.id, label: x.label, auxiliaryData: {group: 'Chat'}})),
+  ]), [actions.map((x) => x.id).join('|')]);
   const num = Object.fromEntries(ANSWER_MODES.map((m, i) => [m.id, i + 1]));
+  const choose = (v) => {
+    onOpenChange(false);
+    if (v.startsWith('do:')) { const x = actions.find((y) => 'do:' + y.id === v); if (x) setTimeout(x.run, 0); } else onPick(v);
+  };
   return (
-    <CommandPalette isOpen={open} onOpenChange={onOpenChange} searchSource={source} label="How to answer" value="" onValueChange={(v) => { onOpenChange(false); onPick(v); }}
+    <CommandPalette isOpen={open} onOpenChange={onOpenChange} searchSource={source} label="Command menu" value="" onValueChange={choose}
       renderItem={(item) => <HStack gap={2} vAlign="center" hAlign="between"><Text type="body">{item.label}</Text>{num[item.id] ? <Kbd keys={'mod+' + num[item.id]} /> : null}</HStack>} />
   );
 }

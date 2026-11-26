@@ -534,7 +534,16 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         composer={<>
           {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
           <AnswerBar value={answer} onChange={setAnswer} held={held} />
-          <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} />
+          <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} actions={[
+            {id: 'new', label: 'New chat', run: newChat},
+            {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},
+            {id: 'model', label: 'Choose AI model', run: () => setMdlOpen(true)},
+            {id: 'computers', label: 'Choose computers', run: () => setPcOpen(true)},
+            {id: 'attach', label: 'Attach files', run: () => fileIn.current && fileIn.current.click()},
+            {id: 'dictate', label: 'Dictate', run: dictate},
+            {id: 'talk', label: 'Voice talk', run: () => setTalk(true)},
+            {id: 'settings', label: 'Settings and usage', run: () => openSettings('usage')},
+          ]} />
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder="Ask or build…" {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {

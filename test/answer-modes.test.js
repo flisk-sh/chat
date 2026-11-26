@@ -55,3 +55,9 @@ test('take your time sends the plain words as the quick answer and a second requ
   expect(m).toContain("e.altKey && e.key === 'Enter'");
   expect(m).toContain('Switch to this answer');
 });
+
+test('the command menu also runs the chat actions: new chat, plugins, model, computers, attach, dictate, talk, settings', () => {
+  const app = read('web/src/App.jsx');
+  for (const id of ['new', 'plugins', 'model', 'computers', 'attach', 'dictate', 'talk', 'settings']) expect(app).toContain("{id: '" + id + "', label:");
+  expect(read('web/src/Modes.jsx')).toContain("'do:' + x.id");
+});
