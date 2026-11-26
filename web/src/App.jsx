@@ -529,11 +529,10 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       }
       sideNav={BOOT.embed ? undefined : side}>
       <div className="chat-split">
-      <div className="earth-content" style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
+      <div className={'earth-content' + (turns.length || limit ? '' : ' empty')} style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={<>
           {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
-          <AnswerBar value={answer} onChange={setAnswer} held={held} />
           <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} actions={[
             {id: 'new', label: 'New chat', run: newChat},
             {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},
@@ -571,7 +570,8 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
               </HStack>
             }
             footerActions={
-              <HStack gap={1}>
+              <HStack gap={1} align="center" wrap="wrap">
+                <AnswerBar value={answer} onChange={setAnswer} held={held} />
                 {brandOf(sel.provider) !== 'wolf' && <Tip brand={brandOf(sel.provider)} title="Which AI answers" scene="model" text="Which AI answers. Flisk Wolf is free; your own key is sent per request and never stored." more="Tap to switch, paste your key, or pick a model. Claude and OpenAI use your own key, so you pay them directly."><span><Button label={sel.name} variant="ghost" size="sm" icon={<Brand name={brandOf(sel.provider)} />} onClick={() => setMdlOpen(true)} /></span></Tip>}
                 {picked.length > 0 && <Tip brand="fleet" title="Where your app runs" scene="computers" text="Where your app runs. Fleet picks the cheapest of your connected computers." more="Tap to connect Daytona, Upstash, E2B or Isorun with a key."><span><Button label={pcLabel} variant="ghost" size="sm" icon={<Brand name={picked[0] || 'fleet'} />} onClick={() => setPcOpen(true)} /></span></Tip>}
               </HStack>

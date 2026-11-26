@@ -250,3 +250,8 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 @media (max-width:760px){.settings-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}.settings-nav{flex-direction:row;overflow-x:auto;gap:var(--spacing-2)}.settings-nav>div{flex-direction:row}.settings-gl{display:none}}
 .srow{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap}.srow-text{flex:1 1 240px;min-width:0}.srow-ctl{flex:0 0 auto;padding-inline-end:var(--spacing-3);padding-block:var(--spacing-1)}
 @media (max-width:760px){.srow-ctl{flex:1 1 100%;padding:0 var(--spacing-3) var(--spacing-3)}.srow-ctl>*{max-width:100%}}
+
+/* Empty chat: greeting and box sit together in the middle, like a start page (docs/adr/0002). */
+.earth-content.empty .astryx-chat-layout { justify-content: center; }
+.earth-content.empty .astryx-chat-layout > div:first-child { flex: 0 0 auto; }
+.earth-content.empty .astryx-chat-layout > div:last-child { position: static; }
