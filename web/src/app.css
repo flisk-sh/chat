@@ -271,3 +271,8 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 .cmdk-empty { padding: var(--spacing-3); }
 .plug-row { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; background: transparent; color: inherit; border: 0; border-radius: var(--radius); }
 .plug-row:not(:disabled):hover, .plug-row:focus-visible { background: var(--color-background-secondary, #8882); }
+
+/* Start screen: the drawer grows the box upward over the empty space, so the greeting and the box do not jump when ⌘ is held or ⌘K opens. */
+.earth-content.empty .astryx-chat-composer.one-row { position: relative; }
+.earth-content.empty .astryx-chat-composer.one-row > .astryx-chat-composer-drawer { position: absolute; left: 0; right: 0; bottom: calc(100% - 28px); margin: 0; z-index: 5; }
+.earth-content.empty .astryx-chat-composer.one-row > div:not(.astryx-chat-composer-drawer) { position: relative; z-index: 6; }
