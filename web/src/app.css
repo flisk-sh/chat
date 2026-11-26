@@ -255,7 +255,19 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 .earth-content.empty .astryx-chat-layout { justify-content: center; }
 .earth-content.empty .astryx-chat-layout > div:first-child { flex: 0 0 auto; }
 .earth-content.empty .astryx-chat-layout > div:last-child { position: static; }
-/* Held ⌘: the shortcut list floats above the mode chips, so the message box never gets squeezed. */
-.cmd-hints { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 20; white-space: nowrap; }
+/* The drawer (Questions, ⌘K menu, held-⌘ list) sits above the one-row grid inside the same box: undo the row's grid rules for it. */
+.astryx-chat-composer.one-row > .astryx-chat-composer-drawer { display: block !important; padding: 12px 16px 40px !important; /* Astryx's own: the bottom 40px sit under the row */ }
+.astryx-chat-composer.one-row > .astryx-chat-composer-drawer > div, .astryx-chat-composer.one-row > .astryx-chat-composer-drawer > div > div { display: block !important; min-height: 0 !important; grid-column: auto !important; grid-row: auto !important; align-self: auto !important; }
+/* Held ⌘: the shortcut list is a row inside the composer's own drawer; items wrap, nothing is clipped (docs/adr/0002). */
+.cmd-hints { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-1) var(--spacing-3); min-width: 0; max-width: 100%; }
+.cmd-hint { display: inline-flex; align-items: center; gap: var(--spacing-1); min-width: 0; }
+/* ⌘K: the composer's drawer holds a filter and the grouped choices. */
+.cmdk { display: flex; flex-direction: column; min-width: 0; }
+.cmdk-input { font: inherit; font-size: 15px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--color-border, #8883); outline: none; padding: var(--spacing-2) 0; min-height: 40px; width: 100%; box-sizing: border-box; }
+.cmdk-list { max-height: min(30vh, 240px); overflow-y: auto; padding: var(--spacing-1); }
+.cmdk-group { font-size: 12px; opacity: .65; padding: var(--spacing-2) var(--spacing-2) var(--spacing-1); }
+.cmdk-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-2); padding: var(--spacing-2); min-height: 36px; border-radius: var(--radius, 8px); cursor: pointer; }
+.cmdk-item[aria-selected="true"] { background: var(--color-background-secondary, #8882); }
+.cmdk-empty { padding: var(--spacing-3); }
 .plug-row { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; background: transparent; color: inherit; border: 0; border-radius: var(--radius); }
 .plug-row:not(:disabled):hover, .plug-row:focus-visible { background: var(--color-background-secondary, #8882); }

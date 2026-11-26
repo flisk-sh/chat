@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {Text} from '@astryxdesign/core/Text';
 import {Button} from '@astryxdesign/core/Button';
 import {ChatSystemMessage, ChatMessageBubble} from '@astryxdesign/core/Chat';
@@ -9,8 +9,6 @@ import {Kbd} from '@astryxdesign/core/Kbd';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {TextInput} from '@astryxdesign/core/TextInput';
-import {CommandPalette} from '@astryxdesign/core/CommandPalette';
-import {createStaticSource} from '@astryxdesign/core/Typeahead';
 import {BoltIcon, ClipboardDocumentListIcon, RocketLaunchIcon} from '@heroicons/react/24/outline';
 
 // How the person wants the answer (docs/adr/0002). The page still sends mode `ask` to the server; the choice only
@@ -65,42 +63,84 @@ function useNarrow(px = 480) {
 }
 const SHORT = {fast: 'Quick', ask: 'Ask me', long: 'Take time'};
 
-export function AnswerBar({value, onChange, held}) {
+export function AnswerBar({value, onChange}) {
   const narrow = useNarrow();
   return (
-    <div style={{position: 'relative'}}>
-      {held && (
-        <div className="cmd-hints"><Card padding={2}>
-          <HStack gap={3} vAlign="center" role="status" aria-label="Keyboard shortcuts">
-            <Text type="caption" color="secondary">Shortcuts</Text>
-            {ANSWER_MODES.map((m, i) => <HStack key={m.id} gap={1} vAlign="center"><Kbd keys={'mod+' + (i + 1)} /><Text type="caption">{m.name}</Text></HStack>)}
-            <HStack gap={1} vAlign="center"><Kbd keys="mod+k" /><Text type="caption">Commands</Text></HStack>
-          </HStack>
-        </Card></div>
-      )}
-      <HStack gap={3} vAlign="center" wrap="wrap">
-        <SegmentedControl size="sm" value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
-          {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
-        </SegmentedControl>
-      </HStack>
+    <HStack gap={3} vAlign="center" wrap="wrap">
+      <SegmentedControl size="sm" value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
+        {ANSWER_MODES.map((m) => <SegmentedControlItem key={m.id} value={m.id} label={narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
+      </SegmentedControl>
+    </HStack>
+  );
+}
+
+// Held ⌘: every shortcut, as a row inside the composer's own drawer. Items wrap, so nothing is cut off at any width.
+export function ShortcutHints() {
+  return (
+    <div className="cmd-hints" role="status" aria-label="Keyboard shortcuts">
+      <Text type="caption" color="secondary">Shortcuts</Text>
+      {ANSWER_MODES.map((m, i) => <span key={m.id} className="cmd-hint"><Kbd keys={'mod+' + (i + 1)} /><Text type="caption">{m.name}</Text></span>)}
+      <span className="cmd-hint"><Kbd keys="mod+k" /><Text type="caption">Commands</Text></span>
     </div>
   );
 }
 
-// ⌘K: pick how to answer, or run any of the chat's own actions by name. `actions` is [{id, label, run}].
-export function AnswerPalette({open, onOpenChange, onPick, actions = []}) {
-  const source = useMemo(() => createStaticSource([
-    ...ANSWER_MODES.map((m) => ({id: m.id, label: m.name, auxiliaryData: {group: 'How to answer'}})),
-    ...actions.map((x) => ({id: 'do:' + x.id, label: x.label, auxiliaryData: {group: 'Chat'}})),
-  ]), [actions.map((x) => x.id).join('|')]);
+export function focusComposer() {
+  const el = document.querySelector('.astryx-chat-composer-input [contenteditable], .astryx-chat-composer-input textarea');
+  if (el) el.focus();
+}
+
+// ⌘K: the composer grows upward (its drawer). A filter box, then "How to answer" and "Chat" choices as a listbox.
+// `actions` is [{id, label, run}]. Arrows move, Enter runs, Esc closes; focus goes back to the message box.
+export function AnswerMenu({onClose, onPick, actions = []}) {
+  const [q, setQ] = useState('');
+  const [at, setAt] = useState(0);
+  const uid = useId();
+  const latest = useRef(actions); latest.current = actions;
+  const listRef = useRef(null);
   const num = Object.fromEntries(ANSWER_MODES.map((m, i) => [m.id, i + 1]));
-  const choose = (v) => {
-    onOpenChange(false);
-    if (v.startsWith('do:')) { const x = actions.find((y) => 'do:' + y.id === v); if (x) setTimeout(x.run, 0); } else onPick(v);
+  const items = useMemo(() => {
+    const all = [
+      ...ANSWER_MODES.map((m) => ({id: m.id, label: m.name, group: 'How to answer'})),
+      ...actions.map((x) => ({id: 'do:' + x.id, label: x.label, group: 'Chat', run: x.run})),
+    ];
+    const n = q.trim().toLowerCase();
+    return n ? all.filter((i) => i.label.toLowerCase().includes(n)) : all;
+  }, [q, actions.map((x) => x.id).join('|')]);
+  useEffect(() => { setAt(0); }, [q]);
+  useEffect(() => { const el = listRef.current && listRef.current.querySelector('[aria-selected="true"]'); if (el && el.scrollIntoView) el.scrollIntoView({block: 'nearest'}); }, [at]);
+  const close = () => { onClose(); setTimeout(focusComposer, 0); };
+  const choose = (it) => {
+    if (!it) return;
+    onClose();
+    if (it.run) setTimeout(() => { const x = latest.current.find((y) => 'do:' + y.id === it.id); if (x) x.run(); }, 0); else { onPick(it.id); setTimeout(focusComposer, 0); }
   };
+  const onKey = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setAt((i) => (items.length ? (i + 1) % items.length : 0)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setAt((i) => (items.length ? (i - 1 + items.length) % items.length : 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); choose(items[at]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+  };
+  const groups = ['How to answer', 'Chat'].map((g) => ({g, list: items.filter((i) => i.group === g)})).filter((x) => x.list.length);
+  const optId = (it) => uid + '-' + it.id.replace(/[^a-z0-9]/gi, '_');
   return (
-    <CommandPalette isOpen={open} onOpenChange={onOpenChange} searchSource={source} label="Command menu" value="" onValueChange={choose}
-      renderItem={(item) => <HStack gap={2} vAlign="center" hAlign="between"><Text type="body">{item.label}</Text>{num[item.id] ? <Kbd keys={'mod+' + num[item.id]} /> : null}</HStack>} />
+    <div className="cmdk">
+      <input className="cmdk-input" autoFocus type="text" placeholder="Type a command…" aria-label="Command menu" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey}
+        role="combobox" aria-expanded="true" aria-controls={uid + '-list'} aria-autocomplete="list" aria-activedescendant={items[at] ? optId(items[at]) : undefined} autoComplete="off" spellCheck={false} enterKeyHint="go" />
+      <div className="cmdk-list" id={uid + '-list'} role="listbox" aria-label="Commands" ref={listRef}>
+        {groups.map(({g, list}) => (
+          <div key={g} role="group" aria-label={g}>
+            <div className="cmdk-group" aria-hidden="true">{g}</div>
+            {list.map((it) => (
+              <div key={it.id} id={optId(it)} role="option" aria-selected={items[at] === it} className="cmdk-item" onMouseDown={(e) => e.preventDefault()} onClick={() => choose(it)} onMouseMove={() => setAt(items.indexOf(it))}>
+                <Text type="body">{it.label}</Text>{num[it.id] ? <Kbd keys={'mod+' + num[it.id]} /> : null}
+              </div>
+            ))}
+          </div>
+        ))}
+        {!items.length && <div className="cmdk-empty"><Text type="caption" color="secondary">Nothing matches</Text></div>}
+      </div>
+    </div>
   );
 }
 
