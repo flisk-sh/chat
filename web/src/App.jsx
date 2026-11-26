@@ -255,6 +255,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   const [answer, setAnswerRaw] = useState(() => { try { const v = sessionStorage.getItem('chat_answer'); return ['fast', 'ask', 'long'].includes(v) ? v : 'fast'; } catch (e) { return 'fast'; } });
   const setAnswer = useCallback((v) => { setAnswerRaw(v); try { sessionStorage.setItem('chat_answer', v); } catch (e) { /* storage blocked */ } }, []);
   const [palette, setPalette] = useState(false);
+  useEffect(() => { const sl = readSlash(value); if (sl && sl.answer !== answer) setAnswer(sl.answer); }, [value]);
   const [asking, setAsking] = useState(null); // {task, files} waiting for the three answers
   const held = useHeldModifier();
   useAnswerKeys(setAnswer, useCallback(() => setPalette((o) => !o), []));
@@ -321,10 +322,9 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   };
 
   // Take your time: the plain request answers first; this second request works longer and fills a pill under the answer.
-  const longCtl = useRef(null);
+  const longCtl = useRef([]);
   const startLong = useCallback((idx, payload) => {
-    if (longCtl.current) longCtl.current.abort();
-    const ac = new AbortController(); longCtl.current = ac;
+    const ac = new AbortController(); longCtl.current.push(ac);
     let lt = newTurn(payload.task);
     const putL = (nt, state) => { lt = nt; setTurns((all) => { const c = all.slice(); if (c[idx]) c[idx] = {...c[idx], long: {t: lt, state}}; return c; }); };
     putL(lt, 'cook');
@@ -441,7 +441,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   pick.free = sel.free;
 
   const [navOpen, setNavOpen] = useState(false); // the phone chat drawer
-  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); longCtl.current && longCtl.current.abort(); setChatId('c' + Date.now()); setLimit(null); setBusy(false); setPanel(''); };
+  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); longCtl.current.forEach((c) => c.abort()); longCtl.current = []; setChatId('c' + Date.now()); setLimit(null); setBusy(false); setPanel(''); };
   // Delete one past chat from this browser (#355). Deleting the open chat starts a new one.
   const dropChat = (c) => {
     if (!confirm('Delete the chat "' + (c.title || 'Untitled') + '"? This cannot be undone.')) return;
@@ -533,7 +533,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={<>
           {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
-          <AnswerBar value={answer} onChange={setAnswer} held={held} />
+          <AnswerBar value={answer} onChange={setAnswer} held={held} showHint={!touch} />
           <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} actions={[
             {id: 'new', label: 'New chat', run: newChat},
             {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},

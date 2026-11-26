@@ -54,7 +54,17 @@ export function useAnswerKeys(onPick, onPalette) {
   }, [onPick, onPalette]);
 }
 
-export function AnswerBar({value, onChange, held}) {
+// True on a screen narrower than `px`, where the three full names do not fit in one row.
+function useNarrow(px = 480) {
+  const q = typeof matchMedia !== 'undefined' ? matchMedia('(max-width: ' + px + 'px)') : null;
+  const [n, setN] = useState(!!(q && q.matches));
+  useEffect(() => { if (!q) return; const f = () => setN(q.matches); q.addEventListener('change', f); return () => q.removeEventListener('change', f); }, []);
+  return n;
+}
+const SHORT = {fast: 'Quick', ask: 'Ask me', long: 'Take time'};
+
+export function AnswerBar({value, onChange, held, showHint = true}) {
+  const narrow = useNarrow();
   return (
     <VStack gap={1}>
       {held && (
@@ -68,9 +78,9 @@ export function AnswerBar({value, onChange, held}) {
       )}
       <HStack gap={3} vAlign="center" wrap="wrap">
         <SegmentedControl value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
-          {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={held ? m.name + ' ⌘' + (i + 1) : m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
+          {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={held ? m.name + ' ⌘' + (i + 1) : narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
         </SegmentedControl>
-        <Text type="caption" color="secondary">{held ? 'Release to hide' : 'Hold ⌘ for shortcuts'}</Text>
+        {showHint && <Text type="caption" color="secondary">{held ? 'Release to hide' : 'Hold ⌘ for shortcuts'}</Text>}
       </HStack>
     </VStack>
   );
@@ -139,9 +149,9 @@ export function LongPill({long, onSwitch, isLast}) {
   const text = shownText(long.t) || '';
   const label = switched ? 'Showing the long answer' : state === 'done' ? 'Long answer is ready' : state === 'error' ? 'The long answer did not finish' : 'Long answer is cooking\u2026';
   return (
-    <div style={{position: 'relative', display: 'inline-block'}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
+    <div style={{display: 'block'}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
       {(hover || pinned) && !switched && (
-        <div style={{position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 'min(420px, 90vw)', zIndex: 20}}>
+        <div style={{marginBottom: 8, width: 'min(420px, 100%)'}}>
           <Card padding={4}>
             <VStack gap={2}>
               <Text weight="semibold">{state === 'done' ? 'Long answer' : state === 'error' ? 'It did not finish' : long.t.status || 'Working'}</Text>
