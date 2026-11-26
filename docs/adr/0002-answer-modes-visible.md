@@ -9,16 +9,17 @@ The three choices are about how much the person wants to be involved, not about 
 
 - **Quick answer** sends the words as typed.
 - **Ask me first** shows three short questions (who is it for, what do you already have, what counts as a win) before anything is sent. The answers are added to the task. Skipping sends the task as typed. For a person who knows the topic and wants to steer.
-- **Take your time** adds one line asking for a plan first and the whole job done.
+- **Take your time** answers quickly first, as Quick answer does. A second request, with one extra line asking for a plan first and the whole job done, runs at the same time. A pill under the quick answer shows it cooking. When it is ready its card opens by itself, with a preview and "Switch to this answer" (also Option+Enter), which replaces the quick answer.
 
 ## Considered options
 
 - **Keep 0001 as it was.** Rejected by the owner: people who know the topic had no way to say so, and nobody could ask for a slower, fuller answer.
 - **A mode chip inside the input.** Rejected in 0001 and still rejected: it competes with the input. The control sits above the composer instead.
-- **Run the quick and the long answer side by side, with a pill that shows the long one cooking.** Mocked and liked, not built: it needs a background run on the server and doubles the cost of each message. Left for a separate decision.
+- **Run the long answer on the server in the background.** Not needed to ship this: the page sends both requests itself. Revisit if long runs must survive closing the tab.
 
 ## Consequences
 
-- `Take your time` is only a request to the same model for now; it is not a longer run. Do not describe it as one.
+- `Take your time` sends two requests, so one message uses two of the 40 answers a day. The pill and the card say so only by showing the long answer; if people hit the limit sooner, count it as one on the server.
+- The long run lives in the page: closing or reloading the tab loses it. A question from the long run to the person (the mock had one) is not built.
 - A person can pick a mode by accident. The choice is kept for the browser tab (`sessionStorage`) and the control always shows the current one.
 - Shortcuts use the page's key events, so ⌘K and ⌘1 to ⌘3 also work while the box has focus.

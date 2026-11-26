@@ -1,5 +1,5 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
-import {AnswerBar, AnswerPalette, AskFirst, frame, readSlash, useAnswerKeys, useHeldModifier} from './Modes.jsx';
+import {AnswerBar, AnswerPalette, AskFirst, LongPill, frame, readSlash, useAnswerKeys, useHeldModifier} from './Modes.jsx';
 import {Tip, ExplainContext} from './Tip.jsx';
 import {Brand} from './Brand.jsx';
 import {Oracle} from './Oracle.jsx';
@@ -320,6 +320,23 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     m.busy = false;
   };
 
+  // Take your time: the plain request answers first; this second request works longer and fills a pill under the answer.
+  const longCtl = useRef(null);
+  const startLong = useCallback((idx, payload) => {
+    if (longCtl.current) longCtl.current.abort();
+    const ac = new AbortController(); longCtl.current = ac;
+    let lt = newTurn(payload.task);
+    const putL = (nt, state) => { lt = nt; setTurns((all) => { const c = all.slice(); if (c[idx]) c[idx] = {...c[idx], long: {t: lt, state}}; return c; }); };
+    putL(lt, 'cook');
+    runTask({...payload, task: frame(payload.task, 'long')}, (ev) => putL(applyEv(lt, ev), 'cook'), ac.signal)
+      .then((res) => { if (!ac.signal.aborted) putL(lt, res.status && res.status !== 200 ? 'error' : 'done'); })
+      .catch(() => { if (!ac.signal.aborted) putL(lt, 'error'); });
+  }, []);
+  const switchLong = (i) => {
+    setTurns((all) => { const c = all.slice(); const x = c[i]; if (x && x.long && x.long.state === 'done') c[i] = {...x, t: x.long.t, long: {...x.long, switched: true}}; return c; });
+    const x = turns[i], reply = x && x.long ? shownText(x.long.t) : '';
+    if (reply && i === turns.length - 1 && hist.current.length && hist.current[hist.current.length - 1].role === 'assistant') hist.current[hist.current.length - 1].content = reply.slice(0, 4000);
+  };
   const run = useCallback(async (task, opts = {}) => {
     if (busy) return;
     markEngaged();
@@ -333,6 +350,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     setLimit(null); setBusy(true);
     const ac = new AbortController(); ctl.current = ac;
     const payload = {mode: m, pod: !!opts.pod, cat, task: opts.send || task, history: hist.current.slice(-6).map((x) => ({role: x.role, content: x.content})), lang: task.length > 3 ? lang(task) : '', memo: memo.current.text, ui: '', providers: picked, files: sendFiles, ai: aiBlock()};
+    if (opts.long && !opts.reuse) startLong(idx, payload);
     let res;
     try { res = await runTask(payload, (ev) => put(applyEv(t, ev)), ac.signal); }
     catch (e) { res = {status: e.name === 'AbortError' ? 0 : -1}; if (res.status === -1) put({...t, error: {message: 'Could not reach Chat. Check your connection and try again.', kind: 'busy'}}); }
@@ -361,7 +379,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     const reply = shownText(t);
     if (reply) hist.current.push({role: 'assistant', content: reply.slice(0, 4000)});
     persist(chatId); roll();
-  }, [busy, mode, turns, picked, sel, chatId]);
+  }, [busy, mode, turns, picked, sel, chatId, startLong]);
 
   const [dictating, setDictating] = useState(false);
   // With Studio open, "remove the background" or "crop to square", spoken or typed, goes to the editor, not to the chat.
@@ -407,7 +425,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     if (!words && !files.length) { setValue(''); return; }
     const fs = files; setValue(''); setFiles([]);
     if (picked1 === 'ask') { setAsking({task: words, files: fs}); return; }
-    run(words, {files: fs, send: frame(words, picked1)}).catch(() => {});
+    run(words, {files: fs, send: picked1 === 'long' ? undefined : frame(words, picked1), long: picked1 === 'long'}).catch(() => {});
   };
   const startAsked = (answers) => { const a = asking; setAsking(null); if (a) run(a.task, {files: a.files, send: frame(a.task, 'ask', answers)}).catch(() => {}); };
   const skipAsked = () => startAsked([]);
@@ -423,7 +441,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
   pick.free = sel.free;
 
   const [navOpen, setNavOpen] = useState(false); // the phone chat drawer
-  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); setChatId('c' + Date.now()); setLimit(null); setBusy(false); setPanel(''); };
+  const newChat = () => { setNavOpen(false); ctl.current && ctl.current.abort(); hist.current = []; memo.current = {text: '', n: 0, busy: false}; setTurns([]); longCtl.current && longCtl.current.abort(); setChatId('c' + Date.now()); setLimit(null); setBusy(false); setPanel(''); };
   // Delete one past chat from this browser (#355). Deleting the open chat starts a new one.
   const dropChat = (c) => {
     if (!confirm('Delete the chat "' + (c.title || 'Untitled') + '"? This cannot be undone.')) return;
@@ -570,6 +588,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
               <ChatMessage sender="assistant" avatar={<Brand name="wolf" size={32} />}>
                 {busy && i === turns.length - 1 && <Text type="supporting" color="secondary">{x.t.status}…</Text>}
                 <Answer t={x.t} openUrl={panel} onPreview={setPanel} onAgain={(pod) => run(x.task, {pod: !!pod, reuse: true}).catch(() => {})} onPick={pick} />
+                {x.long && <LongPill long={x.long} onSwitch={() => switchLong(i)} isLast={i === turns.length - 1} />}
               </ChatMessage>
             </div>
           ))}

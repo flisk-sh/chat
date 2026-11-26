@@ -45,3 +45,13 @@ test('shortcuts: command 1 to 3, command K, hold command to show them, and a ski
   expect(m).toContain('Hold ⌘ for shortcuts');
   expect(m).toContain("e.key === 'Escape'");
 });
+
+test('take your time sends the plain words as the quick answer and a second request with the long line', () => {
+  const app = read('web/src/App.jsx');
+  expect(app).toContain("send: picked1 === 'long' ? undefined : frame(words, picked1), long: picked1 === 'long'");
+  expect(app).toContain("runTask({...payload, task: frame(payload.task, 'long')}");
+  expect(app).toContain('<LongPill long={x.long}');
+  const m = read('web/src/Modes.jsx');
+  expect(m).toContain("e.altKey && e.key === 'Enter'");
+  expect(m).toContain('Switch to this answer');
+});

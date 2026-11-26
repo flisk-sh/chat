@@ -20,6 +20,7 @@ export const ANSWER_MODES = [
 ];
 
 import {ASK_QUESTIONS, frame, readSlash} from './modes-logic.js';
+import {shownText} from './events.js';
 export {ASK_QUESTIONS, frame, readSlash};
 
 // True while ⌘ (or Ctrl) is held for a moment, or a ⌘ shortcut is pressed. Release, or leaving the window, hides it.
@@ -111,5 +112,39 @@ export function AskFirst({task, onDone, onSkip}) {
         </HStack>
       </VStack>
     </Card>
+  );
+}
+
+// "Take your time": under the quick answer, a pill shows the long run. Hover or focus opens a card; when it is ready the card
+// opens by itself and Switch (or Option+Enter on the latest one) replaces the quick answer with it.
+export function LongPill({long, onSwitch, isLast}) {
+  const [hover, setHover] = useState(false);
+  const {state, switched} = long;
+  const done = state === 'done' && !switched;
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => { setPinned(done); }, [done]);
+  useEffect(() => {
+    if (!done || !isLast) return;
+    const h = (e) => { if (e.altKey && e.key === 'Enter') { e.preventDefault(); onSwitch(); } };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [done, isLast, onSwitch]);
+  const text = shownText(long.t) || '';
+  const label = switched ? 'Showing the long answer' : state === 'done' ? 'Long answer is ready' : state === 'error' ? 'The long answer did not finish' : 'Long answer is cooking\u2026';
+  return (
+    <div style={{position: 'relative', display: 'inline-block'}} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onFocus={() => setHover(true)} onBlur={() => setHover(false)}>
+      {(hover || pinned) && !switched && (
+        <div style={{position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 'min(420px, 90vw)', zIndex: 20}}>
+          <Card padding={4}>
+            <VStack gap={2}>
+              <Text weight="semibold">{state === 'done' ? 'Long answer' : state === 'error' ? 'It did not finish' : long.t.status || 'Working'}</Text>
+              {text && <Text size="xsm" color="secondary">{text.length > 400 ? text.slice(0, 400) + '\u2026' : text}</Text>}
+              {done && <HStack gap={2}><Button label={'Switch to this answer  \u2325\u21b5'} size="sm" variant="primary" onClick={onSwitch} /></HStack>}
+            </VStack>
+          </Card>
+        </div>
+      )}
+      <Button label={label} size="sm" variant="secondary" aria-live="polite" onClick={() => setPinned((p) => !p)} />
+    </div>
   );
 }
