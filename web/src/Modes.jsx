@@ -9,6 +9,7 @@ import {Kbd} from '@astryxdesign/core/Kbd';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {TextInput} from '@astryxdesign/core/TextInput';
+import {RadioList, RadioListItem} from '@astryxdesign/core/RadioList';
 import {BoltIcon, ClipboardDocumentListIcon, RocketLaunchIcon} from '@heroicons/react/24/outline';
 
 // How the person wants the answer (docs/adr/0002). The page still sends mode `ask` to the server; the choice only
@@ -144,28 +145,41 @@ export function AnswerMenu({onClose, onPick, actions = []}) {
   );
 }
 
-// "Ask me first": three short questions the person answers before the AI starts. Skipping sends the task as it is.
+// "Ask me first": three short questions, one at a time, each with ready answers (or your own words). Skipping sends the task as it is.
+const ASK_OPTIONS = [
+  ['Just me', 'My customers or clients', 'My team', 'The public'],
+  ['Nothing yet', 'A rough idea', 'Text or photos ready', 'An existing site or app'],
+  ['It looks good and works', 'It gets me sign-ups or sales', 'A quick prototype to show', 'Something I can launch today'],
+];
+const OTHER = '__other';
 export function AskFirst({task, onDone, onSkip}) {
-  const [a, setA] = useState(['', '', '']);
-  const set = (i, v) => setA((all) => all.map((x, j) => (j === i ? v : x)));
+  const [step, setStep] = useState(0);
+  const [pick, setPick] = useState(['', '', '']);   // an option label, OTHER, or ''
+  const [own, setOwn] = useState(['', '', '']);     // typed text for "Something else"
+  const answers = pick.map((p, i) => (p === OTHER ? own[i].trim() : p));
+  const set = (arr, setArr, v) => setArr(arr.map((x, j) => (j === step ? v : x)));
+  const last = step === ASK_QUESTIONS.length - 1;
+  const next = () => (last ? onDone(answers) : setStep(step + 1));
   useEffect(() => {
-    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); onDone(a); } else if (e.key === 'Escape') onSkip(); };
+    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); onDone(answers); } else if (e.key === 'Escape') onSkip(); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [a, onDone, onSkip]);
+  }, [answers, onDone, onSkip]);
   return (
-    <div style={{padding: 'var(--spacing-3)'}}>
+    <div className="ask-first">
       <VStack gap={2}>
         <HStack gap={2} vAlign="center" hAlign="between">
-          <Text weight="semibold">A few quick questions</Text>
-          <Text type="caption" color="secondary">All optional</Text>
-        </HStack>
-        {ASK_QUESTIONS.map((q, i) => (
-          <TextInput key={q} label={q} isLabelHidden placeholder={q} size="sm" value={a[i]} onChange={(v) => set(i, v)} autoFocus={i === 0} />
-        ))}
-        <HStack gap={2} vAlign="center">
-          <Button label="Start" variant="primary" size="sm" onClick={() => onDone(a)} />
+          <Text type="caption" color="secondary">{'Question ' + (step + 1) + ' of ' + ASK_QUESTIONS.length + ' \u00b7 optional'}</Text>
           <Button label="Skip" variant="ghost" size="sm" onClick={onSkip} />
+        </HStack>
+        <RadioList key={step} label={ASK_QUESTIONS[step]} size="sm" value={pick[step]} onChange={(v) => set(pick, setPick, v)}>
+          {ASK_OPTIONS[step].map((o) => <RadioListItem key={o} value={o} label={o} />)}
+          <RadioListItem value={OTHER} label="Something else…" />
+        </RadioList>
+        {pick[step] === OTHER && <TextInput label={ASK_QUESTIONS[step]} isLabelHidden placeholder="In your own words" size="sm" value={own[step]} onChange={(v) => set(own, setOwn, v)} autoFocus />}
+        <HStack gap={2} vAlign="center">
+          <Button label={last ? 'Start' : 'Next'} variant="primary" size="sm" onClick={next} />
+          {step > 0 && <Button label="Back" variant="ghost" size="sm" onClick={() => setStep(step - 1)} />}
           <HStack gap={1} vAlign="center"><Kbd keys="mod+enter" /><Text type="caption" color="secondary">to start</Text></HStack>
         </HStack>
       </VStack>
