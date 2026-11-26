@@ -533,8 +533,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <div className={'earth-content' + (turns.length || limit ? '' : ' empty')} style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1, minWidth: 0}}>
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={<>
-          <ChatComposer className="one-row" drawer={asking ? <ChatComposerDrawer label="Questions"><AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} /></ChatComposerDrawer>
-              : palette ? <ChatComposerDrawer label="Commands"><AnswerMenu onClose={closePalette} onPick={setAnswer} actions={[
+          <ChatComposer className="one-row" drawer={palette ? <ChatComposerDrawer label="Commands"><AnswerMenu onClose={closePalette} onPick={setAnswer} actions={[
             {id: 'new', label: 'New chat', run: newChat},
             {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},
             {id: 'model', label: 'Choose AI model', run: () => setMdlOpen(true)},
@@ -544,7 +543,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
             {id: 'talk', label: 'Voice talk', run: () => setTalk(true)},
             {id: 'settings', label: 'Settings and usage', run: () => openSettings('usage')},
           ]} /></ChatComposerDrawer>
-              : held ? <ChatComposerDrawer label="Shortcuts"><ShortcutHints /></ChatComposerDrawer> : undefined} value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
+              : asking || held ? <ChatComposerDrawer label={asking ? 'Questions' : 'Shortcuts'}>{asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}{held && <ShortcutHints />}</ChatComposerDrawer> : undefined} value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
             placeholder={PLACEHOLDER[answer] || 'Ask or build…'} {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }

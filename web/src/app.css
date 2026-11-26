@@ -264,10 +264,17 @@ html[data-scheme] .astryx-app-shell .one-row .astryx-chat-composer-input, html[d
 /* ⌘K: the composer's drawer holds a filter and the grouped choices. */
 .cmdk { display: flex; flex-direction: column; min-width: 0; }
 .cmdk-input { font: inherit; font-size: 15px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--color-border, #8883); outline: none; padding: var(--spacing-2) 0; min-height: 40px; width: 100%; box-sizing: border-box; }
-.cmdk-list { max-height: min(30vh, 240px); overflow-y: auto; padding: var(--spacing-1); }
+.cmdk-list { max-height: min(26vh, 220px); overflow-y: auto; padding: var(--spacing-1); }
 .cmdk-group { font-size: 12px; opacity: .65; padding: var(--spacing-2) var(--spacing-2) var(--spacing-1); }
 .cmdk-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-2); padding: var(--spacing-2); min-height: 36px; border-radius: var(--radius, 8px); cursor: pointer; }
 .cmdk-item[aria-selected="true"] { background: var(--color-background-secondary, #8882); }
 .cmdk-empty { padding: var(--spacing-3); }
 .plug-row { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; background: transparent; color: inherit; border: 0; border-radius: var(--radius); }
 .plug-row:not(:disabled):hover, .plug-row:focus-visible { background: var(--color-background-secondary, #8882); }
+
+/* Phones: the mode chips take their own row under the text, so the text box keeps its width (it was squeezed to a sliver). */
+@media (max-width:900px){
+.one-row > div{grid-template-columns:auto minmax(0,1fr) auto}
+.one-row > div > div:last-child > div:first-child{grid-column:1 / -1;grid-row:2;justify-content:flex-start;align-self:center}
+.one-row > div > div:last-child > div:last-child{grid-column:3;grid-row:1}
+}
