@@ -20,7 +20,8 @@
     "install-ignore-scripts": "report",
     "workflow-checkout-safety": "report",
     "curl-https-only": "report",
-    "log-injection": "report"
+    "log-injection": "report",
+    "risk-history": "report"
   },
   "north_star": {
     "metric": "bounce rate of chat.flisk.si visits (last 7 days, Flisk Analytics)",
@@ -57,7 +58,8 @@
     "install-ignore-scripts": "adding --ignore-scripts to bun/npm installs in check.yml, deploy.yml and e2e-live.yml can break builds that rely on postinstall; needs a maintainer to test each one, tracked as follow-up",
     "workflow-checkout-safety": "deploy.yml checks out in a workflow_run workflow with a write token; this is a deploy-security change that needs a maintainer review, not a mechanical edit",
     "curl-https-only": "scripts/ios/run_agent.sh curl probes a local simulator endpoint; needs a maintainer to confirm it can be https-only",
-    "log-injection": "scripts/e2e-live.mjs logs error.message; the CR/LF strip needs a maintainer to confirm the log format the e2e dashboard parses"
+    "log-injection": "scripts/e2e-live.mjs logs error.message; the CR/LF strip needs a maintainer to confirm the log format the e2e dashboard parses",
+    "risk-history": "src/loop.js scores 65/100 because it is the most-fixed file in the repo; every plugin PR that wires a task into runTask would fail the guard. Kept on report so the score stays visible without blocking; revisit when loop.js is split"
   },
   "ignore": [
     "src/app.generated.js"
