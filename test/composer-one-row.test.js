@@ -40,8 +40,11 @@ test('what / serves includes the modal', () => {
 });
 
 test('the placeholder fits one line on a 320px phone (17 characters or fewer)', () => {
-  const placeholder = app.match(/placeholder="([^"]+)"/)[1];
-  expect([...placeholder].length).toBeLessThanOrEqual(17);
+  // The placeholder follows the answer mode (docs/adr/0002): every one of them must fit.
+  const m = read('web/src/Modes.jsx').match(/PLACEHOLDER = \{([^}]+)\}/)[1];
+  const all = [...m.matchAll(/'([^']+)'/g)].map((x) => x[1]);
+  expect(all.length).toBe(3);
+  for (const p of all) expect([...p].length).toBeLessThanOrEqual(17);
 });
 
 test('the computers dialog lets the Fleet auto button wrap and keeps Connect and Get key on one row', () => {

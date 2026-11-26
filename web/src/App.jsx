@@ -1,5 +1,5 @@
 import {useState, useEffect, useRef, useCallback} from 'react';
-import {AnswerBar, AnswerPalette, AskFirst, LongPill, frame, readSlash, useAnswerKeys, useHeldModifier} from './Modes.jsx';
+import {AnswerBar, AnswerPalette, AskFirst, LongPill, PLACEHOLDER, frame, readSlash, useAnswerKeys, useHeldModifier} from './Modes.jsx';
 import {Tip, ExplainContext} from './Tip.jsx';
 import {Brand} from './Brand.jsx';
 import {Oracle} from './Oracle.jsx';
@@ -533,7 +533,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
       <ChatLayout style={{flex: 1, minHeight: 0}} density="spacious"
         composer={<>
           {asking && <AskFirst task={asking.task} onDone={startAsked} onSkip={skipAsked} />}
-          <AnswerBar value={answer} onChange={setAnswer} held={held} showHint={!touch} />
+          <AnswerBar value={answer} onChange={setAnswer} held={held} />
           <AnswerPalette open={palette} onOpenChange={setPalette} onPick={setAnswer} actions={[
             {id: 'new', label: 'New chat', run: newChat},
             {id: 'plugins', label: 'Plugins', run: () => setPlugOpen(true)},
@@ -545,7 +545,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
             {id: 'settings', label: 'Settings and usage', run: () => openSettings('usage')},
           ]} />
           <ChatComposer className="one-row" value={value} onChange={setValue} onSubmit={submit} onStop={() => ctl.current && ctl.current.abort()} isStopShown={busy} isDisabled={false}
-            placeholder="Ask or build…" {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
+            placeholder={PLACEHOLDER[answer] || 'Ask or build…'} {...(BOOT.embed && hints.length ? {placeholder: hints[hintAt % hints.length]} : {})}
             input={<ChatComposerInput autoFocus={!touch} enterKeyHint={touch ? 'enter' : 'send'} onKeyDown={(e) => {
               if (touch && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); }
             }} />}

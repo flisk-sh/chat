@@ -35,14 +35,13 @@ test('the page still sends mode ask to the server and shows the control above th
   expect(app).toContain("const mode = 'ask';");
   expect(app).toContain('<AnswerBar value={answer}');
   expect(app).toContain('send: frame(');
-  expect(read('src/app.generated.js')).toContain('Hold');
+  expect(read('src/app.generated.js')).toContain('Questions first');
 });
 
 test('shortcuts: command 1 to 3, command K, hold command to show them, and a skip key for the questions', () => {
   const m = read('web/src/Modes.jsx');
   expect(m).toContain("['1', '2', '3'].indexOf(e.key)");
   expect(m).toContain("e.key.toLowerCase() === 'k'");
-  expect(m).toContain('Hold ⌘ for shortcuts');
   expect(m).toContain("e.key === 'Escape'");
 });
 
@@ -67,7 +66,7 @@ test('dogfood fixes: each long run keeps its own controller, the chip follows a 
   expect(app).toContain('longCtl.current.push(ac)');
   expect(app).not.toContain('longCtl.current.abort()');
   expect(app).toContain('const sl = readSlash(value)');
-  expect(app).toContain('showHint={!touch}');
+  expect(app).toContain('placeholder={PLACEHOLDER[answer]');
   expect(m).toContain("const SHORT = {fast: 'Quick', ask: 'Ask me', long: 'Take time'}");
   expect(m).toContain('aria-label={m.name}');
   expect(m).not.toContain("position: 'absolute', bottom: 'calc(100% + 8px)'");

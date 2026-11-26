@@ -63,7 +63,7 @@ function useNarrow(px = 480) {
 }
 const SHORT = {fast: 'Quick', ask: 'Ask me', long: 'Take time'};
 
-export function AnswerBar({value, onChange, held, showHint = true}) {
+export function AnswerBar({value, onChange, held}) {
   const narrow = useNarrow();
   return (
     <VStack gap={1}>
@@ -77,10 +77,10 @@ export function AnswerBar({value, onChange, held, showHint = true}) {
         </Card>
       )}
       <HStack gap={3} vAlign="center" wrap="wrap">
-        <SegmentedControl value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
+        <SegmentedControl size="sm" value={value} onChange={(v) => onChange(v)} aria-label="How to answer">
           {ANSWER_MODES.map((m, i) => <SegmentedControlItem key={m.id} value={m.id} label={held ? m.name + ' ⌘' + (i + 1) : narrow ? SHORT[m.id] : m.name} aria-label={m.name} icon={<Icon icon={m.icon} size="sm" />} />)}
         </SegmentedControl>
-        {showHint && <Text type="caption" color="secondary">{held ? 'Release to hide' : 'Hold ⌘ for shortcuts'}</Text>}
+        
       </HStack>
     </VStack>
   );
@@ -165,3 +165,6 @@ export function LongPill({long, onSwitch, isLast}) {
     </div>
   );
 }
+
+// The box's placeholder says what the picked mode will do, so the choice explains itself without another line of text.
+export const PLACEHOLDER = {fast: 'Ask or build…', ask: 'Questions first…', long: 'The whole job…'};
