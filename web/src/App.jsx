@@ -604,7 +604,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
         </ChatMessageList>
       </ChatLayout>
       </div>
-      {studio && <StudioPanel frameRef={studioFrame} onClose={() => setStudio(false)} onReply={onStudioReply} />}
+      {studio && <StudioPanel scheme={scheme} frameRef={studioFrame} onClose={() => setStudio(false)} onReply={onStudioReply} />}
       {panel && <PagePanel url={panel} onClose={() => setPanel('')} onCopy={copy} />}
       </div>
     </AppShell>

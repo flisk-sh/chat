@@ -71,3 +71,13 @@ test('dogfood fixes: each long run keeps its own controller, the chip follows a 
   expect(m).toContain('aria-label={m.name}');
   expect(m).not.toContain("position: 'absolute', bottom: 'calc(100% + 8px)'");
 });
+
+test('Studio wears the chat look: the address and a message carry light or dark, and the address never changes', async () => {
+    const st = await Bun.file(new URL('../web/src/Studio.jsx', import.meta.url)).text();
+    expect(st).toContain("scheme === 'earth' ? 'dark'");
+    expect(st).toContain("'?embed=1&mode='");
+    expect(st).toContain("type: 'mode'");
+    expect(st).toContain('src={first.current}');
+    const app = await Bun.file(new URL('../web/src/App.jsx', import.meta.url)).text();
+    expect(app).toContain('<StudioPanel scheme={scheme}');
+});
