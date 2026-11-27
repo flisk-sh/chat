@@ -49,7 +49,7 @@ html[data-scheme=earth] [role=menu],html[data-scheme=earth] [role=listbox]{backg
 .chat-head:has(.chat-head-end){flex-wrap:nowrap!important;gap:var(--spacing-1)!important}
 .chat-head .chat-head-end{flex-shrink:0}
 /* Phones up to 400px (375px iPhone SE and mini included, #358): tighter mode buttons and edges, so the more button stays on screen. */
-@media (max-width:400px){.chat-head:has(.chat-head-end){padding-left:var(--spacing-2)!important;padding-right:var(--spacing-2)!important}.chat-head .astryx-segmented-control-item{padding-left:7px!important;padding-right:7px!important}.chat-head .chat-head-end a{padding-left:10px!important;padding-right:10px!important}.astryx-app-shell-header{padding-left:6px!important;padding-right:6px!important;gap:4px!important}.astryx-app-shell-header button{min-width:36px!important;padding-left:6px!important;padding-right:6px!important}}
+@media (max-width:400px){.chat-head:has(.chat-head-end){padding-left:var(--spacing-2)!important;padding-right:var(--spacing-2)!important}.chat-head .astryx-segmented-control-item{padding-left:7px!important;padding-right:7px!important}.chat-head .chat-head-end a{padding-left:10px!important;padding-right:10px!important}}
 [role=dialog] .astryx-field,[role=dialog] input{min-width:0}
 
 /* Cards a turn shows beside its text (web/src/Cards.jsx), ported from /classic. */
