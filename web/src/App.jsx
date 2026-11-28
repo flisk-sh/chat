@@ -134,8 +134,8 @@ function Answer({t, onAgain, onPick, onPreview, openUrl, onOpenChat}) {
       </VStack>}
       {t.sources.length > 0 && <HStack gap={2} wrap="wrap">{t.sources.slice(0, 8).map((s, i) => <Button key={s.url} label={'[' + (i + 1) + '] ' + s.title} size="sm" variant="secondary" href={s.url} target="_blank" />)}</HStack>}
       {t.error && <ErrorCard t={t} onPick={onPick} />}
-      {t.needPod && <Card><VStack gap={2}><Text>This task needs a computer. Start one for it, or connect your own.</Text>
-        <HStack gap={2}><Button label="Start a computer and run it" variant="primary" onClick={() => onAgain(true)} /><Button label="Connect my own" variant="secondary" onClick={() => onPick('connect-computer')} /></HStack></VStack></Card>}
+      {t.needPod && <Card><VStack gap={2}><Text>This task needs a computer, and this browser cannot start one. Connect your own.</Text>
+        <HStack gap={2}><Button label="Connect my own" variant="primary" onClick={() => onPick('connect-computer')} /></HStack></VStack></Card>}
     </>
   );
 }
@@ -388,7 +388,7 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     setTurns((all) => (opts.reuse ? all : [...all, {task, files: sendFiles.map((f) => f.name), t}]));
     setLimit(null); setBusy(true);
     const ac = new AbortController(); ctl.current = ac;
-    const payload = {mode: m, pod: !!opts.pod, cat, task: opts.send || task, history: hist.current.slice(-6).map((x) => ({role: x.role, content: x.content})), lang: task.length > 3 ? lang(task) : '', memo: memo.current.text, ui: '', providers: picked, files: sendFiles, ai: aiBlock(), ...(opts.plugin ? {plugin: opts.plugin} : {})};
+    const payload = {mode: m, pod: !!opts.pod, cat, task: opts.send || task, history: hist.current.slice(-6).map((x) => ({role: x.role, content: x.content})), lang: task.length > 3 ? lang(task) : '', memo: memo.current.text, ui: window.__LANG === 'uk' ? 'uk' : '', providers: picked, files: sendFiles, ai: aiBlock(), ...(opts.plugin ? {plugin: opts.plugin} : {})};
     if (opts.long && !opts.reuse) startLong(idx, payload);
     let res;
     try { res = await runTask(payload, (ev) => put(applyEv(t, ev)), ac.signal); }
@@ -401,9 +401,10 @@ export default function App({scheme = 'system', setScheme = () => {}}) {
     if (res.status === 429) { setTurns((all) => all.slice(0, -1)); setLimit(limitInfo(res.body, task)); return; }
     // No cloud computer connected: run the task on the small Linux in this tab, as /classic does. If the tab cannot start it,
     // the card to connect a computer is shown instead.
-    if (res.status === 409 && podOk()) {
+    // The model asked for a computer mid-answer (needcomputer): start it at once, with no button to press first.
+    if ((res.status === 409 || (res.status === 200 && t.needPod)) && podOk()) {
       setBusy(true); ctl.current = ac;
-      put({...t, status: 'Starting a computer in this tab'});
+      put({...t, needPod: false, status: 'Starting a computer in this tab'});
       if (await getPod().then(() => true, () => false)) {
         try { res = await runInBrowser(payload, (ev) => put(applyEv(t, ev)), ac.signal); }
         catch (e) { res = {status: e.name === 'AbortError' ? 0 : -1}; }

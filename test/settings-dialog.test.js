@@ -256,7 +256,7 @@ describe('usage today', () => {
     expect(d.named).toBe(false);
     expect(d.login).toBe('');
     expect(d.saved).toBe(null);
-    expect(d.usage.map((u) => u.key)).toEqual(['tasks', 'pictures', 'talk']);
+    expect(d.usage.map((u) => u.key)).toEqual(['tasks', 'computer', 'pictures', 'talk']);
     expect((await handle(new Request('https://chat.test/settings/data', { headers: { 'sec-fetch-site': 'cross-site' } }), env)).status).toBe(403);
   });
 });

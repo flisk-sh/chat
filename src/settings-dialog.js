@@ -92,7 +92,7 @@ ${row(t('API key'), t('The key is encrypted before it is stored and never shown 
 
   // What is left of today's free allowance. The numbers come from the same counters the gates use; the counters are not exact across data
   // centres, so "about" is honest. Everything resets at midnight UTC.
-  const USAGE_NAMES = { tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.'] };
+  const USAGE_NAMES = { tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], computer: ['Free computer tasks', 'Tasks that ran on a computer, in this tab or in the cloud.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.'] };
   // A ring: the share of today's allowance used. Green while there is room, red when it is used up.
   const ring = (u) => {
     const frac = u.limit ? Math.min(1, u.used / u.limit) : 0, C = 2 * Math.PI * 26;

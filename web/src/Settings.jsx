@@ -32,7 +32,7 @@ const COMMANDS = [
   ['@flisk-chat review run', "The same, and also runs the project's lint and tests on one of your computers. The results are posted when it finishes."],
   ['@flisk-chat auto on', 'Reviews every new pull request in this repo by itself. Write @flisk-chat auto off to stop.'],
 ];
-const USAGE = {tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.']};
+const USAGE = {tasks: ['Free tasks', 'Questions, pages and apps on the free Flisk Wolf model.'], computer: ['Free computer tasks', 'Tasks that ran on a computer, in this tab or in the cloud.'], pictures: ['Pictures', 'Photos and drawings made for you.'], talk: ['Voice chats', 'Talking with chat out loud.']};
 
 const ic = (I) => <Icon icon={I} size="sm" />;
 

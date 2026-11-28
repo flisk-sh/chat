@@ -220,6 +220,13 @@ export function parseAction(text) {
       if (typeof a?.say === 'string') return { type: 'say', text: a.say };
     } catch {}
   }
+  // The whole reply is one JSON object that is no action we know (a model guessing a tool: {"curl": "https://..."}, {"tool": ...}).
+  // Never an answer to show: ask again, naming the actions that exist.
+  if (start === 0 && end === s.length - 1) {
+    let o = null;
+    try { o = JSON.parse(s); } catch {}
+    if (o && typeof o === 'object' && !Array.isArray(o)) return { type: 'bad', text: s, why: 'That is not an action chat knows. Reply with exactly one JSON action: {"say": "..."} to answer, or run, write, read, publish, share, search or widget. To fetch a web page, use {"search": "<words>"} or the web widget, not curl.' };
+  }
   // An action that starts but never closes (the answer was cut off at the length limit, often a long file with no } in
   // it) is a bad reply to retry, never an answer to show.
   if (start >= 0 && /^\s*\{\s*"(run|write|read|publish|worker|image|site|video|system|share|search|widget)"\s*:/.test(s.slice(start))) return { type: 'bad', text: s };
@@ -244,6 +251,8 @@ const TOOL_TAGS = /<\|DSML\|>[\s\S]*?<\|\/DSML\|>|<\/?(?:invoke|parameter|tool_c
 export function guardAnswer(text) {
   const orig = String(text ?? '');
   let t = unwrapName(orig.replace(TOOL_TAGS, '').trim());
+  // A bare JSON object with no "say" is plumbing, never words for a person.
+  if (/^\s*\{/.test(t)) { try { const o = JSON.parse(t); if (o && typeof o === 'object' && !Array.isArray(o) && typeof o.say !== 'string') return { text: '', changed: true, empty: true }; } catch {} }
   for (let i = 0; i < 3 && PLUMBING_START.test(t); i++) {
     const m = /^\s*(?:```(?:json)?\s*)?\{\s*"say"/.test(t);
     if (!m) { t = ''; break; } // another action: there are no words in it

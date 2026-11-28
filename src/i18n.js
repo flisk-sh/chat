@@ -428,3 +428,24 @@ Object.assign(UK, {
   'Open Computers': 'Відкрити «Комп’ютери»',
   'Account, reviews, computers': 'Обліковий запис, рев’ю, комп’ютери',
 });
+
+// The new app (src/app-page.js): the live status line, the steps and the computer cards.
+Object.assign(UK, {
+  'Working': 'Працюю',
+  'Starting a computer': 'Запускаю комп’ютер',
+  'Starting a computer in this tab': 'Запускаю комп’ютер у цій вкладці',
+  'Computer stopped': 'Комп’ютер зупинено',
+  'Running a command': 'Виконую команду',
+  'Writing files': 'Записую файли',
+  'Publishing': 'Публікую',
+  'Searching the web': 'Шукаю в інтернеті',
+  'Connect my own': 'Підключити свій',
+  'This task needs a computer, and this browser cannot start one. Connect your own.': 'Для цього завдання потрібен комп’ютер, а цей браузер не може його запустити. Підключіть свій.',
+  'Free computer tasks': 'Безкоштовні завдання на комп’ютері',
+  'Tasks that ran on a computer, in this tab or in the cloud.': 'Завдання, виконані на комп’ютері: у цій вкладці або в хмарі.',
+});
+UK_PATTERNS.push(
+  [/^Thinking, step (\d+)$/, (m) => `Думаю, крок ${m[1]}`],
+  [/^Computer ready on (.+)$/, (m) => `Комп’ютер готовий: ${m[1]}`],
+  [/^Searching the web: (.+)$/, (m) => `Шукаю в інтернеті: ${m[1]}`],
+);
