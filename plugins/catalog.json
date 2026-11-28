@@ -339,7 +339,7 @@
       "id": "studio.reorder-pdf",
       "title": "Reorder or delete PDF pages",
       "group": "Studio next",
-      "status": "soon",
+      "status": "ready",
       "owner": "flisk",
       "voice": [
         "delete page 3"
