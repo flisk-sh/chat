@@ -329,7 +329,7 @@
       "id": "studio.split-pdf",
       "title": "Split or extract PDF pages",
       "group": "Studio next",
-      "status": "soon",
+      "status": "ready",
       "owner": "flisk",
       "voice": [
         "take pages 2 to 4"
