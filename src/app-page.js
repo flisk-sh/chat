@@ -5,6 +5,7 @@ import { APP_CSS, APP_CSS_PATH, APP_FONTS, APP_JS, APP_JS_PATH } from './app.gen
 import { EARTH_JS } from './earth.js';
 import { COMPUTERS_URL } from './settings-dialog.js';
 import { jaScript } from './i18n-ja.js';
+import { i18nScript } from './i18n.js';
 import { CATS, ICON_HEAD, KEY_PAGES, PROVIDER_CARDS, PROVIDER_NAMES, GITHUB_APP_URL, seoHead, loginHook } from './page.js';
 
 const LS = new RegExp('[\\u2028\\u2029]', 'g');
@@ -14,7 +15,10 @@ const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '');
 const BAR_CSS = '.vv-root{top:calc(var(--vv-top,0px) + var(--fbar,0px));height:calc(var(--vv-h,100dvh) - var(--fbar,0px))}';
 const BAR_JS = `(function(){var r=document.documentElement,h;function find(){return [].find.call(document.body.children,function(e){return /2147483000/.test(e.style.cssText)})}function set(){r.style.setProperty('--fbar',(h?h.offsetHeight:0)+'px')}function go(){h=find();if(!h)return setTimeout(go,100);set();if(window.ResizeObserver)new ResizeObserver(set).observe(h)}go()})();`;
 
-export function chatPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false, lang = 'en' } = {}) {
+// The Ukrainian dictionary (about 40 KB) goes only to a visit from Ukraine or from a browser that asks for Ukrainian; everyone else keeps the small page.
+export const wantsUk = (geo, acceptLanguage) => geo === 'UA' || /(^|[,;\s])uk\b/i.test(String(acceptLanguage || ''));
+
+export function chatPage({ login = null, anon = false, connected = [], models = [], names = {}, theme = 'earth', here = null, pod = '', inf = '', embed = false, lang = 'en', geo = '', acceptLanguage = '' } = {}) {
   const boot = { embed, login, anon, connected, models, names, theme, here, pod, inf, cats: CATS, cards: PROVIDER_CARDS, providerNames: PROVIDER_NAMES, keyPages: KEY_PAGES, appUrl: GITHUB_APP_URL, computersUrl: COMPUTERS_URL };
   return `<!doctype html><html lang="${lang === 'ja' ? 'ja' : 'en'}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
@@ -26,7 +30,7 @@ ${embed ? '' : `<script src="https://flisk.si/assets/bar.js" data-product="Chat"
 <style>${embed ? '' : BAR_CSS}</style></head><body>${embed ? '' : '<canvas id="earth" class="earthc" aria-hidden="true"></canvas>'}<div id="root"></div>${loginHook(login, anon)}
 <script>window.__BOOT__=${json(boot)}</script>
 <script type="module" src="${APP_JS_PATH}"></script>
-${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>`}${lang === 'ja' ? `\n<script>${jaScript()}</script>` : ''}</body></html>`;
+${embed ? '' : `<script>${EARTH_JS}</script>\n<script>${BAR_JS}</script>`}${lang === 'ja' ? `\n<script>${jaScript()}</script>` : (wantsUk(geo, acceptLanguage) ? `\n<script>${geo === 'UA' ? 'window.__GEO="UA";' : ''}${i18nScript()}</script>` : '')}</body></html>`;
 }
 
 // The embedded chat can be framed by grow.flisk.si (and analytics, as everywhere); nothing else.

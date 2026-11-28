@@ -621,7 +621,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const page = (opts) => {
       const inf = inferenceOrigin(env);
       const csp = withFrame(cspWithPod(pod, origin), inf);
-      if (isApp) return html(chatPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed, lang: path === '/ja' ? 'ja' : 'en' }), 200, { 'content-security-policy': embed ? embedCsp(appCsp(csp)) : appCsp(csp) });
+      if (isApp) return html(chatPage({ ...opts, models, theme: embed ? 'system' : theme, here, pod, inf, names, embed, lang: path === '/ja' ? 'ja' : 'en', geo, acceptLanguage: request.headers.get('accept-language') || '' }), 200, { 'content-security-policy': embed ? embedCsp(appCsp(csp)) : appCsp(csp) });
       let body = appPage({ ...opts, models, theme, here, pod, inf, names });
       if (geo === 'UA') body = body.replace('<head>', `<head><script>window.__GEO="UA"</script>`);
       return html(body, 200, { 'content-security-policy': csp });
@@ -644,8 +644,8 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
     const usageToday = async (named) => {
       const login = session?.login || 'anon-none';
       const id = await who(login);
-      const [tasks, talk, pics] = await Promise.all([usageOf(env, 'chat', { anon: !named, id }), usageOf(env, 'talk', { anon: !named, id }), session ? photosUsed(env, session.login) : 0]);
-      return [{ key: 'tasks', ...tasks }, { key: 'pictures', used: pics, limit: PHOTOS_PER_LOGIN }, { key: 'talk', ...talk }];
+      const [tasks, computers, talk, pics] = await Promise.all([usageOf(env, 'chat', { anon: !named, id }), usageOf(env, 'computer', { anon: !named, id }), usageOf(env, 'talk', { anon: !named, id }), session ? photosUsed(env, session.login) : 0]);
+      return [{ key: 'tasks', ...tasks }, { key: 'computer', ...computers }, { key: 'pictures', used: pics, limit: PHOTOS_PER_LOGIN }, { key: 'talk', ...talk }];
     };
   if (request.method === 'GET' && path === '/settings/data') {
 
@@ -730,6 +730,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       const admitted = await admitTask(login, chosen);
       if (admitted.refuse) return { refuse: { status: 429, ...admitted.refuse } };
       const { m, refund } = admitted;
+      overQuota(env, 'computer', { anon, id: await who(login) }).catch(() => {}); // counted for Usage today, never refused
       return { model: m.ask, settle: () => refund(), maxSteps: chosen.free ? MAX_STEPS : BYO_STEPS, vision: !chosen.free && body.ai?.vision !== false, modelName: modelLabel(chosen) };
     };
     const job = runOverSocket(server, { lookupFacts: (q) => lookup(q), gate, origin, fetchImpl, publish: (content, o) => publishSite(env, login, content, origin, o?.limit), photo: (p) => sitePhoto(env, login, p), saveImage: (pic, p) => saveImage(env, login, pic, p, origin), saveVideo: async () => ({ error: 'a video needs a cloud computer' }) });
@@ -891,7 +892,7 @@ async function handleRequest(request, env = {}, { fetchImpl = fetch, waitUntil =
       // Without a computer the steps are held until we know the task needs none; plain answers are then sent all at once.
       // Status-only events (they set the label and add no step) go out at once even with no computer, so the visitor sees "Thinking"
       // while the model works. Steps stay held: they are dropped if the task turns out to need a computer.
-      const emit = (e) => { if (!noPod || EARLY_EVENTS.has(e.type)) return send(e); if (needPod) return; if (e.type === 'pod_starting') { needPod = true; buffered = []; return; } buffered.push(e); };
+      const emit = (e) => { if (!noPod && e.type === 'pod_starting') who(login).then((id) => overQuota(env, 'computer', { anon, id })).catch(() => {}); if (!noPod || EARLY_EVENTS.has(e.type)) return send(e); if (needPod) return; if (e.type === 'pod_starting') { needPod = true; buffered = []; return; } buffered.push(e); };
       const computer = noPod ? { ...fleet, start: async () => ({ error: ['needs', 'a computer'].join(' ') }) } : fleet;
       const github = anon ? null : { login, ...((await loadGithubToken(env, login).catch(() => null)) || {}) };
       const heuristicLang = resolveLang({ text: task, sticky: String(body?.lang || '').slice(0, 8), ui: body?.ui });

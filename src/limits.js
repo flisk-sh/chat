@@ -6,6 +6,9 @@ import { WORKERS_AI_PER_DAY } from './model.js';
 
 export const TASKS_PER_DAY = 20;
 export const ANON_TASKS_PER_DAY = 10;
+// Tasks that ran on a computer (the one in the visitor's tab, or a cloud one). Shown in Usage today; it counts, it never refuses.
+export const COMPUTER_PER_DAY = 20;
+export const ANON_COMPUTER_PER_DAY = 10;
 export const VOICE_PER_DAY = 60;
 export const ANON_VOICE_PER_DAY = 20;
 // The mic sends one request per spoken phrase (it writes while you talk), so phrases have their own, larger allowance.
@@ -27,6 +30,7 @@ export const WORKERS_AI_PER_PERSON = 40;
 // kind -> [signed-in limit, anonymous limit, counter name for signed-in, counter name for anonymous]
 const KINDS = {
   chat: [TASKS_PER_DAY, ANON_TASKS_PER_DAY, 'chat-limit', 'chat-anon'],
+  computer: [COMPUTER_PER_DAY, ANON_COMPUTER_PER_DAY, 'computer-limit', 'computer-anon'],
   voice: [VOICE_PER_DAY, ANON_VOICE_PER_DAY, 'voice-limit', 'voice-anon'],
   'voice-part': [VOICE_PARTS_PER_DAY, ANON_VOICE_PARTS_PER_DAY, 'voice-part-limit', 'voice-part-anon'],
   talk: [TALK_PER_DAY, ANON_TALK_PER_DAY, 'talk-limit', 'talk-anon'],

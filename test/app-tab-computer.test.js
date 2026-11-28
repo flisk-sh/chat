@@ -1,5 +1,5 @@
 // The new home page runs a task on the computer in the tab when no cloud computer is connected (/api/run answers 409),
-// as /classic does. Before, "Start a computer and run it" only sent the task again and got the same 409.
+// as /classic does. A task that asks for a computer mid-answer (needcomputer) starts it at once, with no "Start a computer" button.
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'bun:test';
 
@@ -47,7 +47,7 @@ test('Stop ends the task as an AbortError', async () => {
 
 test('the page falls back to the tab computer on 409 before showing the connect card', () => {
   const src = readFileSync(new URL('../web/src/App.jsx', import.meta.url), 'utf8');
-  const tab = src.indexOf('if (res.status === 409 && podOk())');
+  const tab = src.indexOf('if ((res.status === 409 || (res.status === 200 && t.needPod)) && podOk())');
   const card = src.indexOf('if (res.status === 409) { put({...t, needPod: true}); return; }');
   expect(tab).toBeGreaterThan(0);
   expect(card).toBeGreaterThan(tab);
