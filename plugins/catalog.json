@@ -319,7 +319,7 @@
       "id": "studio.photo-to-pdf",
       "title": "Photo to PDF",
       "group": "Studio next",
-      "status": "soon",
+      "status": "ready",
       "owner": "flisk",
       "voice": [
         "make this a pdf"
