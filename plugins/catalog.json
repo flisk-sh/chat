@@ -299,7 +299,7 @@
       "id": "studio.upscale",
       "title": "Upscale a photo",
       "group": "Studio next",
-      "status": "soon",
+      "status": "ready",
       "owner": "flisk",
       "voice": [
         "make it sharper"
