@@ -950,7 +950,13 @@ mb.forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 {const vb=document.querySelector('.md[data-mode=voice]'),ob=document.getElementById('orbbtn'),or=document.getElementById('oracle');
 if(vb&&ob&&or){const lit=()=>vb.setAttribute('aria-checked',String(!or.hidden));vb.onclick=()=>{if(or.hidden)ob.click();};new MutationObserver(lit).observe(or,{attributes:true,attributeFilter:['hidden']});}
 else if(vb)vb.hidden=true;}
-let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MODE[m0])m0='chat';setMode(m0);}
+let m0='chat';try{m0=localStorage.getItem('chat_mode')||'chat'}catch(e){}if(!MODE[m0])m0='chat';
+// A link can open a mode with the question already typed: /?mode=search&q=... (the Advanced search icon on search.flisk.si and
+// maps.flisk.si). The question is only put in the box, never sent: the user presses Enter. Both are taken off the address after.
+const lq=new URLSearchParams(location.search),lm=lq.get('mode'),lt=(lq.get('q')||'').replace(/[\\u0000-\\u0008\\u000b-\\u001f\\u007f]/g,' ').slice(0,6000);
+if(lm&&MODE[lm])m0=lm;setMode(m0);
+if(lt.trim()){const t=document.getElementById('task');if(t&&!t.value){t.value=lt;t.dispatchEvent(new Event('input',{bubbles:true}));t.focus();t.setSelectionRange(lt.length,lt.length);}}
+if(lq.has('mode')||lq.has('q')){lq.delete('mode');lq.delete('q');try{window.history.replaceState(window.history.state,'',location.pathname+(lq.toString()?'?'+lq:'')+location.hash)}catch(e){}}}
 {const pb=document.getElementById('plus'),pm=document.getElementById('plusmenu'),cats=document.querySelector('.cats');
 if(pm&&cats)pm.prepend(cats);
 const setPlus=(on)=>{document.documentElement.classList.toggle('plus',on);if(pb)pb.setAttribute('aria-expanded',String(on));if(on)placeFloat(pm,pb);};
